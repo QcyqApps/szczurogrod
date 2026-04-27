@@ -11,6 +11,10 @@ services:
       - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      # Postgres SIEDZI WYŁĄCZNIE w internal — proxy nie ma do niego dostępu.
+      # Server'owi pozwalamy mówić do bazy bo on też jest w `internal`.
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U grodno -d grodno"]
       interval: 5s
@@ -46,8 +50,16 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-    ports:
-      - "4000:4000"
+    networks:
+      # `internal` — komunikacja z postgresem.
+      # `shared-proxy` — wystawienie pod nginx'a który siedzi w tej samej sieci.
+      #   nginx upstreama wskaż na `grodno-server:4000` (container_name + port).
+      - internal
+      - shared-proxy
+    # Brak `ports:` — port 4000 NIE jest publikowany na hostowym interfejsie.
+    # Cały zewnętrzny ruch musi iść przez nginx'a w `shared-proxy`. Lokalny
+    # debug: `docker exec -it grodno-server wget -qO- localhost:4000/healthz`,
+    # albo dodaj tymczasowo `ports: ["127.0.0.1:4000:4000"]` na czas testów.
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4000/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
       interval: 10s
@@ -57,3 +69,20 @@ services:
 
 volumes:
   postgres_data:
+    # `name:` wymusza dokładną nazwę volume'u, bez auto-prefixu compose project
+    # name (`<dir>_postgres_data`). Powód: na serwerze produkcyjnym chodzi
+    # inny postgres który używa generic `postgres_data` — kolizja by przykryła
+    # tamte dane (postgres init w nowym kontenerze widzi niepustą bazę i
+    # crashuje, albo gorzej — nadpisuje rolami z tego compose'a).
+    name: grodno_pg_data
+
+networks:
+  # Sieć wewnętrzna tego compose'a (server ↔ postgres). Default driver bridge.
+  internal:
+
+  # `shared-proxy` istnieje już na serwerze (utworzona przez compose'a nginx'a).
+  # `external: true` znaczy: nie twórz, tylko podepnij się. Lokalnie żeby ten
+  # plik nie sypał błędem zanim sieć powstanie:
+  #   docker network create shared-proxy
+  shared-proxy:
+    external: true
