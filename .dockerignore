@@ -1,0 +1,20 @@
+# Wszystko co nie jest potrzebne do build'u serwera. Layer cache hit ↑,
+# context size ↓ (Docker wysyła wszystko z context'u do daemona).
+
+**/node_modules
+**/dist
+**/.gradle
+**/build
+apps/web/android
+apps/web/ios
+apps/web/dist
+.git
+.idea
+.vscode
+.claude
+design
+docs
+**/*.log
+**/.DS_Store
+**/.env
+**/.env.local

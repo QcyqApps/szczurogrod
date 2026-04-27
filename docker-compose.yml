@@ -17,15 +17,43 @@ services:
       timeout: 5s
       retries: 10
 
-#  adminer:
-#    image: adminer:4
-#    container_name: grodno-adminer
-#    restart: unless-stopped
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
+  server:
+    # Profil "app" oddziela tryb pełnej produkcji (server+db) od `pnpm db:up`
+    # (tylko Postgres pod lokalny dev przez `pnpm dev:server`).
+    # Start: `docker compose --profile app up -d`
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    container_name: grodno-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4000
+      # Wewnątrz docker network host = nazwa serwisu, port = wewnętrzny 5432
+      # (nie zmapowany 5434).
+      DATABASE_URL: postgres://grodno:grodno@postgres:5432/grodno
+      # Reszta env'ów — z pliku .env w root'cie repo (docker-compose czyta go
+      # automatycznie). `:?` = required, `:-x` = default.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wymagane (32+ znaków)}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN wymagane}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4000/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
