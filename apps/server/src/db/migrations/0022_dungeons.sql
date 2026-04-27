@@ -88,35 +88,15 @@ VALUES
 ON CONFLICT ("slug") DO NOTHING;--> statement-breakpoint
 
 -- ============ Przypisanie 19 mobów do lochów ============
--- Piwnice Miasta (L1-5) — 6 mobów
-INSERT INTO "dungeon_mobs" ("dungeon_slug", "enemy_slug", "sort_order") VALUES
-  ('piwnice-miasta', 'goblin-scav',     1),
-  ('piwnice-miasta', 'rat-giant',       2),
-  ('piwnice-miasta', 'slime-green',     3),
-  ('piwnice-miasta', 'kobold-thief',    4),
-  ('piwnice-miasta', 'goblin-warrior',  5),
-  ('piwnice-miasta', 'cave-spider',     6)
-ON CONFLICT DO NOTHING;--> statement-breakpoint
-
--- Stare Katakumby (L5-8) — 6 mobów
-INSERT INTO "dungeon_mobs" ("dungeon_slug", "enemy_slug", "sort_order") VALUES
-  ('stare-katakumby', 'skeleton-soldier', 1),
-  ('stare-katakumby', 'bat-dire',         2),
-  ('stare-katakumby', 'troll-cave',       3),
-  ('stare-katakumby', 'demon-imp',        4),
-  ('stare-katakumby', 'ogre-brute',       5),
-  ('stare-katakumby', 'skeleton-captain', 6)
-ON CONFLICT DO NOTHING;--> statement-breakpoint
-
--- Mroczna Grań (L10-18) — 7 mobów (w tym 3 quest-bossy jako regularne moby
--- najwyższego tieru; ich boss-quest identity Q5/Q10/Q15 pozostaje oddzielna
--- od dungeon-boss identity nowych 3 bossów).
-INSERT INTO "dungeon_mobs" ("dungeon_slug", "enemy_slug", "sort_order") VALUES
-  ('mroczna-gran', 'goblin-shaman',  1),
-  ('mroczna-gran', 'minotaur',       2),
-  ('mroczna-gran', 'slime-shadow',   3),
-  ('mroczna-gran', 'wraith',         4),
-  ('mroczna-gran', 'hobgoblin-king', 5),
-  ('mroczna-gran', 'bone-dragon',    6),
-  ('mroczna-gran', 'void-horror',    7)
-ON CONFLICT DO NOTHING;
+-- USUNIĘTE: oryginalne INSERTy do dungeon_mobs zależały od enemy_slug'ów
+-- (`goblin-scav`, `rat-giant`, ...) które żyją wyłącznie w TS array
+-- DUNGEON_ENEMIES (apps/server/src/game/combat.ts) i są wstrzykiwane do
+-- enemy_templates dopiero przez `seedIfEmpty(db)` w `content/seed.ts`,
+-- które działa PO migracjach. Na świeżej bazie produkcyjnej FK
+-- dungeon_mobs.enemy_slug → enemy_templates.slug walił constraint violation.
+--
+-- Naprawa: ten sam content (DUNGEON_MOBS w game/dungeons.ts) jest seedowany
+-- przez seed.ts z onConflictDoNothing(). Migracja zostawia tylko schema +
+-- regions/dungeons/3 nowe bossy; dungeon_mobs trafia z TS.
+-- Dla DBek które już mają stary 0022 zaaplikowany — zero efektu (drizzle
+-- nie przekompilowuje __drizzle_migrations według hashy plików).
