@@ -1,0 +1,1 @@
+ALTER TABLE "characters" ADD COLUMN "oracle_free_used_date" varchar(10);

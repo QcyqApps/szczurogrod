@@ -1,0 +1,1 @@
+ALTER TABLE "character_items" ADD COLUMN "qty" integer DEFAULT 1 NOT NULL;

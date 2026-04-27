@@ -1,0 +1,996 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppFrame } from '@/components/AppFrame';
+import {
+  AchievementUnlockModal,
+  ActiveBuffsBar,
+  LevelUpModal,
+  OfflineSummaryModal,
+  TabBar,
+  ToastContainer,
+  TopBar,
+  QuestRewardModal,
+} from '@/components/ui-common';
+import type { Tab } from '@/components/ui-common';
+import { ScreenTown } from '@/screens/town';
+import { ScreenChar } from '@/screens/character';
+import { ScreenQuests } from '@/screens/quests';
+import { ScreenArena } from '@/screens/arena';
+import { ScreenGuild } from '@/screens/guild';
+import { ScreenDungeon } from '@/screens/dungeon';
+import { ScreenShop } from '@/screens/shop';
+import type { ShopItem } from '@/screens/shop';
+import { ScreenTavern } from '@/screens/tavern';
+import { ScreenDaily } from '@/screens/daily';
+import { ScreenCreator } from '@/screens/creator';
+import { ScreenAchievements } from '@/screens/achievements';
+import { ScreenBlacksmith } from '@/screens/blacksmith';
+import { ScreenChronicle } from '@/screens/chronicle';
+import { ScreenLeaderboards } from '@/screens/leaderboards';
+import { ScreenScrapbook } from '@/screens/scrapbook';
+import { ScreenTower } from '@/screens/tower';
+import { ScreenDice } from '@/screens/dice';
+import { ScreenOracle } from '@/screens/oracle';
+import { ScreenBlessing } from '@/screens/blessing';
+import { ScreenWitch } from '@/screens/witch';
+import { ScreenSeasonPass } from '@/screens/season-pass';
+import { ScreenSettings } from '@/screens/settings';
+import { ScreenStables } from '@/screens/stables';
+import { ScreenTrainer } from '@/screens/trainer';
+import { ScreenWorldMap } from '@/screens/world';
+import { ScreenGemShop } from '@/screens/gem-shop';
+import type { Purchase } from '@/screens/gem-shop';
+import {
+  ScreenSplash,
+  ScreenLogin,
+  ScreenCreateChar,
+  ScreenTutorial,
+} from '@/screens/auth';
+import type { CreateCharPayload, LoginPayload } from '@/screens/auth';
+import { monsterBySlug } from '@/components/monsters';
+import { useAuthStore } from '@/api/auth-store';
+import { useToastQueue } from '@/api/toast-queue-store';
+import { useUnlockQueue } from '@/api/unlock-queue-store';
+import { trpc } from '@/api/trpc';
+import type {
+  Character,
+  EquippedSlot,
+  InventoryItem,
+  LevelUpInfo,
+  OfflineSummary,
+  Quest,
+  QuestReward,
+  Stamina,
+} from '@grodno/shared';
+import type { SubScreen } from '@/types/nav';
+
+type AppState = 'splash' | 'login' | 'createChar' | 'tutorial' | 'game';
+
+/** Ludzka nazwa moba po slug'u — fallback na slug gdy nie znany. */
+function enemyNameFor(slug: string): string {
+  return monsterBySlug(slug).name;
+}
+
+export default function App() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const authEmail = useAuthStore((s) => s.email);
+  const authIsGuest = useAuthStore((s) => s.isGuest);
+  const setTokens = useAuthStore((s) => s.setTokens);
+  const clearAuth = useAuthStore((s) => s.clear);
+
+  const [appState, setAppState] = useState<AppState>(() =>
+    accessToken ? 'game' : 'splash',
+  );
+
+  // ===== Server state =====
+  // Character fetched whenever we're authenticated and past login; tutorial needs it too.
+  const meQuery = trpc.me.get.useQuery(undefined, {
+    enabled: Boolean(accessToken) && (appState === 'game' || appState === 'tutorial'),
+  });
+  const char: Character | null = meQuery.data ?? null;
+
+  const questsQuery = trpc.quests.list.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const quests: readonly Quest[] = useMemo(() => questsQuery.data ?? [], [questsQuery.data]);
+
+  // Local 1Hz tick to drive countdown UI (Town "ready" badge, quest card timers)
+  // only while at least one quest is active. Zero network traffic.
+  const hasActiveQuests = quests.some((q) => q.state === 'active');
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    if (!hasActiveQuests) return;
+    const t = setInterval(() => setClockTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, [hasActiveQuests]);
+
+  // ===== Auth mutations =====
+  const loginMut = trpc.auth.login.useMutation();
+  const registerMut = trpc.auth.register.useMutation();
+  const guestMut = trpc.auth.guest.useMutation();
+  const createCharMut = trpc.me.createCharacter.useMutation();
+  const updateAppearanceMut = trpc.me.updateAppearance.useMutation();
+  const unlockCosmeticMut = trpc.me.unlockCosmetic.useMutation();
+
+  // ===== Quest mutations =====
+  const utils = trpc.useUtils();
+  const startQuestMut = trpc.quests.start.useMutation({
+    onSuccess: () => {
+      void utils.quests.list.invalidate();
+      void utils.me.get.invalidate();
+    },
+  });
+  const collectQuestMut = trpc.quests.collect.useMutation({
+    onSuccess: (data) => {
+      void utils.quests.list.invalidate();
+      void utils.me.get.invalidate();
+      void utils.inventory.list.invalidate();
+      if (data?.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
+    },
+  });
+  const skipQuestMut = trpc.quests.skip.useMutation({
+    onSuccess: () => {
+      void utils.quests.list.invalidate();
+      void utils.me.get.invalidate();
+    },
+  });
+  const skipQuestHalfMut = trpc.quests.skipHalf.useMutation({
+    onSuccess: () => {
+      void utils.quests.list.invalidate();
+      void utils.me.get.invalidate();
+    },
+    onError: (err) => {
+      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+    },
+  });
+  const refillStaminaMut = trpc.me.refillStamina.useMutation({
+    onSuccess: () => {
+      void utils.me.get.invalidate();
+      useToastQueue.getState().push({ text: '+10 wytrzymałości.', accent: '#2a4a3a' });
+    },
+    onError: (err) => {
+      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+    },
+  });
+  const renameMut = trpc.me.rename.useMutation({
+    onSuccess: (data) => {
+      void utils.me.get.invalidate();
+      useToastQueue.getState().push({
+        text: `Nowe imię: ${data.name}.`,
+        accent: '#2a4a3a',
+      });
+    },
+    onError: (err) => {
+      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+    },
+  });
+
+  // ===== Local UI state (not server-authoritative) =====
+  const [tab, setTab] = useState<Tab>('town');
+  const [sub, setSub] = useState<SubScreen | null>(null);
+  /** Który loch otwarty (gdy sub === 'dungeon'). null = nic nie wybrane. */
+  const [selectedDungeonSlug, setSelectedDungeonSlug] = useState<string | null>(null);
+  /** True gdy gracz jest w aktywnej walce — chowamy TabBar i rozciągamy content na pełną wysokość. */
+  const [inCombat, setInCombat] = useState(false);
+  const [questReward, setQuestReward] = useState<{
+    reward: QuestReward;
+    title: string;
+  } | null>(null);
+  const [levelUp, setLevelUp] = useState<LevelUpInfo | null>(null);
+  // Kolejka modali osiągnięć — App renderuje head, pushujemy z onSuccess mutacji.
+  const unlockHead = useUnlockQueue((s) => s.queue[0] ?? null);
+  const shiftUnlock = useUnlockQueue((s) => s.shift);
+  const pushUnlocks = useUnlockQueue((s) => s.push);
+  // Offline summary — pokazujemy raz per sesja. Serwer zwraca summary tylko
+  // gdy gracz był offline >= 30 min; potem odświaża last_seen_at, więc
+  // subsekwentne me.get zwracają null. Ref na object-identity żeby po
+  // zamknięciu modala (setOfflineSummary(null)) effect nie re-otworzył go
+  // z cachowanego pierwszego me.get — ten sam obiekt już został skonsumowany.
+  const [offlineSummary, setOfflineSummary] = useState<OfflineSummary | null>(null);
+  const seenOfflineSummaryRef = useRef<OfflineSummary | null>(null);
+  useEffect(() => {
+    const fresh = meQuery.data?.offlineSummary;
+    if (fresh && seenOfflineSummaryRef.current !== fresh) {
+      seenOfflineSummaryRef.current = fresh;
+      setOfflineSummary(fresh);
+    }
+  }, [meQuery.data]);
+
+  // Tropy auto-roll toasts — serwer zwraca slugs nowo wstawionych tropów w
+  // tym tick'u me.get. Push toast per slug; dedup po lastSeenNewTracks żeby
+  // szybkie refreshy nie spamowały (React StrictMode może wywołać useEffect
+  // dwa razy).
+  const pushToast = useToastQueue((s) => s.push);
+  const newTrackSlugs = meQuery.data?.newTrackSlugs;
+  const lastSeenNewTracksRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!newTrackSlugs || newTrackSlugs.length === 0) return;
+    const key = newTrackSlugs.join(',');
+    if (lastSeenNewTracksRef.current === key) return;
+    lastSeenNewTracksRef.current = key;
+    for (const slug of newTrackSlugs) {
+      pushToast({
+        tag: 'NOWY TROP',
+        accent: '#c8a090',
+        text: `Wytropiono: ${enemyNameFor(slug)}`,
+      });
+    }
+  }, [newTrackSlugs, pushToast]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const dailyStatusQuery = trpc.daily.getStatus.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  // Karciarz Franek — status darmowego rzutu. Enabled razem z resztą daily
+  // queries; cache'ujemy krótko bo status zmienia się tylko po kliknięciu
+  // „rzuć za darmo" (invalidate odpala ScreenDice).
+  const diceStatusQuery = trpc.dice.status.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const oracleStatusQuery = trpc.oracle.status.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const blessingStatusQuery = trpc.blessing.status.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const witchStatusQuery = trpc.witch.status.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const seasonPassStatusQuery = trpc.seasonPass.status.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  // Ile tierów do odebrania (reachable + unclaimed). Badge w banner town + char.
+  const seasonPassClaimableCount = (() => {
+    const s = seasonPassStatusQuery.data;
+    if (!s) return 0;
+    let count = 0;
+    for (let t = 1; t <= s.currentTier; t += 1) {
+      if ((s.claimedFreeBitmap & (1 << (t - 1))) === 0) count += 1;
+      if (s.isPremium && (s.claimedPremiumBitmap & (1 << (t - 1))) === 0) count += 1;
+    }
+    return count;
+  })();
+  const dailyClaimMut = trpc.daily.claim.useMutation({
+    onSuccess: (data) => {
+      void utils.daily.getStatus.invalidate();
+      void utils.me.get.invalidate();
+      // Daily reward can drop a potion/item — refresh the bag so it shows up.
+      void utils.inventory.list.invalidate();
+      if (data?.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
+    },
+  });
+
+  const inventoryQuery = trpc.inventory.list.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const shopCatalogQuery = trpc.shop.catalog.useQuery(undefined, {
+    enabled: Boolean(accessToken) && appState === 'game',
+    staleTime: 5 * 60_000,
+  });
+  const shopBuyMut = trpc.shop.buy.useMutation({
+    onSuccess: (data) => {
+      void utils.inventory.list.invalidate();
+      void utils.me.get.invalidate();
+      // Refresh catalog so the just-bought listing flips to soldOut right away.
+      void utils.shop.catalog.invalidate();
+      if (data?.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
+    },
+  });
+  const shopRefreshMut = trpc.shop.refresh.useMutation({
+    onSuccess: () => {
+      void utils.shop.catalog.invalidate();
+      void utils.me.get.invalidate();
+      useToastQueue.getState().push({
+        text: 'Oferta odświeżona.',
+        accent: '#2a4a3a',
+      });
+    },
+    onError: (err) => {
+      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+    },
+  });
+
+  const tavernCompanionsQuery = trpc.tavern.listCompanions.useQuery(undefined, {
+    enabled: Boolean(accessToken) && appState === 'game',
+    staleTime: 5 * 60_000,
+  });
+  const tavernRumorsQuery = trpc.tavern.getRumors.useQuery(undefined, {
+    enabled: Boolean(accessToken) && appState === 'game',
+    staleTime: 60 * 60_000,
+  });
+  const activeCompanionQuery = trpc.tavern.getActive.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const invalidateTavern = () => {
+    void utils.tavern.getActive.invalidate();
+    void utils.me.get.invalidate();
+  };
+  const hireMut = trpc.tavern.hire.useMutation({ onSuccess: invalidateTavern });
+  const dismissMut = trpc.tavern.dismiss.useMutation({ onSuccess: invalidateTavern });
+  const healFullMut = trpc.tavern.healFull.useMutation({
+    onSuccess: () => {
+      void utils.me.get.invalidate();
+    },
+  });
+  const healInstantMut = trpc.tavern.healInstant.useMutation({
+    onSuccess: () => {
+      void utils.me.get.invalidate();
+      pushToast({ text: 'HP/MP przywrócone.', accent: '#2a4a3a' });
+    },
+    onError: (err) => {
+      pushToast({ text: err.message, accent: '#c83232' });
+    },
+  });
+  const rerollCompanionsMut = trpc.tavern.rerollCompanions.useMutation({
+    onSuccess: () => {
+      void utils.tavern.listCompanions.invalidate();
+      void utils.me.get.invalidate();
+      pushToast({ text: 'Nowa lista towarzyszy.', accent: '#2a4a3a' });
+    },
+    onError: (err) => {
+      pushToast({ text: err.message, accent: '#c83232' });
+    },
+  });
+
+  const trainerQuery = trpc.trainer.getQuote.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const trainerBuyMut = trpc.trainer.buyStat.useMutation({
+    onSuccess: (data) => {
+      void utils.trainer.getQuote.invalidate();
+      void utils.me.get.invalidate();
+      if (data?.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
+    },
+  });
+
+  const stablesQuery = trpc.stables.list.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game' && sub === 'stables',
+  });
+
+  const worldQuery = trpc.world.get.useQuery(undefined, {
+    enabled:
+      Boolean(accessToken) &&
+      Boolean(char) &&
+      appState === 'game' &&
+      (sub === 'world' || sub === 'dungeon'),
+  });
+  const rentMountMut = trpc.stables.rent.useMutation({
+    onSuccess: (data) => {
+      void utils.stables.list.invalidate();
+      void utils.me.get.invalidate();
+      if (data?.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
+    },
+  });
+  const invalidateInventory = () => {
+    void utils.inventory.list.invalidate();
+    void utils.me.get.invalidate();
+  };
+  const equipMut = trpc.inventory.equip.useMutation({ onSuccess: invalidateInventory });
+  const unequipMut = trpc.inventory.unequip.useMutation({ onSuccess: invalidateInventory });
+  const dropMut = trpc.inventory.drop.useMutation({ onSuccess: invalidateInventory });
+  const sellMut = trpc.inventory.sell.useMutation({ onSuccess: invalidateInventory });
+  const usePotionMut = trpc.inventory.usePotion.useMutation({ onSuccess: invalidateInventory });
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [tab, sub]);
+
+  // If authenticated but no character yet, redirect to creator step.
+  useEffect(() => {
+    if (appState !== 'game') return;
+    if (meQuery.isLoading) return;
+    if (meQuery.data === null) {
+      setAppState('createChar');
+    }
+  }, [appState, meQuery.data, meQuery.isLoading]);
+
+  const questsReady = quests.filter(
+    (q) => q.state === 'active' && q.endsAt > 0 && q.endsAt <= Date.now(),
+  ).length;
+
+  const stamina: Stamina = char
+    ? { cur: char.stamina, max: char.staminaMax }
+    : { cur: 0, max: 10 };
+
+  async function handleLogin(payload: LoginPayload) {
+    const res = payload.isNew
+      ? await registerMut.mutateAsync({ email: payload.email, password: payload.password })
+      : await loginMut.mutateAsync({ email: payload.email, password: payload.password });
+    setTokens({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+      email: res.email,
+      isGuest: res.isGuest,
+    });
+    setAppState(res.hasCharacter ? 'game' : 'createChar');
+  }
+
+  async function handleGuest() {
+    const res = await guestMut.mutateAsync();
+    setTokens({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      userId: res.userId,
+      email: res.email,
+      isGuest: res.isGuest,
+    });
+    setAppState('createChar');
+  }
+
+  async function handleCreateChar(payload: CreateCharPayload) {
+    await createCharMut.mutateAsync(payload);
+    await utils.me.get.invalidate();
+    setAppState('tutorial');
+  }
+
+  const navTo = useCallback((screen: Tab | SubScreen) => {
+    if (
+      screen === 'town' ||
+      screen === 'char' ||
+      screen === 'quest' ||
+      screen === 'arena' ||
+      screen === 'guild'
+    ) {
+      setSub(null);
+      setTab(screen);
+    } else {
+      setSub(screen);
+    }
+  }, []);
+
+  async function startQuest(id: string) {
+    try {
+      await startQuestMut.mutateAsync({ questId: id });
+    } catch (e) {
+      console.error('startQuest failed', e);
+    }
+  }
+
+  async function collectQuest(id: string) {
+    const q = quests.find((x) => x.id === id);
+    if (!q) return;
+    try {
+      const reward = await collectQuestMut.mutateAsync({ questId: id });
+      setQuestReward({ reward, title: q.title });
+      if (reward.levelUp) setLevelUp(reward.levelUp);
+    } catch (e) {
+      console.error('collectQuest failed', e);
+    }
+  }
+
+  async function skipQuest(id: string, _cost: number) {
+    void _cost;
+    try {
+      await skipQuestMut.mutateAsync({ questId: id });
+    } catch (e) {
+      console.error('skipQuest failed', e);
+    }
+  }
+
+  function onCombatClosed() {
+    void utils.me.get.invalidate();
+  }
+
+  async function onBuy(item: ShopItem) {
+    try {
+      await shopBuyMut.mutateAsync({ itemId: item.id });
+    } catch (e) {
+      console.error('shop.buy failed', e);
+    }
+  }
+
+  const devGrantMut = trpc.dev.grantPurchase.useMutation({
+    onSuccess: (data) => {
+      const parts: string[] = [];
+      if (data.grantedGems > 0) parts.push(`+${data.grantedGems} gemów`);
+      if (data.grantedGold > 0) parts.push(`+${data.grantedGold.toLocaleString('pl-PL')}g`);
+      pushToast({
+        tag: 'DEMO',
+        accent: '#3a6aa8',
+        text: parts.join(' · ') || 'Przyznano.',
+      });
+      void utils.me.get.invalidate();
+    },
+    onError: (err) => {
+      pushToast({
+        text: `Nie udało się przyznać: ${err.message}`,
+        accent: '#c83232',
+      });
+    },
+  });
+
+  function onGemPurchase(pack: Purchase) {
+    // DEV mode only — prawdziwy IAP przyjdzie w Phase Capacitor M4.
+    // W prod mode serwer zwróci FORBIDDEN, toast pokaże błąd.
+    let gems = 0;
+    let gold = 0;
+    if (pack.bundle) {
+      for (const r of pack.bundle.rewards) {
+        if (r.kind === 'gems') gems += r.value;
+        else if (r.kind === 'gold') gold += r.value;
+        // r.kind === 'item' — skipujemy, mock items bez template ID w DB
+      }
+    } else if (pack.gems) {
+      gems = pack.gems;
+    }
+    if (gems === 0 && gold === 0) {
+      pushToast({ text: 'Ten zakup niczego nie przyznaje.', accent: '#c83232' });
+      return;
+    }
+    devGrantMut.mutate({ packId: pack.id, gems, gold });
+  }
+
+  async function onDailyClaim() {
+    try {
+      return await dailyClaimMut.mutateAsync();
+    } catch (e) {
+      console.error('daily claim failed', e);
+      return null;
+    }
+  }
+
+  // ===== Render =====
+  if (appState === 'splash') {
+    return (
+      <AppFrame>
+        <ScreenSplash onContinue={() => setAppState('login')} />
+      </AppFrame>
+    );
+  }
+
+  if (appState === 'login') {
+    return (
+      <AppFrame>
+        <div style={{ height: '100%', position: 'relative', background: '#1a0a2a' }}>
+          <ScreenLogin onLogin={handleLogin} onGuest={handleGuest} />
+        </div>
+      </AppFrame>
+    );
+  }
+
+  if (appState === 'createChar') {
+    return (
+      <AppFrame>
+        <div style={{ height: '100%', position: 'relative', background: '#1a0a2a' }}>
+          <ScreenCreateChar
+            onDone={handleCreateChar}
+            onBackToLogin={() => {
+              clearAuth();
+              setAppState('login');
+            }}
+          />
+        </div>
+      </AppFrame>
+    );
+  }
+
+  if (appState === 'tutorial' && char) {
+    return (
+      <AppFrame>
+        <div style={{ height: '100%', position: 'relative', background: '#1a0a2a' }}>
+          <ScreenTutorial char={char} onDone={() => setAppState('game')} />
+        </div>
+      </AppFrame>
+    );
+  }
+
+  if (!char) {
+    return (
+      <AppFrame>
+        <div
+          style={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f3ead9',
+            textAlign: 'center',
+            padding: 20,
+          }}
+        >
+          <div className="h-title" style={{ fontSize: 16, color: '#5a3a2a' }}>
+            {meQuery.isError ? (
+              <>
+                Błąd połączenia z serwerem.
+                <br />
+                <button
+                  type="button"
+                  className="cbtn sm"
+                  style={{ marginTop: 8 }}
+                  onClick={() => {
+                    clearAuth();
+                    setAppState('login');
+                  }}
+                >
+                  Wyloguj
+                </button>
+              </>
+            ) : (
+              'Ładowanie postaci...'
+            )}
+          </div>
+        </div>
+      </AppFrame>
+    );
+  }
+
+  let content: React.ReactNode = null;
+  if (sub === 'dungeon') {
+    // Gdy selectedDungeonSlug jest ustawiony — wchodzimy "w loch". Nazwa i
+    // desc pobierane z worldQuery (cached gdy się chwilę wcześniej otworzyło
+    // mapę). Fallback: stary flat-view gdy brak slugu (backward compat).
+    const selectedDungeon = selectedDungeonSlug
+      ? worldQuery.data?.regions
+          .flatMap((r) => r.dungeons)
+          .find((d) => d.slug === selectedDungeonSlug) ?? null
+      : null;
+    content = (
+      <ScreenDungeon
+        char={char}
+        onBack={() => {
+          if (selectedDungeonSlug) {
+            // Loch otwarty z mapy → wracamy na mapę, nie do miasta.
+            setSelectedDungeonSlug(null);
+            setSub('world');
+          } else {
+            setSub(null);
+          }
+        }}
+        onReward={onCombatClosed}
+        onLevelUp={(info) => setLevelUp(info)}
+        dungeonSlug={selectedDungeonSlug ?? undefined}
+        dungeonName={selectedDungeon?.name}
+        dungeonDesc={selectedDungeon?.desc}
+        onCombatStateChange={setInCombat}
+      />
+    );
+  } else if (sub === 'world') {
+    content = (
+      <ScreenWorldMap
+        regions={worldQuery.data?.regions ?? []}
+        charLvl={char.lvl}
+        onDungeonOpen={(slug) => {
+          setSelectedDungeonSlug(slug);
+          setSub('dungeon');
+        }}
+        onBack={() => setSub(null)}
+      />
+    );
+  } else if (sub === 'shop') {
+    // Build the equipped map from the bag query so the shop can show deltas
+    // vs what the character is wearing right now.
+    const equippedForShop: Partial<Record<EquippedSlot, InventoryItem>> = {};
+    for (const it of inventoryQuery.data ?? []) {
+      if (it.equippedSlot) {
+        equippedForShop[it.equippedSlot] = it;
+      }
+    }
+    content = (
+      <ScreenShop
+        char={char}
+        items={shopCatalogQuery.data?.items ?? []}
+        equipped={equippedForShop}
+        refreshCost={shopCatalogQuery.data?.refreshCost ?? 10}
+        refreshCountToday={shopCatalogQuery.data?.refreshCountToday ?? 0}
+        refreshPending={shopRefreshMut.isPending}
+        onRefresh={() => shopRefreshMut.mutate()}
+        onBuy={onBuy}
+        onBack={() => setSub(null)}
+      />
+    );
+  } else if (sub === 'tavern') {
+    content = (
+      <ScreenTavern
+        rumors={tavernRumorsQuery.data ?? []}
+        companions={tavernCompanionsQuery.data ?? []}
+        activeCompanion={activeCompanionQuery.data ?? null}
+        playerGold={char.gold}
+        playerGems={char.gems}
+        playerHp={char.hp}
+        playerHpMax={char.hpMax}
+        playerMp={char.mp}
+        playerMpMax={char.mpMax}
+        healerCost={char.healerCost}
+        healerReadyAt={char.healerReadyAt}
+        onHire={async (slug) => {
+          try {
+            await hireMut.mutateAsync({ slug });
+          } catch (e) {
+            console.error('tavern.hire failed', e);
+          }
+        }}
+        onDismiss={async () => {
+          try {
+            await dismissMut.mutateAsync();
+          } catch (e) {
+            console.error('tavern.dismiss failed', e);
+          }
+        }}
+        onHealFull={async () => {
+          try {
+            await healFullMut.mutateAsync();
+          } catch (e) {
+            console.error('tavern.healFull failed', e);
+          }
+        }}
+        onHealInstant={() => healInstantMut.mutate()}
+        healInstantPending={healInstantMut.isPending}
+        onRerollCompanions={() => rerollCompanionsMut.mutate()}
+        rerollCompanionsPending={rerollCompanionsMut.isPending}
+        onBack={() => setSub(null)}
+        onOpenDice={() => setSub('dice')}
+        diceFreeAvailable={diceStatusQuery.data?.freeAvailable ?? false}
+        onOpenOracle={() => setSub('oracle')}
+        oracleFreeAvailable={oracleStatusQuery.data?.freeAvailable ?? false}
+        onOpenBlessing={() => setSub('blessing')}
+        blessingCooldownReadyAt={blessingStatusQuery.data?.cooldownReadyAt ?? null}
+        onOpenWitch={() => setSub('witch')}
+        witchCurseCount={witchStatusQuery.data?.curses.length ?? 0}
+      />
+    );
+  } else if (sub === 'daily') {
+    const status = dailyStatusQuery.data;
+    content = (
+      <ScreenDaily
+        day={status?.day ?? 1}
+        claimed={status?.claimedToday ?? false}
+        onClaim={onDailyClaim}
+        onBack={() => setSub(null)}
+      />
+    );
+  } else if (sub === 'creator') {
+    content = (
+      <ScreenCreator
+        cls={char.cls}
+        appearance={char.appearance}
+        mode="edit"
+        gems={char.gems}
+        onUnlock={async (slug) => {
+          await unlockCosmeticMut.mutateAsync({ slug });
+          await utils.me.get.invalidate();
+        }}
+        onSave={async (appearance) => {
+          await updateAppearanceMut.mutateAsync({ appearance });
+          await utils.me.get.invalidate();
+          setSub(null);
+        }}
+        onCancel={() => setSub(null)}
+      />
+    );
+  } else if (sub === 'gemshop') {
+    content = (
+      <ScreenGemShop char={char} onBack={() => setSub(null)} onPurchase={onGemPurchase} />
+    );
+  } else if (sub === 'trainer') {
+    content = (
+      <ScreenTrainer
+        quote={trainerQuery.data ?? null}
+        pending={trainerBuyMut.isPending ? (trainerBuyMut.variables?.stat ?? null) : null}
+        onBuy={async (stat) => {
+          try {
+            await trainerBuyMut.mutateAsync({ stat });
+          } catch (e) {
+            console.error('trainer.buyStat failed', e);
+          }
+        }}
+        onBack={() => setSub(null)}
+      />
+    );
+  } else if (sub === 'stables') {
+    content = (
+      <ScreenStables
+        mounts={stablesQuery.data?.mounts ?? []}
+        activeMount={char.activeMount ?? stablesQuery.data?.active ?? null}
+        playerGold={char.gold}
+        playerLvl={char.lvl}
+        nextUnlockLvl={stablesQuery.data?.nextUnlockLvl ?? null}
+        onRent={async (slug) => {
+          try {
+            await rentMountMut.mutateAsync({ slug });
+          } catch (e) {
+            console.error('stables.rent failed', e);
+          }
+        }}
+        onBack={() => setSub(null)}
+      />
+    );
+  } else if (sub === 'achievements') {
+    content = <ScreenAchievements onBack={() => setSub(null)} />;
+  } else if (sub === 'chronicle') {
+    content = <ScreenChronicle onBack={() => setSub(null)} />;
+  } else if (sub === 'leaderboards') {
+    content = <ScreenLeaderboards onBack={() => setSub(null)} />;
+  } else if (sub === 'scrapbook') {
+    content = <ScreenScrapbook onBack={() => setSub(null)} />;
+  } else if (sub === 'blacksmith') {
+    content = <ScreenBlacksmith onBack={() => setSub(null)} />;
+  } else if (sub === 'tower') {
+    content = <ScreenTower onBack={() => setSub(null)} />;
+  } else if (sub === 'dice') {
+    content = <ScreenDice onBack={() => setSub(null)} />;
+  } else if (sub === 'oracle') {
+    content = <ScreenOracle onBack={() => setSub(null)} />;
+  } else if (sub === 'blessing') {
+    content = <ScreenBlessing onBack={() => setSub(null)} />;
+  } else if (sub === 'witch') {
+    content = <ScreenWitch onBack={() => setSub(null)} />;
+  } else if (sub === 'seasonPass') {
+    content = <ScreenSeasonPass onBack={() => setSub(null)} />;
+  } else if (sub === 'settings') {
+    content = (
+      <ScreenSettings
+        email={authEmail}
+        isGuest={authIsGuest}
+        characterName={char.name}
+        playerGems={char.gems}
+        onRename={(newName) => renameMut.mutate({ name: newName })}
+        renamePending={renameMut.isPending}
+        onBack={() => setSub(null)}
+        onLogout={() => {
+          clearAuth();
+          setSub(null);
+          setTab('town');
+          setAppState('splash');
+        }}
+        onAccountDeleted={() => {
+          clearAuth();
+          setSub(null);
+          setTab('town');
+          setAppState('splash');
+        }}
+        onEditAppearance={() => setSub('creator')}
+        onReplayTutorial={() => {
+          setSub(null);
+          setAppState('tutorial');
+        }}
+      />
+    );
+  } else if (tab === 'town') {
+    content = (
+      <ScreenTown
+        char={char}
+        nav={navTo}
+        dailyAvailable={dailyStatusQuery.data ? !dailyStatusQuery.data.claimedToday : false}
+        questsDone={questsReady}
+        seasonPassClaimableCount={seasonPassClaimableCount}
+      />
+    );
+  } else if (tab === 'char') {
+    content = (
+      <ScreenChar
+        char={char}
+        items={inventoryQuery.data ?? []}
+        onEditAppearance={() => setSub('creator')}
+        onEquip={async (item) => {
+          if (item.slot === 'potion' || item.slot === 'any') return;
+          await equipMut.mutateAsync({ itemId: item.id, targetSlot: item.slot });
+        }}
+        onUnequip={async (item) => {
+          await unequipMut.mutateAsync({ itemId: item.id });
+        }}
+        onDrop={async (item) => {
+          await dropMut.mutateAsync({ itemId: item.id });
+        }}
+        onSell={async (item) => {
+          await sellMut.mutateAsync({ itemId: item.id });
+        }}
+        onUsePotion={async (item) => {
+          await usePotionMut.mutateAsync({ itemId: item.id });
+        }}
+        onNavigate={navTo}
+        dailyAvailable={
+          dailyStatusQuery.data ? !dailyStatusQuery.data.claimedToday : false
+        }
+        seasonPassClaimableCount={seasonPassClaimableCount}
+      />
+    );
+  } else if (tab === 'quest') {
+    content = (
+      <ScreenQuests
+        quests={quests}
+        onStart={startQuest}
+        onCollect={collectQuest}
+        onSkip={skipQuest}
+        onSkipHalf={(id) => skipQuestHalfMut.mutate({ questId: id })}
+        onRefillStamina={() => refillStaminaMut.mutate()}
+        refillStaminaPending={refillStaminaMut.isPending}
+        onBack={() => navTo('town')}
+        gems={char.gems}
+        stamina={stamina}
+        charLvl={char.lvl}
+        mountSpeedPct={char.activeMount?.speedPct ?? 0}
+      />
+    );
+  } else if (tab === 'arena') {
+    content = <ScreenArena char={char} onBack={() => navTo('town')} />;
+  } else if (tab === 'guild') {
+    content = <ScreenGuild />;
+  }
+
+  return (
+    <AppFrame>
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#f3ead9',
+          position: 'relative',
+        }}
+      >
+        {!inCombat && (
+          <div style={{ paddingTop: 'var(--frame-top)' }}>
+            <TopBar
+              char={char}
+              onProfile={() => {
+                setSub(null);
+                setTab('char');
+              }}
+              onGemShop={() => {
+                setTab('town');
+                setSub('gemshop');
+              }}
+              onSettings={() => setSub('settings')}
+            />
+            <ActiveBuffsBar buffs={char.activeBuffs} />
+          </div>
+        )}
+
+        <div
+          ref={scrollRef}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            // Walka: górny margin = frame-top (status bar iOS mockupu).
+            // Bez walki TopBar już daje spacing — scroll bez paddingu góry.
+            paddingTop: inCombat ? 'var(--frame-top)' : 0,
+            // Walka zajmuje pełną wysokość bez TabBar'a → dół frame-bottom
+            // dla home indicator. Bez walki TabBar jest flex child — sam
+            // bierze swój space, scroll nie rezerwuje.
+            paddingBottom: inCombat ? 'var(--frame-bottom)' : 0,
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            // Rezerwuj miejsce pod scrollbar zawsze — kiedy content rośnie
+            // (np. po kliknięciu itemu u Kowala) scroll się pojawia bez
+            // przeskoku layoutu. Na mobile scrollbar jest overlay, więc bez
+            // wpływu. Webkit <14 ignoruje — akceptowalny fallback.
+            scrollbarGutter: 'stable',
+          }}
+        >
+          {content}
+        </div>
+
+        {!inCombat && (
+          <TabBar
+            tab={sub ? null : tab}
+            setTab={(t) => {
+              setSub(null);
+              setTab(t);
+            }}
+          />
+        )}
+
+        {questReward && (
+          <QuestRewardModal
+            reward={questReward.reward}
+            questTitle={questReward.title}
+            onClose={() => setQuestReward(null)}
+          />
+        )}
+        {levelUp && <LevelUpModal info={levelUp} onClose={() => setLevelUp(null)} />}
+        {unlockHead && (
+          <AchievementUnlockModal unlock={unlockHead} onClose={shiftUnlock} />
+        )}
+        {offlineSummary && (
+          <OfflineSummaryModal
+            summary={offlineSummary}
+            onClose={() => setOfflineSummary(null)}
+          />
+        )}
+        <ToastContainer />
+      </div>
+    </AppFrame>
+  );
+}

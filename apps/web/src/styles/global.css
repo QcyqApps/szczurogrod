@@ -1,0 +1,640 @@
+/* ========== Global reset / fonts ========== */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif;
+  color: #2a1810;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* Frame tokens — default (desktop mockup). Mobile media query niżej nadpisuje.
+   MUSZĄ być PRZED media query, bo CSS cascade: później-wygrywa przy równej
+   specyfice. Gdyby były niżej, mobile override by nie działał. */
+:root {
+  --frame-top: 54px;
+  --frame-bottom: 38px;
+}
+
+/* ========== Mobile (≤900px) — fullscreen bez mockupu ========== */
+@media (max-width: 900px) {
+  :root {
+    /* Safe area insets — Android/iOS notche, status bar overlay, gesture
+       home indicator. Capacitor StatusBar.setOverlaysWebView(false) zwykle
+       sprawia że env(safe-area-inset-top)=0 (bar wziął swoje miejsce poza
+       WebView), ale fallback przez env() chroni przed edge-cases:
+       - telefony z notch'em wciąż mogą zwracać >0
+       - dolny gesture nav (Pixel/Samsung One UI gestures) raportuje
+         safe-area-inset-bottom nawet w non-overlay trybie
+       - czysty web w przeglądarce (bez Capacitora) → 0, brak efektu
+    */
+    --frame-top: env(safe-area-inset-top, 0px);
+    --frame-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* iOS auto-zoom fix: Safari/WebKit przybliża viewport przy focus'ie na
+     input/textarea/select z font-size < 16px. Wymuszamy 16px na mobile
+     żeby blokować zoom. `!important` bije inline style TSX — accepowalne
+     dla platform quirk fix, nie normalnych style'i. */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  /* HARD SCROLL LOCK — html/body/#root trzymają dokładnie viewport height,
+     żaden z nich nie scrolluje. Dynamic viewport (dvh) na html = zawsze
+     realny widoczny obszar (Safari odejmuje URL bar). Wszystkie poziomy
+     mają overflow:hidden, więc single internal scroll (scroll container
+     w App) jest jedyną powierzchnią która reaguje na palec. */
+  html {
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
+    background: #f3ead9;
+  }
+  body {
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    display: block;
+    overflow: hidden;
+    background: #f3ead9;
+    position: fixed;
+    inset: 0;
+  }
+  body > #root {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+/* ========== Desktop (>900px) — mockup + dekoracyjne tło ========== */
+@media (min-width: 901px) {
+  html, body {
+    background: #3a2a1a;
+  }
+  body {
+    /* Ciepła parchmentowa kompozycja: radial highlight + dots pattern
+       żeby nie było płasko. Kolory z palety gry (ciemne brązy do złotego). */
+    background:
+      radial-gradient(ellipse at 50% 40%, #8a6a48 0%, #5a3f28 55%, #2a1810 100%),
+      repeating-linear-gradient(45deg, transparent 0 14px, rgba(0,0,0,0.04) 14px 15px);
+    background-blend-mode: multiply;
+    min-height: 100vh;
+    padding: 24px 0;
+    position: relative;
+  }
+  body > #root {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: calc(100vh - 48px);
+  }
+  /* Subtelna winiety dots texture na warstwie nad gradient'em. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(#f3ead9 1px, transparent 1.5px);
+    background-size: 20px 20px;
+    opacity: 0.06;
+    z-index: 0;
+  }
+  body > * { position: relative; z-index: 1; }
+
+  /* Dekoracyjny tytuł gry nad mockupem — render'owany przez DesktopChrome w React. */
+  .dt-title {
+    font-family: 'Luckiest Guy', 'Patrick Hand', system-ui, sans-serif;
+    font-size: 52px;
+    letter-spacing: 2px;
+    color: #ffc830;
+    text-shadow:
+      3px 3px 0 #2a1810,
+      -1px -1px 0 #2a1810,
+      1px -1px 0 #2a1810,
+      -1px 1px 0 #2a1810,
+      0 0 32px rgba(255, 200, 48, 0.35);
+    margin: 0;
+    line-height: 1;
+  }
+  .dt-tagline {
+    font-family: 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif;
+    font-size: 16px;
+    color: #e8c870;
+    font-style: italic;
+    opacity: 0.85;
+    margin: 0;
+    text-shadow: 1px 1px 0 #2a1810;
+  }
+  .dt-footer {
+    font-family: 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif;
+    font-size: 13px;
+    color: #c8a878;
+    opacity: 0.65;
+    text-align: center;
+    margin: 0;
+    text-shadow: 1px 1px 0 #1a0e08;
+  }
+}
+
+/* ===== Comic design tokens ===== */
+:root {
+  --ink: #2a1810;
+  --ink-soft: #5a3a2a;
+  --parchment: #f3ead9;
+  --parchment-2: #e8dcb9;
+  --parchment-3: #d4c491;
+  --gold: #d4a24c;
+  --gold-dark: #a87d2e;
+  --red: #c83232;
+  --red-dark: #8a1e1e;
+  --green: #4a7c3a;
+  --green-dark: #2e5020;
+  --blue: #3a5a8a;
+  --purple: #6a3a8a;
+  --orange: #e07820;
+
+  --shadow-hard: 3px 3px 0 var(--ink);
+  --shadow-hard-sm: 2px 2px 0 var(--ink);
+  --shadow-hard-lg: 5px 5px 0 var(--ink);
+
+  --border-thick: 3px solid var(--ink);
+  --border-med: 2.5px solid var(--ink);
+  --border-thin: 2px solid var(--ink);
+}
+
+/* ===== Headings / comic feel ===== */
+.h-display {
+  font-family: 'Luckiest Guy', 'Patrick Hand', sans-serif;
+  letter-spacing: 1px;
+  -webkit-text-stroke: 0.5px var(--ink);
+  text-shadow: 2px 2px 0 var(--ink);
+  color: var(--gold);
+  line-height: 1;
+}
+/* Clean variant: no stroke / shadow — use on light backgrounds / smaller sizes */
+.h-display.clean {
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  color: var(--ink);
+  letter-spacing: 0.5px;
+}
+.h-title {
+  font-family: 'Luckiest Guy', sans-serif;
+  letter-spacing: 0.8px;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* ===== Flavor text — handwritten quote, like a scribble on the margin =====
+   Caveat ma wąskie glify — poniżej 14px traci czytelność. Baseline 14px,
+   komponenty mogą podbijać (17, 18 dla hero'ów), NIE zjeżdżać. Patrz zasada
+   „Flavor text — minimum 14px" w CLAUDE.md. */
+.flavor {
+  font-family: 'Caveat', 'Patrick Hand', cursive;
+  font-weight: 700;
+  font-style: normal;
+  color: #5a3a2a;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
+  font-size: 14px;
+}
+.flavor.light { color: #f5eed8; }
+.flavor::before { content: '“'; margin-right: 1px; opacity: 0.7; }
+.flavor::after { content: '”'; margin-left: 1px; opacity: 0.7; }
+
+/* ===== Comic panel ===== */
+.panel {
+  background: var(--parchment);
+  border: var(--border-thick);
+  border-radius: 14px;
+  box-shadow: var(--shadow-hard);
+  position: relative;
+}
+.panel-tight {
+  background: var(--parchment);
+  border: var(--border-med);
+  border-radius: 12px;
+  box-shadow: var(--shadow-hard-sm);
+}
+
+/* ===== Comic button ===== */
+/* ===== Comic button ===== */
+.cbtn {
+  font-family: 'Luckiest Guy', sans-serif;
+  letter-spacing: 0.8px;
+  background: var(--gold);
+  color: var(--ink);
+  border: var(--border-thick);
+  border-radius: 10px;
+  padding: 0.55em 1em;
+  box-shadow: var(--shadow-hard-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  line-height: 1;
+}
+.cbtn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+.cbtn.red { background: var(--red); color: #fff3e0; }
+.cbtn.green { background: var(--green); color: #fff3e0; }
+.cbtn.blue { background: var(--blue); color: #fff3e0; }
+.cbtn.ghost { background: var(--parchment-2); }
+.cbtn.sm { padding: 0.45em 0.8em; font-size: 14px; }
+.cbtn.lg { padding: 0.7em 1.2em; font-size: 18px; }
+.cbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ===== Halftone dots — pops of comic texture ===== */
+.halftone {
+  background-image: radial-gradient(var(--ink) 1px, transparent 1.5px);
+  background-size: 8px 8px;
+  opacity: 0.14;
+}
+.halftone-gold {
+  background-image: radial-gradient(var(--gold-dark) 1.5px, transparent 2px);
+  background-size: 10px 10px;
+  opacity: 0.35;
+}
+
+/* ===== Speech / flavor bubble ===== */
+.bubble {
+  position: relative;
+  background: #fff;
+  border: var(--border-med);
+  border-radius: 14px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-hard-sm);
+  font-family: 'Patrick Hand', sans-serif;
+  font-size: 15px;
+}
+.bubble::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  bottom: -10px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-right: var(--border-med);
+  border-bottom: var(--border-med);
+  transform: rotate(45deg);
+}
+
+/* ===== Bars (HP / MP / XP) ===== */
+.bar {
+  height: 18px;
+  border: var(--border-thin);
+  border-radius: 999px;
+  background: var(--parchment-3);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.12);
+}
+.bar > .fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #ff6a6a 0%, #c83232 60%, #8a1e1e 100%);
+  transition: width 400ms ease;
+}
+.bar.mp > .fill {
+  background: linear-gradient(180deg, #7cb2ff 0%, #3a5a8a 60%, #1e3a6a 100%);
+}
+.bar.xp > .fill {
+  background: linear-gradient(180deg, #ffe07a 0%, #d4a24c 60%, #a87d2e 100%);
+}
+.bar.stam > .fill {
+  background: linear-gradient(180deg, #8ee060 0%, #4a7c3a 60%, #2e5020 100%);
+}
+
+/* ===== Inventory slot ===== */
+.slot {
+  width: 54px; height: 54px;
+  background: var(--parchment-2);
+  border: var(--border-med);
+  border-radius: 10px;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  position: relative;
+  user-select: none;
+}
+.slot.eq { background: #fff7e0; box-shadow: var(--shadow-hard-sm), inset 0 0 0 2px var(--gold); }
+.slot.rare::before {
+  content: ""; position: absolute; inset: -2px; border-radius: 10px;
+  background: conic-gradient(from 0deg, #4a7cff, #a04ef0, #4a7cff);
+  z-index: -1;
+  filter: blur(4px);
+  opacity: 0.6;
+}
+.slot.epic { box-shadow: var(--shadow-hard-sm), inset 0 0 0 2px #a04ef0; }
+.slot.legendary { box-shadow: var(--shadow-hard-sm), inset 0 0 0 2px var(--orange); }
+
+/* ===== Pip / badge ===== */
+.pip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0.25em 0.7em;
+  border: var(--border-thin);
+  border-radius: 999px;
+  background: var(--parchment);
+  font-family: 'Luckiest Guy', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  box-shadow: 1px 1px 0 var(--ink);
+  line-height: 1;
+}
+.pip.gold { background: var(--gold); }
+.pip.red { background: var(--red); color: #fff; }
+.pip.green { background: var(--green); color: #fff; }
+
+/* ===== Floating damage number ===== */
+@keyframes dmgFloat {
+  0% { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+  15% { transform: translate(-50%, -20px) scale(1.3); opacity: 1; }
+  100% { transform: translate(-50%, -80px) scale(0.9); opacity: 0; }
+}
+.dmg-num {
+  position: absolute;
+  left: 50%;
+  font-family: 'Luckiest Guy', sans-serif;
+  font-size: 38px;
+  color: #fff;
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+  animation: dmgFloat 900ms ease-out forwards;
+  z-index: 10;
+}
+.dmg-num.crit { color: var(--gold); font-size: 52px; }
+.dmg-num.heal { color: #6ad060; }
+.dmg-num.miss { color: #b0a8a0; font-size: 26px; }
+.dmg-num.dodge { color: #8ec8ff; font-size: 26px; }
+/* Status + ability-proc dmg popups — color signals source. */
+.dmg-num.poison { color: #a0e040; }      /* DOT tick */
+.dmg-num.magic  { color: #c840ff; }      /* enemy magic proc, ignores DEF */
+.dmg-num.pierce { color: #ff8c2a; }      /* enemy armor pierce proc */
+
+/* ===== Shake on hit =====
+   Single gentle recoil + settle, not a vibration. Previous 5-keyframe back-and-
+   forth jittered too much; this eases out once and returns smoothly. */
+@keyframes hitShake {
+  0%   { transform: translate(0, 0) rotate(0); }
+  30%  { transform: translate(-3px, 2px) rotate(-1.2deg); }
+  60%  { transform: translate(1.5px, -0.5px) rotate(0.6deg); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+.shake { animation: hitShake 320ms cubic-bezier(0.25, 0.9, 0.3, 1); }
+
+/* ===== Defeat flourish — skull rises from smoke ===== */
+@keyframes defeatSmokeRise {
+  0%   { opacity: 0;    transform: translate(-50%, 28px) scale(0.5); }
+  40%  { opacity: 0.9;  transform: translate(-50%, 4px)  scale(1.05); }
+  100% { opacity: 0.85; transform: translate(-50%, 0)    scale(1); }
+}
+@keyframes defeatSkullRise {
+  0%   { opacity: 0; transform: translateY(40px) rotate(-10deg) scale(0.4); }
+  55%  { opacity: 1; transform: translateY(-8px) rotate(4deg)   scale(1.12); }
+  80%  {             transform: translateY(2px)  rotate(-2deg)  scale(0.98); }
+  100% { opacity: 1; transform: translateY(0)    rotate(0)      scale(1); }
+}
+@keyframes defeatSkullBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@keyframes defeatWilt {
+  0%   { filter: none;                           transform: rotate(0); }
+  60%  { filter: grayscale(70%) brightness(0.8); transform: rotate(7deg); }
+  100% { filter: grayscale(85%) brightness(0.6); transform: rotate(10deg); }
+}
+.defeat-overlay { animation: none; }
+.defeat-smoke {
+  animation: defeatSmokeRise 700ms ease-out forwards;
+}
+.defeat-skull {
+  /* Rise first, then gentle endless bob once landed. */
+  animation:
+    defeatSkullRise 800ms cubic-bezier(0.34, 1.56, 0.64, 1) 180ms both,
+    defeatSkullBob 1800ms ease-in-out 1000ms infinite;
+}
+.defeat-wilt {
+  animation: defeatWilt 700ms ease-out forwards;
+  transform-origin: 50% 80%;
+}
+
+/* ===== Reward / loot card (shared across QuestRewardModal + CombatView victory) ===== */
+@keyframes qrm-slide {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+@keyframes qrm-glow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(160,78,240,0.20); }
+  50%      { box-shadow: 0 0 0 6px rgba(160,78,240,0.40); }
+}
+
+/* ===== POW/WHAM comic burst ===== */
+@keyframes burstIn {
+  0% { transform: translate(-50%, -50%) scale(0.1) rotate(-15deg); opacity: 0; }
+  30% { transform: translate(-50%, -50%) scale(1.3) rotate(5deg); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.2) rotate(0deg); opacity: 0; }
+}
+.burst {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Luckiest Guy', sans-serif;
+  font-size: 56px;
+  color: var(--gold);
+  -webkit-text-stroke: 2px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink);
+  pointer-events: none;
+  animation: burstIn 500ms ease-out forwards;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+/* ===== Coin flip / shimmer ===== */
+@keyframes shimmer {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+.shimmer-y { animation: shimmer 2s ease-in-out infinite; }
+
+/* ===== Bounce ===== */
+@keyframes bounceY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.bounce { animation: bounceY 1.6s ease-in-out infinite; }
+
+/* ===== Chest shake ===== */
+@keyframes chestTease {
+  0%, 60%, 100% { transform: translate(0,0) rotate(0); }
+  65% { transform: translate(-3px, 0) rotate(-3deg); }
+  70% { transform: translate(3px, 0) rotate(3deg); }
+  75% { transform: translate(-2px, 0) rotate(-2deg); }
+  80% { transform: translate(2px, 0) rotate(2deg); }
+}
+.chest-tease { animation: chestTease 3s ease-in-out infinite; }
+
+/* ===== Progress tick / appear ===== */
+@keyframes popIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.pop-in { animation: popIn 280ms ease-out; }
+
+/* ===== Screen enter ===== */
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.screen-in { animation: screenIn 220ms ease-out; }
+
+/* ===== Drag ghost ===== */
+.drag-ghost {
+  opacity: 0.4;
+}
+.drop-zone.over {
+  box-shadow: var(--shadow-hard-sm), inset 0 0 0 3px var(--green);
+  background: #d6ebc0;
+}
+
+/* ===== Scrollbars ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--ink-soft); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ===== Utility ===== */
+.no-select { user-select: none; -webkit-user-select: none; }
+.clickable { cursor: pointer; }
+.clickable:active { transform: translate(1px, 1px); }
+
+/* ===== Boss intro overlay — 1.5s flourish przy engage bossa ===== */
+@keyframes boss-intro-fade {
+  0%   { opacity: 0; }
+  15%  { opacity: 1; }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes boss-intro-scale {
+  0%   { transform: scale(0.4); }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes boss-intro-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+/* ===== Modal fade-in (persistent modals — nie zmykane auto) =====
+ * boss-intro-fade fades in/out w 0.3s bo boss-intro sam się chowa po 1.5s.
+ * Dla modali które stoją aż user kliknie OK, potrzebujemy TYLKO fade-in
+ * (bez snap'a z powrotem do opacity: 1 po końcu animacji — to powoduje blink).
+ */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ===== Toast — slide from top ===== */
+@keyframes toast-slide {
+  0%   { opacity: 0; transform: translateY(-20px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Hero castle — drobne animacje w ScreenTown.
+ * Flaga powiewa zawsze, okna migoczą wieczorem, komin dymi zimą.
+ * Koszt: ~3 animations × ~4 keyframes. Liveness at near zero cost.
+ *
+ * `transform-box: fill-box` — origin liczymy względem bbox elementu SVG
+ * (bez tego CSS transforms w SVG zaczynają w (0,0) globalnego układu). */
+@keyframes castle-flag-wave {
+  0%, 100% { transform: skewY(0deg) scaleX(1); }
+  25%      { transform: skewY(-10deg) scaleX(0.88); }
+  55%      { transform: skewY(6deg) scaleX(0.96); }
+  80%      { transform: skewY(-4deg) scaleX(0.92); }
+}
+.castle-flag {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: castle-flag-wave 2.2s ease-in-out infinite;
+}
+
+@keyframes castle-window-flicker {
+  0%, 100% { opacity: 1; }
+  32%      { opacity: 0.62; }
+  55%      { opacity: 0.92; }
+  78%      { opacity: 0.48; }
+}
+.castle-window-lit {
+  animation: castle-window-flicker 3.6s ease-in-out infinite;
+}
+
+@keyframes castle-smoke-rise {
+  0%   { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  15%  { opacity: 0.55; }
+  70%  { opacity: 0.22; }
+  100% { transform: translate(2px, -16px) scale(1.35); opacity: 0; }
+}
+.castle-smoke {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: castle-smoke-rise 3s ease-in-out infinite;
+}
+.castle-smoke-1 { animation-delay: 1s; }
+.castle-smoke-2 { animation-delay: 2s; }
+
+/* Szczur-mascot przebiega po gruncie pod zamkiem. Dash = 30% czasu cyklu
+ * (widoczny), reszta = szczur siedzi schowany offscreen right. Kadencja
+ * konfigurowalna z ScreenTown.tsx przez `animationDuration` inline —
+ * domyślny `RAT_DASH_CYCLE_SEC` nadpisuje 8s tutaj. 500px w prawo z zapasem
+ * pokrywa mobile frame (~380-400px) + parent clip. */
+@keyframes castle-rat-dash {
+  0%   { transform: translateX(-60px); }
+  30%  { transform: translateX(500px); }
+  100% { transform: translateX(500px); }
+}
+.castle-rat {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  animation: castle-rat-dash 8s linear infinite;
+  pointer-events: none;
+}
+
+/* Drobny bounce nałożony na SVG ciała — sprint look bez rysowania klatek
+ * nóżek. Parent `castle-rat` robi horizontal translate, ten robi lekki
+ * pionowy odbić. Transforms się składają. */
+@keyframes castle-rat-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.5px); }
+}
+.castle-rat-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: castle-rat-bounce 0.22s linear infinite;
+}
+
+/* Karciarz Franek — potrząsanie kostką podczas rolla. Mały chaos, krótki
+ * cykl (< 0.1s) żeby wyglądało jak wibracja, nie jak rotacja. */
+@keyframes dice-shake {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  20%  { transform: translate(-2px, 1px) rotate(-4deg); }
+  40%  { transform: translate(2px, -1px) rotate(5deg); }
+  60%  { transform: translate(-1px, 2px) rotate(-2deg); }
+  80%  { transform: translate(1px, -2px) rotate(3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "characters" ADD COLUMN "dice_free_used_date" varchar(10);

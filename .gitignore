@@ -1,0 +1,52 @@
+./.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# Testing
+coverage
+
+.env
+
+apps/server/.env
+apps/server/node_modules
+apps/web/node_modules
+apps/web/android
+.claude
+design
+docs
+node_modules
+packages/shared/node_modules
+scripts
+scripts
+
+# Capacitor — natywne projekty (apps/web/android, apps/web/ios) commit'ujemy
+# żeby zmiany w Manifest/gradle/icons były wersjonowane. Capacitor generuje
+# własne `.gitignore` per platforma które wyklucza artefakty buildu (build/,
+# .gradle/, app/src/main/assets/public/ itp.).

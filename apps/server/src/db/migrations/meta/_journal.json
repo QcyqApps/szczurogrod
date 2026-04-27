@@ -1,0 +1,398 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1776694554290,
+      "tag": "0000_aberrant_red_ghost",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776704613948,
+      "tag": "0001_freezing_inhumans",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776705563177,
+      "tag": "0002_nebulous_james_howlett",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776755213217,
+      "tag": "0003_true_hellfire_club",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776759749451,
+      "tag": "0004_far_chameleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776760000000,
+      "tag": "0005_backfill_template_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776766812878,
+      "tag": "0006_parallel_giant_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776769790938,
+      "tag": "0007_material_jubilee",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776773279234,
+      "tag": "0008_familiar_devos",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776778000000,
+      "tag": "0009_hp_mp_regen",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776787000000,
+      "tag": "0010_potion_heal",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776795000000,
+      "tag": "0011_olaf_heal_bonus",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776800000000,
+      "tag": "0012_shop_purchases",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776810000000,
+      "tag": "0013_enemy_cooldowns",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776820000000,
+      "tag": "0014_dungeon_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1776830000000,
+      "tag": "0015_dungeon_tracks",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776840000000,
+      "tag": "0016_mob_hp_bump",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1776850000000,
+      "tag": "0017_enemy_abilities",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776860000000,
+      "tag": "0018_stables",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1776861000000,
+      "tag": "0019_seed_mounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1776862000000,
+      "tag": "0020_mount_icons",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1776863000000,
+      "tag": "0021_chronicles",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1776864000000,
+      "tag": "0022_dungeons",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1776865000000,
+      "tag": "0023_dungeon_boss_drops",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1776866000000,
+      "tag": "0024_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1776867000000,
+      "tag": "0025_last_seen_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1776868000000,
+      "tag": "0026_chapter_2",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1776869000000,
+      "tag": "0027_chapter_2_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1776870000000,
+      "tag": "0028_arena",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1776871000000,
+      "tag": "0029_arena_matches",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1776872000000,
+      "tag": "0030_chapter_3",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1776873000000,
+      "tag": "0031_unique_item_icons",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1776874000000,
+      "tag": "0032_final_icon_dedupe",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1776875000000,
+      "tag": "0033_akt_5_quests",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1776876000000,
+      "tag": "0034_akt_5_shop",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1776877000000,
+      "tag": "0035_more_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1776878000000,
+      "tag": "0036_guilds",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1776879000000,
+      "tag": "0037_guild_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1776928101017,
+      "tag": "0038_guild_buildings",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1776929000000,
+      "tag": "0039_guild_wars",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1776929500000,
+      "tag": "0040_guild_war_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1776931000000,
+      "tag": "0041_guild_raids",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1776931500000,
+      "tag": "0042_guild_raid_achievements",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1776940000000,
+      "tag": "0043_gem_sinks",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1776950000000,
+      "tag": "0044_scrapbook",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1776955000000,
+      "tag": "0045_blacksmith",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1776960000000,
+      "tag": "0046_tower",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1776969962455,
+      "tag": "0047_shop_refresh",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1777015316682,
+      "tag": "0048_character_buffs",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1777020000000,
+      "tag": "0049_reprice_buff_elixirs",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1777029264968,
+      "tag": "0050_dice_karciarz_franek",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1777030157829,
+      "tag": "0051_oracle_wrozka_hanusia",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1777033438904,
+      "tag": "0052_mnich_panteleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1777034469153,
+      "tag": "0053_curses_baba_jaga",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1777035462410,
+      "tag": "0054_season_pass",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1777040000000,
+      "tag": "0055_chapter_4",
+      "breakpoints": true
+    }
+  ]
+}
