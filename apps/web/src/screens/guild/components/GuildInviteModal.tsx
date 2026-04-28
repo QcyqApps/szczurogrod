@@ -3,12 +3,20 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { PortraitByClass } from '@/components/portraits';
+import { useT, tStatic, type DictKey } from '@/i18n';
 
 export interface GuildInviteModalProps {
   onClose: () => void;
 }
 
+const CLASS_LABEL_KEY: Record<'warrior' | 'mage' | 'rogue', DictKey> = {
+  warrior: 'class.warrior.title',
+  mage: 'class.mage.title',
+  rogue: 'class.rogue.title',
+};
+
 export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
+  const t = useT();
   const pushToast = useToastQueue((s) => s.push);
   const [raw, setRaw] = useState('');
   const [query, setQuery] = useState('');
@@ -28,14 +36,16 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
     onSuccess: (_, vars) => {
       const target = searchQuery.data?.results.find((r) => r.id === vars.characterId);
       pushToast({
-        text: `Zaproszono ${target?.name ?? 'gracza'}.`,
+        text: target?.name
+          ? tStatic('guildInvite.toast.success').replace('{name}', target.name)
+          : tStatic('guildInvite.toast.successFallback'),
         accent: '#2a4a3a',
       });
       onClose();
     },
     onError: (err) => {
       const msg =
-        err instanceof TRPCClientError ? err.message : 'Nie udało się zaprosić.';
+        err instanceof TRPCClientError ? err.message : tStatic('guildInvite.toast.fail');
       pushToast({ text: msg, accent: '#c83232', ttlMs: 4200 });
     },
   });
@@ -73,13 +83,13 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
           className="h-display"
           style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}
         >
-          ZAPROŚ GRACZA
+          {t('guildInvite.title')}
         </div>
 
         <input
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
-          placeholder="Szukaj po nazwie (min. 3 znaki)"
+          placeholder={t('guildInvite.search.placeholder')}
           autoFocus
           style={{
             width: '100%',
@@ -98,12 +108,12 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginBottom: 8 }}
           >
-            Wpisz kogo szukasz. Miasto duże.
+            {t('guildInvite.prompt')}
           </div>
         )}
 
         {query.length >= 3 && searchQuery.isLoading && (
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a' }}>Szukam...</div>
+          <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a' }}>{t('guildInvite.searching')}</div>
         )}
 
         {query.length >= 3 && !searchQuery.isLoading && results.length === 0 && (
@@ -111,7 +121,7 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginBottom: 8 }}
           >
-            Nikogo takiego w Szczurogrodzie. Albo już gdzieś siedzi.
+            {t('guildInvite.empty')}
           </div>
         )}
 
@@ -147,7 +157,9 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
                     {r.name}
                   </div>
                   <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                    {labelForClass(r.cls)} · LVL {r.lvl}
+                    {t('guildInvite.line')
+                      .replace('{cls}', t(CLASS_LABEL_KEY[r.cls]))
+                      .replace('{lvl}', String(r.lvl))}
                   </div>
                 </div>
                 <button
@@ -156,7 +168,7 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
                   disabled={inviteMut.isPending}
                   onClick={() => inviteMut.mutate({ characterId: r.id })}
                 >
-                  ZAPROŚ
+                  {t('guildInvite.btn')}
                 </button>
               </div>
             ))}
@@ -164,15 +176,9 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
         )}
 
         <button type="button" className="cbtn ghost sm" style={{ width: '100%' }} onClick={onClose}>
-          ZAMKNIJ
+          {t('guildInvite.close')}
         </button>
       </div>
     </div>
   );
-}
-
-function labelForClass(cls: 'warrior' | 'mage' | 'rogue'): string {
-  if (cls === 'warrior') return 'Wojownik';
-  if (cls === 'mage') return 'Mag';
-  return 'Łotrzyk';
 }

@@ -7,6 +7,7 @@ import type { DungeonEnemy } from './ScreenDungeon';
 
 export function dungeonEnemyToCombatInfo(enemy: DungeonEnemy): CombatEnemyInfo {
   return {
+    slug: enemy.slug,
     name: enemy.name,
     lvl: enemy.lvl,
     flavor: enemy.flavor,

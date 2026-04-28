@@ -1,15 +1,41 @@
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin } from '@/components/icons';
+import { useT, type DictKey } from '@/i18n';
 import type { StatKey, TrainerQuote } from '@grodno/shared';
 
 const STAT_META: Record<
   StatKey,
-  { label: string; desc: string; color: string; icon: React.ComponentProps<typeof GameIcon>['name'] }
+  {
+    labelKey: DictKey;
+    descKey: DictKey;
+    color: string;
+    icon: React.ComponentProps<typeof GameIcon>['name'];
+  }
 > = {
-  atk: { label: 'ATAK', desc: 'Bijesz mocniej.', color: '#c83232', icon: 'sword' },
-  def: { label: 'OBRONA', desc: 'Dostajesz mniej.', color: '#3a5a8a', icon: 'shield-item' },
-  mag: { label: 'MAGIA', desc: 'Ogniem, lodem, czymkolwiek.', color: '#6a3a8a', icon: 'orb' },
-  spd: { label: 'SZYBKOŚĆ', desc: 'Unikasz ciosów. MOCNY celuje.', color: '#4a7c3a', icon: 'bolt' },
+  atk: {
+    labelKey: 'trainer.stat.atk.label',
+    descKey: 'trainer.stat.atk.desc',
+    color: '#c83232',
+    icon: 'sword',
+  },
+  def: {
+    labelKey: 'trainer.stat.def.label',
+    descKey: 'trainer.stat.def.desc',
+    color: '#3a5a8a',
+    icon: 'shield-item',
+  },
+  mag: {
+    labelKey: 'trainer.stat.mag.label',
+    descKey: 'trainer.stat.mag.desc',
+    color: '#6a3a8a',
+    icon: 'orb',
+  },
+  spd: {
+    labelKey: 'trainer.stat.spd.label',
+    descKey: 'trainer.stat.spd.desc',
+    color: '#4a7c3a',
+    icon: 'bolt',
+  },
 };
 
 export interface ScreenTrainerProps {
@@ -20,6 +46,7 @@ export interface ScreenTrainerProps {
 }
 
 export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerProps) {
+  const t = useT();
   const stats: StatKey[] = ['atk', 'def', 'mag', 'spd'];
 
   return (
@@ -44,10 +71,10 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
           className="h-display"
           style={{ fontSize: 22, color: '#ffc830', position: 'relative' }}
         >
-          PLAC TRENINGOWY
+          {t('trainer.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 17, marginTop: 4, position: 'relative' }}>
-          Złoto w pot, pot w staty.
+          {t('trainer.flavor')}
         </div>
       </div>
 
@@ -64,7 +91,7 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
             className="h-title"
             style={{ fontSize: 14, color: '#5a3a2a', letterSpacing: 0.4 }}
           >
-            TWÓJ PORTFEL
+            {t('trainer.wallet')}
           </span>
           <span className="pip gold" style={{ fontSize: 14 }}>
             <IcoCoin s={14} /> {quote?.gold.toLocaleString('pl') ?? '—'}
@@ -75,7 +102,7 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
           className="flavor light"
           style={{ fontSize: 14, color: '#7a5a3a', marginBottom: 10, textAlign: 'center' }}
         >
-          Trening drożeje kwadratowo. Po L35 sprzęt zwykle taniej.
+          {t('trainer.note')}
         </div>
 
         {stats.map((s) => {
@@ -113,7 +140,7 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="h-title" style={{ fontSize: 14, color: meta.color, lineHeight: 1 }}>
-                  {meta.label}{' '}
+                  {t(meta.labelKey)}{' '}
                   <span className="mono" style={{ fontSize: 16, color: '#2a1810' }}>
                     {current ?? '—'}
                   </span>
@@ -122,7 +149,9 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
                     → {current !== undefined ? current + 1 : '—'}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 2 }}>{meta.desc}</div>
+                <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 2 }}>
+                  {t(meta.descKey)}
+                </div>
               </div>
               <button
                 type="button"
@@ -150,12 +179,12 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
           className="flavor"
           style={{ fontSize: 14, marginTop: 10, color: '#5a3a2a', textAlign: 'center' }}
         >
-          Każdy kolejny punkt drożej. Trener też musi z czegoś żyć.
+          {t('trainer.footer')}
         </div>
       </div>
 
       <button type="button" className="cbtn ghost" style={{ width: '100%' }} onClick={onBack}>
-        ← Wróć
+        {t('trainer.back')}
       </button>
     </div>
   );

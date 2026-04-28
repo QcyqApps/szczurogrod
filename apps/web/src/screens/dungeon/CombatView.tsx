@@ -7,6 +7,8 @@ import { StatBar } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
 import { useCombatPrefs } from '@/api/combat-prefs-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
+import { useT, tStatic, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type {
   Character,
   CombatLoot,
@@ -24,11 +26,11 @@ const RARITY_COLOR: Record<Rarity, string> = {
   epic: '#a04ef0',
   legendary: '#ffc830',
 };
-const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'ZWYKŁY',
-  rare: 'RZADKI',
-  epic: 'EPICKI',
-  legendary: 'LEGEND.',
+const RARITY_LABEL_KEY: Record<Rarity, DictKey> = {
+  common: 'rarity.common',
+  rare: 'rarity.rare',
+  epic: 'rarity.epic',
+  legendary: 'rarity.legendary.short',
 };
 const rarityClass = (r: Rarity) =>
   r === 'epic' ? 'epic' : r === 'legendary' ? 'legendary' : r === 'rare' ? 'rare' : '';
@@ -55,8 +57,8 @@ interface DmgNum {
 }
 
 function dmgLabel(d: Pick<DmgNum, 'value' | 'kind'>): string {
-  if (d.kind === 'miss') return 'PUDŁO';
-  if (d.kind === 'dodge') return 'UNIK';
+  if (d.kind === 'miss') return tStatic('combat.dmg.miss');
+  if (d.kind === 'dodge') return tStatic('combat.dmg.dodge');
   if (d.kind === 'heal') return `+${d.value}`;
   return `-${d.value}`;
 }
@@ -116,19 +118,20 @@ function heavyMissPct(spd: number): number {
 function abilityLogLine(enemyName: string, ab: EnemyAbility): string {
   switch (ab.kind) {
     case 'magic':
-      return `${enemyName} rzuca klątwę — pancerz nie pomaga!`;
+      return tStatic('combat.ability.magic').replace('{name}', enemyName);
     case 'poison':
-      return `${enemyName} zatruwa na ${ab.turns} tury!`;
+      return tStatic('combat.ability.poison').replace('{name}', enemyName).replace('{turns}', String(ab.turns));
     case 'armor_pierce':
-      return `${enemyName} przebija pancerz!`;
+      return tStatic('combat.ability.armor_pierce').replace('{name}', enemyName);
   }
 }
 
-/** Compact label for a status effect (shown in the status bar under HP). */
 function statusLabel(s: StatusEffect): string {
   switch (s.kind) {
     case 'poison':
-      return `TRUCIZNA ${s.dmgPerTurn}/turę · ${s.turnsRemaining}×`;
+      return tStatic('combat.status.poison')
+        .replace('{dmg}', String(s.dmgPerTurn))
+        .replace('{turns}', String(s.turnsRemaining));
   }
 }
 
@@ -212,6 +215,9 @@ function DefeatOverlay({ size }: { size: number }) {
  * rozmiar i zwraca dowolny node — CombatView tylko osadza go w ramce.
  */
 export interface CombatEnemyInfo {
+  /** Server enemy slug — used for content translation lookup. Optional for
+   *  non-mob portraits (tower bosses) where we just display `name`. */
+  slug?: string;
   name: string;
   lvl: number;
   flavor: string;
@@ -245,9 +251,12 @@ export function CombatView({
   onLevelUp,
   mode = 'dungeon',
 }: CombatViewProps) {
+  const t = useT();
+  const tc = useContentT();
+  const enemyDisplayName = tc.enemyName(enemy.slug, enemy.name);
   const [state, setState] = useState<CombatState>(initialState);
   const [log, setLog] = useState<string[]>([
-    `Spotkałeś: ${enemy.name}! ${enemy.flavor}`,
+    t('combat.log.met').replace('{name}', enemyDisplayName).replace('{flavor}', enemy.flavor),
   ]);
   const [anims, setAnims] = useState<{ player: string; enemy: string }>({
     player: '',
@@ -339,7 +348,7 @@ export function CombatView({
     setTimeout(() => {
       if (enemyDodged) {
         addDmg('player', 0, 'dodge');
-        pushLog(`${char.name} uniknął ciosu!`);
+        pushLog(t('combat.log.dodged').replace('{name}', char.name));
         return;
       }
       setAnims((a) => ({ ...a, player: 'shake' }));
@@ -354,7 +363,9 @@ export function CombatView({
             ? 'pierce'
             : 'norm';
       addDmg('player', enemyDmg, kind);
-      pushLog(`${enemy.name} ciął za ${enemyDmg}`);
+      pushLog(
+        t('combat.log.enemyHit').replace('{enemy}', enemyDisplayName).replace('{dmg}', String(enemyDmg)),
+      );
     }, 500);
   }
 
@@ -382,11 +393,11 @@ export function CombatView({
       // Kind 'poison' → zielony popup, odróżnia od zwykłego hita.
       if (res.playerStatusDmg > 0) {
         addDmg('player', res.playerStatusDmg, 'poison');
-        pushLog(`Trucizna tnie za ${res.playerStatusDmg}!`);
+        pushLog(t('combat.log.poisonTick').replace('{dmg}', String(res.playerStatusDmg)));
       }
       if (res.playerMiss) {
         addDmg('enemy', 0, 'miss');
-        pushLog(`${char.name} spudłował!`);
+        pushLog(t('combat.log.miss').replace('{name}', char.name));
       } else {
         setAnims((a) => ({ ...a, enemy: 'shake' }));
         setTimeout(() => setAnims((a) => ({ ...a, enemy: '' })), 400);
@@ -403,10 +414,15 @@ export function CombatView({
           setBurst('CRIT!');
           setTimeout(() => setBurst(null), 500);
         }
-        pushLog(`${char.name} trafił za ${res.playerDmg}${res.playerCrit ? ' (KRYT!)' : ''}`);
+        pushLog(
+          t('combat.log.hit')
+            .replace('{name}', char.name)
+            .replace('{dmg}', String(res.playerDmg)) +
+            (res.playerCrit ? t('combat.log.crit.suffix') : ''),
+        );
       }
       if (res.enemyAbility) {
-        pushLog(abilityLogLine(enemy.name, res.enemyAbility));
+        pushLog(abilityLogLine(enemyDisplayName, res.enemyAbility));
       }
       setState(res.state);
       const enemyAttacked = res.state.status === 'fight';
@@ -422,7 +438,7 @@ export function CombatView({
       if (res.tower) setLastTower(res.tower);
       if (res.loot) {
         setLastLoot(res.loot);
-        pushLog(`Zdobyto: ${res.loot.name}!`);
+        pushLog(t('combat.log.loot').replace('{name}', res.loot.name));
         void utils.inventory.list.invalidate();
       }
       if (res.levelUp && onLevelUp) {
@@ -446,15 +462,18 @@ export function CombatView({
       });
       if (res.playerStatusDmg > 0) {
         addDmg('player', res.playerStatusDmg, 'poison');
-        pushLog(`Trucizna tnie za ${res.playerStatusDmg}!`);
+        pushLog(t('combat.log.poisonTick').replace('{dmg}', String(res.playerStatusDmg)));
       }
       if (res.healedHp > 0) addDmg('player', res.healedHp, 'heal');
       const parts: string[] = [];
       if (res.healedHp > 0) parts.push(`+${res.healedHp} HP`);
       if (res.healedMp > 0) parts.push(`+${res.healedMp} MP`);
-      pushLog(`Wypił ${res.itemName}${parts.length ? ` (${parts.join(', ')})` : ''}`);
+      pushLog(
+        t('combat.log.drank').replace('{name}', res.itemName) +
+          (parts.length ? ` (${parts.join(', ')})` : ''),
+      );
       if (res.enemyAbility) {
-        pushLog(abilityLogLine(enemy.name, res.enemyAbility));
+        pushLog(abilityLogLine(enemyDisplayName, res.enemyAbility));
       }
       setState(res.state);
       // Heal consumes a turn — enemy gets a hit in just like a normal attack.
@@ -609,9 +628,9 @@ export function CombatView({
                   fontSize: 10,
                   letterSpacing: 0.4,
                 }}
-                title="Wytropiony mob — nagrody ×2, większa szansa na łup."
+                title={t('combat.tracked.title')}
               >
-                <IcoPaw s={11} /> TROP ×2
+                <IcoPaw s={11} /> {t('combat.tracked.tag')}
               </div>
             )}
             <div style={{ width: 160, marginTop: 2 }}>
@@ -716,7 +735,7 @@ export function CombatView({
                     textAlign: 'center',
                     whiteSpace: 'nowrap',
                   }}
-                  title="Status effect aktywny — tyka na początku każdej twojej tury."
+                  title={t('combat.status.title')}
                 >
                   {statusLabel(s)}
                 </div>
@@ -777,7 +796,7 @@ export function CombatView({
               marginBottom: 2,
             }}
           >
-            <span>Decyzja…</span>
+            <span>{t('combat.decision')}</span>
             <span className="mono" style={{ fontWeight: 700 }}>
               {decisionSecondsLeft.toFixed(1)}s
             </span>
@@ -825,14 +844,10 @@ export function CombatView({
               gap: 6,
               background: simMode ? undefined : '#e8dcb9',
             }}
-            title={
-              simMode
-                ? 'Klik zatrzymuje symulację. Ty znów decydujesz.'
-                : 'Auto-pilot. Klepie akcje wg ustawień poniżej. Ręcznie nadal możesz odpalać MOCNY/MAGIA/LECZ.'
-            }
+            title={simMode ? t('combat.sim.toggleStop.title') : t('combat.sim.toggleStart.title')}
           >
             <GameIcon name="bolt" size={14} />
-            {simMode ? 'STOP — wracam do sterów' : 'SYMULUJ WALKĘ'}
+            {simMode ? t('combat.sim.toggleStop') : t('combat.sim.toggleStart')}
           </button>
           {simMode && (
             <div
@@ -844,25 +859,25 @@ export function CombatView({
               }}
             >
               <SimToggle
-                label="Auto-lecz"
-                sub="gdy HP < 40%"
+                label={t('combat.sim.autoHeal')}
+                sub={t('combat.sim.autoHeal.sub')}
                 on={simAutoHeal}
                 onToggle={() => setSimAutoHeal(!simAutoHeal)}
-                title="Gdy HP spadnie poniżej 40% max i masz miksturę HP w plecaku — sim ją wypije. Tura i tak stracona."
+                title={t('combat.sim.autoHeal.title')}
               />
               <SimToggle
-                label="Mocny"
-                sub="gdy gotowy"
+                label={t('combat.sim.heavy')}
+                sub={t('combat.sim.heavy.sub')}
                 on={simUseHeavy}
                 onToggle={() => setSimUseHeavy(!simUseHeavy)}
-                title="Sim wbija MOCNY gdy zdjęty z cooldownu. Wyższe dmg kosztem ryzyka pudła."
+                title={t('combat.sim.heavy.title')}
               />
               <SimToggle
-                label="Magia"
-                sub="gdy MP ≥ 10"
+                label={t('combat.sim.magic')}
+                sub={t('combat.sim.magic.sub')}
                 on={simUseMagic}
                 onToggle={() => setSimUseMagic(!simUseMagic)}
-                title="Sim rzuca MAGIA gdy ma MP. Przebija 50% DEF — wygra z opancerzonym, jeśli wyłączysz, MP zostaje na twoje ręczne czary."
+                title={t('combat.sim.magic.title')}
               />
             </div>
           )}
@@ -891,11 +906,11 @@ export function CombatView({
                   className="cbtn red"
                   onClick={() => attack('norm')}
                   disabled={locked}
-                  title="Pewny atak. Brak ryzyka, brak kosztu."
+                  title={t('combat.btn.atk.title')}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <GameIcon name="sword" size={18} /> ATAK
+                      <GameIcon name="sword" size={18} /> {t('combat.btn.atk')}
                     </span>
                     <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 400 }}>
                       {norm.lo}–{norm.hi}
@@ -909,14 +924,14 @@ export function CombatView({
                   disabled={locked || heavyLocked}
                   title={
                     heavyLocked
-                      ? `MOCNY gotowy za ${state.heavyCooldown} rund`
-                      : `Duży cios. Ryzyko pudła ${missPct}%. Cooldown 3 rundy.`
+                      ? t('combat.btn.heavy.lockedTitle').replace('{n}', String(state.heavyCooldown))
+                      : t('combat.btn.heavy.title').replace('{pct}', String(missPct))
                   }
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <GameIcon name="bolt" size={18} />
-                      MOCNY
+                      {t('combat.btn.heavy')}
                       {heavyLocked && (
                         <>
                           <IcoClock s={12} />
@@ -925,7 +940,12 @@ export function CombatView({
                       )}
                     </span>
                     <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 400 }}>
-                      {heavyLocked ? 'na chłodzeniu' : `${heavy.lo}–${heavy.hi} · ${missPct}% pudło`}
+                      {heavyLocked
+                        ? t('combat.btn.heavy.cooldown')
+                        : t('combat.btn.heavy.preview')
+                            .replace('{lo}', String(heavy.lo))
+                            .replace('{hi}', String(heavy.hi))
+                            .replace('{pct}', String(missPct))}
                     </span>
                   </div>
                 </button>
@@ -935,11 +955,11 @@ export function CombatView({
                   onClick={() => attack('magic')}
                   disabled={locked || state.playerMp < 10}
                   style={{ background: '#6a3a8a', color: '#fff' }}
-                  title="Magia: ignoruje 50% pancerza celu. Koszt −10 MP."
+                  title={t('combat.btn.magic.title')}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <GameIcon name="magic" size={18} /> MAGIA
+                      <GameIcon name="magic" size={18} /> {t('combat.btn.magic')}
                     </span>
                     <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 400 }}>
                       {magic.lo}–{magic.hi} · −10 MP
@@ -951,20 +971,19 @@ export function CombatView({
                   className="cbtn green"
                   onClick={() => setPickerOpen(true)}
                   disabled={locked || potions.length === 0}
-                  title={
-                    potions.length === 0
-                      ? 'Brak mikstur w plecaku.'
-                      : 'Wybierz miksturę. Zużywa turę — przeciwnik kontratakuje.'
-                  }
+                  title={potions.length === 0 ? t('combat.btn.heal.title.empty') : t('combat.btn.heal.title')}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <GameIcon name="potion" size={18} /> LECZ
+                      <GameIcon name="potion" size={18} /> {t('combat.btn.heal')}
                     </span>
                     <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 400 }}>
                       {potions.length === 0
-                        ? 'BRAK MIKSTUR'
-                        : `${potions.reduce((n, p) => n + p.qty, 0)} w plecaku`}
+                        ? t('combat.btn.heal.none')
+                        : t('combat.btn.heal.count').replace(
+                            '{n}',
+                            String(potions.reduce((n, p) => n + p.qty, 0)),
+                          )}
                     </span>
                   </div>
                 </button>
@@ -985,9 +1004,9 @@ export function CombatView({
             fontSize: 13,
             opacity: locked ? 0.55 : 0.85,
           }}
-          title="Klucz już spalony — walka się nie liczy, ale HP/MP zostają jak teraz. Bez łupu, bez XP."
+          title={t('combat.flee.title')}
         >
-          UCIEKAJ — porzuć walkę
+          {t('combat.flee')}
         </button>
       )}
       {pickerOpen && (
@@ -1028,7 +1047,7 @@ export function CombatView({
               }}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <GameIcon name="potion" size={16} /> WYBIERZ MIKSTURĘ
+                <GameIcon name="potion" size={16} /> {t('combat.picker.heading')}
               </span>
               <button
                 type="button"
@@ -1041,14 +1060,14 @@ export function CombatView({
                   color: '#5a3a2a',
                   padding: '0 4px',
                 }}
-                aria-label="Zamknij"
+                aria-label={t('combat.picker.close.aria')}
               >
                 ✕
               </button>
             </div>
             {potions.length === 0 ? (
               <div style={{ fontSize: 12, color: '#5a3a2a', padding: 12, textAlign: 'center' }}>
-                Plecak pusty. Kup u piekarza albo w sklepie.
+                {t('combat.picker.empty')}
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1107,7 +1126,7 @@ export function CombatView({
           style={{ padding: 14, marginTop: 10, textAlign: 'center', background: '#d8f0c0' }}
         >
           <div className="h-display" style={{ fontSize: 26, color: '#2e5020' }}>
-            ZWYCIĘSTWO!
+            {t('combat.victory')}
           </div>
           <div style={{ margin: '8px 0' }}>
             <span className="pip gold">
@@ -1175,7 +1194,7 @@ export function CombatView({
                     marginBottom: 2,
                   }}
                 >
-                  ŁUP · {RARITY_LABEL[lastLoot.rarity]}
+                  {t('combat.victory.lootLabel')}{t(RARITY_LABEL_KEY[lastLoot.rarity])}
                 </div>
                 <div className="h-title" style={{ fontSize: 14, lineHeight: 1.1 }}>
                   {lastLoot.name}
@@ -1184,7 +1203,7 @@ export function CombatView({
             </div>
           )}
           <button type="button" className="cbtn green" onClick={onBack}>
-            DALEJ!
+            {t('combat.victory.next')}
           </button>
         </div>
       )}
@@ -1197,13 +1216,13 @@ export function CombatView({
           style={{ padding: 14, marginTop: 10, textAlign: 'center', background: '#f0c0c0' }}
         >
           <div className="h-display" style={{ fontSize: 26, color: '#8a1e1e' }}>
-            PORAŻKA!
+            {t('combat.defeat')}
           </div>
           <div style={{ fontSize: 14, margin: '6px 0' }}>
-            Zostajesz z 1 HP. Wylecz się i wracaj.
+            {t('combat.defeat.body')}
           </div>
           <button type="button" className="cbtn red" onClick={onBack}>
-            WYCOFAJ SIĘ
+            {t('combat.defeat.retreat')}
           </button>
         </div>
       )}
@@ -1226,10 +1245,9 @@ export function CombatView({
  * animation keyframes dodane w `global.css`.
  */
 function BossIntroOverlay({ enemy }: { enemy: CombatEnemyInfo }) {
-  // enemy nie ma pola `abilities` bezpośrednio (to w combat state), więc intro
-  // pokazuje tylko portret, nazwę i LVL. Gdyby kiedyś chcieć ikon ability —
-  // trzeba to przepchać przez props z CombatView (state.* ma abilities tylko
-  // dla bieżącej tury, nie dla metadanych enemy).
+  const t = useT();
+  const tc = useContentT();
+  const enemyDisplayName = tc.enemyName(enemy.slug, enemy.name);
   return (
     <div
       aria-hidden
@@ -1256,7 +1274,7 @@ function BossIntroOverlay({ enemy }: { enemy: CombatEnemyInfo }) {
           animation: 'boss-intro-pulse 1.2s ease-in-out infinite',
         }}
       >
-        OSTRZEŻENIE
+        {t('combat.boss.warning')}
       </div>
       <div
         style={{
@@ -1284,7 +1302,7 @@ function BossIntroOverlay({ enemy }: { enemy: CombatEnemyInfo }) {
           marginTop: 4,
         }}
       >
-        BOSS
+        {t('combat.boss.label')}
       </div>
       <div
         style={{
@@ -1297,7 +1315,7 @@ function BossIntroOverlay({ enemy }: { enemy: CombatEnemyInfo }) {
           lineHeight: 1.1,
         }}
       >
-        {enemy.name.toUpperCase()}
+        {enemyDisplayName.toUpperCase()}
       </div>
       <div
         style={{
@@ -1326,6 +1344,7 @@ function TowerVictoryPanel({
   outcome: TowerCombatOutcome | null;
   onBack: () => void;
 }) {
+  const t = useT();
   const reward = outcome?.reward ?? null;
   const completedFloor = outcome ? outcome.newFloor - 1 : null;
   const isMilestone = reward?.isMilestone ?? false;
@@ -1342,14 +1361,14 @@ function TowerVictoryPanel({
       }}
     >
       <div className="h-display" style={{ fontSize: 26, color: '#2e5020' }}>
-        {isMilestone ? 'MILESTONE!' : 'WYŻEJ!'}
+        {isMilestone ? t('combat.tower.victory.milestone') : t('combat.tower.victory.up')}
       </div>
       {completedFloor !== null && (
         <div
           className="flavor"
           style={{ fontSize: 14, color: '#2a1810', marginTop: 4, marginBottom: 8 }}
         >
-          Ukończone piętro {completedFloor}. Schody skrzypią dalej.
+          {t('combat.tower.victory.completed').replace('{n}', String(completedFloor))}
         </div>
       )}
       {reward && (
@@ -1385,7 +1404,7 @@ function TowerVictoryPanel({
       )}
       <div>
         <button type="button" className="cbtn green" onClick={onBack}>
-          DALEJ
+          {t('combat.tower.victory.next')}
         </button>
       </div>
     </div>
@@ -1403,6 +1422,7 @@ function TowerDefeatPanel({
   outcome: TowerCombatOutcome | null;
   onBack: () => void;
 }) {
+  const t = useT();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (!outcome?.failedUntil) return;
@@ -1418,10 +1438,10 @@ function TowerDefeatPanel({
       style={{ padding: 14, marginTop: 10, textAlign: 'center', background: '#f0c0c0' }}
     >
       <div className="h-display" style={{ fontSize: 26, color: '#8a1e1e' }}>
-        PORAŻKA!
+        {t('combat.defeat')}
       </div>
       <div className="flavor" style={{ fontSize: 14, margin: '6px 0', color: '#4a0a0a' }}>
-        Padłeś. Wieża nie wybacza.
+        {t('combat.tower.defeat.body')}
       </div>
       {remainingMs > 0 && (
         <div
@@ -1435,14 +1455,14 @@ function TowerDefeatPanel({
             color: '#2a1810',
           }}
         >
-          <IcoClock s={14} /> Odpoczynek: {min}:{String(sec).padStart(2, '0')}
+          <IcoClock s={14} /> {t('combat.tower.defeat.rest').replace('{time}', `${min}:${String(sec).padStart(2, '0')}`)}
         </div>
       )}
       <div style={{ fontSize: 12, color: '#5a1818', marginBottom: 10 }}>
-        Wróć do wieży — tam możesz wskrzesić się za gemy albo poczekać.
+        {t('combat.tower.defeat.tail')}
       </div>
       <button type="button" className="cbtn red" onClick={onBack}>
-        WYCOFAJ SIĘ
+        {t('combat.defeat.retreat')}
       </button>
     </div>
   );

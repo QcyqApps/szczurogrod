@@ -8,6 +8,7 @@ import { GemSinkButton } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
+import { useT } from '@/i18n';
 import {
   GEM_SINK_COSTS,
   type ArenaFightResult,
@@ -22,6 +23,7 @@ export interface ScreenArenaProps {
 }
 
 export function ScreenArena({ char, onBack }: ScreenArenaProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const listQuery = trpc.arena.list.useQuery();
   const historyQuery = trpc.arena.history.useQuery();
@@ -44,13 +46,13 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
 
   const buyFightMut = trpc.arena.buyExtraFight.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Wykupiono walkę.', accent: '#2a4a3a' });
+      pushToast({ text: t('arena.toast.bought'), accent: '#2a4a3a' });
       void utils.arena.list.invalidate();
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : t('arena.toast.buyFailed'),
         accent: '#c83232',
       });
     },
@@ -77,7 +79,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
           className="h-display"
           style={{ fontSize: 22, textAlign: 'center', color: '#ffc830' }}
         >
-          ARENA
+          {t('arena.title')}
         </div>
         <div
           style={{
@@ -89,7 +91,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
         >
           <div>
             <div className="h-title" style={{ fontSize: 13, opacity: 0.8 }}>
-              RANKING
+              {t('arena.stats.rank')}
             </div>
             <div className="mono" style={{ fontSize: 22, fontWeight: 700 }}>
               {stats?.rank ? `#${stats.rank}` : '—'}
@@ -97,7 +99,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
           </div>
           <div>
             <div className="h-title" style={{ fontSize: 13, opacity: 0.8 }}>
-              PUNKTY
+              {t('arena.stats.points')}
             </div>
             <div className="mono" style={{ fontSize: 22, fontWeight: 700 }}>
               {stats?.arenaPoints ?? '—'}
@@ -105,7 +107,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
           </div>
           <div>
             <div className="h-title" style={{ fontSize: 13, opacity: 0.8 }}>
-              WALKI
+              {t('arena.stats.fights')}
             </div>
             <div className="mono" style={{ fontSize: 22, fontWeight: 700 }}>
               {stats ? `${stats.fightsToday}/${stats.fightsMax}` : '—'}
@@ -121,13 +123,15 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
               opacity: 0.8,
             }}
           >
-            Wygrane: {stats.arenaWins} · Porażki: {stats.arenaLosses}
+            {t('arena.stats.record')
+              .replace('{wins}', String(stats.arenaWins))
+              .replace('{losses}', String(stats.arenaLosses))}
           </div>
         )}
         {stats && stats.fightsToday >= stats.fightsMax && (
           <div style={{ textAlign: 'center', marginTop: 8 }}>
             <GemSinkButton
-              label="DOKUP WALKĘ"
+              label={t('arena.buyExtraFight')}
               cost={GEM_SINK_COSTS.extraArenaFight}
               playerGems={meQuery.data?.gems ?? 0}
               pending={buyFightMut.isPending}
@@ -148,11 +152,11 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
             gap: 6,
           }}
         >
-          <GameIcon name="crown" size={14} /> TOP {leaderboard.length || 10}
+          <GameIcon name="crown" size={14} /> {t('arena.top')} {leaderboard.length || 10}
         </div>
         {leaderboard.length === 0 && (
           <div style={{ fontSize: 12, color: '#5a3a2a', padding: '4px 0' }}>
-            Drabinka jeszcze pusta.
+            {t('arena.ladder.empty')}
           </div>
         )}
         {leaderboard.map((p) => (
@@ -225,12 +229,12 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
           gap: 6,
         }}
       >
-        <GameIcon name="crossed" size={14} /> RYWALE W TWOJEJ LIDZE
+        <GameIcon name="crossed" size={14} /> {t('arena.rivals.heading')}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {listQuery.isLoading && (
           <div className="panel-tight" style={{ padding: 10, fontSize: 12 }}>
-            Szukam rywali...
+            {t('arena.rivals.loading')}
           </div>
         )}
         {rivals.map((p) => (
@@ -263,7 +267,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
                       fontWeight: 400,
                     }}
                   >
-                    (NPC)
+                    {t('arena.rivals.npc')}
                   </span>
                 )}
               </div>
@@ -277,7 +281,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
                 }}
               >
                 LVL {p.lvl} · <GameIcon name="bolt" size={11} /> {p.power} ·{' '}
-                {p.arenaPoints} pkt
+                {p.arenaPoints} {t('arena.rivals.points')}
               </div>
             </div>
             <button
@@ -286,7 +290,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
               disabled={!canFight || fightMut.isPending}
               onClick={() => setFighting(p)}
             >
-              WALCZ
+              {t('arena.rivals.fight')}
             </button>
           </div>
         ))}
@@ -303,7 +307,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
             fontStyle: 'italic',
           }}
         >
-          Dziś już wystarczy. Wróć jutro.
+          {t('arena.noFights')}
         </div>
       )}
 
@@ -315,7 +319,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Miasto
+        {t('arena.back')}
       </button>
 
       {fighting && (
@@ -346,10 +350,11 @@ function HistoryPanel({
   matches: readonly ArenaMatchRow[];
   isLoading: boolean;
 }) {
+  const t = useT();
   if (isLoading) {
     return (
       <div className="panel-tight" style={{ padding: 10, marginTop: 12, fontSize: 12 }}>
-        Ładuję historię...
+        {t('arena.history.loading')}
       </div>
     );
   }
@@ -366,7 +371,7 @@ function HistoryPanel({
           gap: 6,
         }}
       >
-        <GameIcon name="scroll" size={14} /> OSTATNIE WALKI
+        <GameIcon name="scroll" size={14} /> {t('arena.history.heading')}
       </div>
       {matches.slice(0, 5).map((m) => (
         <div
@@ -401,13 +406,14 @@ function HistoryPanel({
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, lineHeight: 1.2 }}>
-              <b>{m.role === 'attacker' ? 'vs' : 'od'}</b> {m.opponentName}
+              <b>{m.role === 'attacker' ? t('arena.history.vs') : t('arena.history.from')}</b>{' '}
+              {m.opponentName}
               {m.opponentKind === 'npc' && (
-                <span style={{ fontSize: 9, color: '#8a6a4a', marginLeft: 4 }}>(NPC)</span>
+                <span style={{ fontSize: 9, color: '#8a6a4a', marginLeft: 4 }}>{t('arena.rivals.npc')}</span>
               )}
             </div>
             <div style={{ fontSize: 10, color: '#5a3a2a' }}>
-              L{m.opponentLvl} · {m.won ? 'WYGRANA' : 'PORAŻKA'}
+              L{m.opponentLvl} · {m.won ? t('arena.history.won') : t('arena.history.lost')}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -521,6 +527,7 @@ function FightConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useT();
   const detailsQuery = trpc.arena.rivalDetails.useQuery({ rivalId: rival.id });
   const rd = detailsQuery.data;
   // Preview używa base stats (char.stats). Nie pokazujemy wpływu ekwipunku
@@ -555,7 +562,7 @@ function FightConfirmModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-display" style={{ fontSize: 22 }}>
-          POJEDYNEK!
+          {t('arena.modal.duel.title')}
         </div>
         <div
           style={{
@@ -593,7 +600,7 @@ function FightConfirmModal({
           </div>
         </div>
         <div style={{ fontSize: 14, color: '#3a2a1a', marginBottom: 8 }}>
-          <b>{rival.name}</b> · LVL {rival.lvl} · {rival.arenaPoints} pkt
+          <b>{rival.name}</b> · LVL {rival.lvl} · {rival.arenaPoints} {t('arena.rivals.points')}
         </div>
 
         <div
@@ -606,7 +613,7 @@ function FightConfirmModal({
           }}
         >
           {detailsQuery.isLoading && (
-            <div style={{ fontSize: 13, color: '#5a3a2a' }}>Oceniam rywala...</div>
+            <div style={{ fontSize: 13, color: '#5a3a2a' }}>{t('arena.modal.assessing')}</div>
           )}
           {rd && (
             <>
@@ -636,7 +643,7 @@ function FightConfirmModal({
             onClick={onCancel}
             disabled={pending}
           >
-            ANULUJ
+            {t('arena.modal.cancel')}
           </button>
           <button
             type="button"
@@ -645,7 +652,7 @@ function FightConfirmModal({
             onClick={onConfirm}
             disabled={pending}
           >
-            {pending ? 'WALKA...' : 'DO BOJU!'}
+            {pending ? t('arena.modal.fighting') : t('arena.modal.toBattle')}
           </button>
         </div>
       </div>
@@ -663,6 +670,7 @@ function FightResultModal({
   result: ArenaFightResult;
   onClose: () => void;
 }) {
+  const t = useT();
   const [revealed, setRevealed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const total = result.log.length;
@@ -730,7 +738,11 @@ function FightResultModal({
             marginBottom: 6,
           }}
         >
-          {isFinished ? (result.won ? 'ZWYCIĘSTWO' : 'PORAŻKA') : 'POJEDYNEK'}
+          {isFinished
+            ? result.won
+              ? t('arena.modal.victory')
+              : t('arena.modal.defeat')
+            : t('arena.modal.duel')}
         </div>
         <div style={{ fontSize: 13, color: '#3a2a1a', marginBottom: 10 }}>
           vs <b>{result.rival.name}</b> · LVL {result.rival.lvl}
@@ -748,7 +760,7 @@ function FightResultModal({
             }}
           >
             <div>
-              <div style={{ fontSize: 10, color: '#5a3a2a' }}>PKT</div>
+              <div style={{ fontSize: 10, color: '#5a3a2a' }}>{t('arena.modal.pts')}</div>
               <div
                 className="mono"
                 style={{
@@ -762,7 +774,7 @@ function FightResultModal({
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: '#5a3a2a' }}>ZŁOTO</div>
+              <div style={{ fontSize: 10, color: '#5a3a2a' }}>{t('arena.modal.gold')}</div>
               <div
                 style={{
                   fontSize: 18,
@@ -776,7 +788,7 @@ function FightResultModal({
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, color: '#5a3a2a' }}>PASSA</div>
+              <div style={{ fontSize: 10, color: '#5a3a2a' }}>{t('arena.modal.streak')}</div>
               <div className="mono" style={{ fontSize: 18, fontWeight: 700 }}>
                 {result.currentStreak > 0 ? `×${result.currentStreak}` : '—'}
               </div>
@@ -806,8 +818,8 @@ function FightResultModal({
                 {entry.side === 'you' ? char.name : result.rival.name}
               </span>{' '}
               {entry.dmg === 0
-                ? 'chybia'
-                : `→ ${entry.dmg}${entry.crit ? ' KRYT' : ''} dmg`}{' '}
+                ? t('arena.modal.miss')
+                : `→ ${entry.dmg}${entry.crit ? ` ${t('arena.modal.crit')}` : ''} dmg`}{' '}
               <span style={{ color: '#a0a0a0' }}>(HP {entry.remainingHp})</span>
             </div>
           ))}
@@ -825,7 +837,7 @@ function FightResultModal({
             style={{ width: '100%' }}
             onClick={skip}
           >
-            POMIŃ
+            {t('arena.modal.skip')}
           </button>
         ) : (
           <button
@@ -834,7 +846,7 @@ function FightResultModal({
             style={{ width: '100%' }}
             onClick={onClose}
           >
-            ZAMKNIJ
+            {t('arena.modal.close')}
           </button>
         )}
       </div>

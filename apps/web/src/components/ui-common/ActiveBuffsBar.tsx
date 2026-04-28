@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { trpc } from '@/api/trpc';
+import { useT } from '@/i18n';
 import {
   IcoClock,
   IcoHeart,
@@ -85,6 +86,7 @@ export interface ActiveBuffsBarProps {
 }
 
 export function ActiveBuffsBar({ buffs }: ActiveBuffsBarProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const [now, setNow] = useState(Date.now());
 
@@ -135,7 +137,11 @@ export function ActiveBuffsBar({ buffs }: ActiveBuffsBarProps) {
         return (
           <div
             key={`${b.kind}-${b.isCurse ? 'c' : 'b'}`}
-            title={`${meta.label} ${valueText}${b.isCurse ? ' (klątwa)' : ''} — jeszcze ${formatTtl(msLeft)}`}
+            title={t('buff.title')
+              .replace('{label}', meta.label)
+              .replace('{value}', valueText)
+              .replace('{curse}', b.isCurse ? t('buff.curse.suffix') : '')
+              .replace('{ttl}', formatTtl(msLeft))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

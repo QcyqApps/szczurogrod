@@ -1,20 +1,22 @@
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
+import { useT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 
 export type Tab = 'town' | 'char' | 'quest' | 'arena' | 'guild';
 
 interface TabDef {
   id: Tab;
-  label: string;
+  labelKey: DictKey;
   icon: IconName;
 }
 
 const TABS: readonly TabDef[] = [
-  { id: 'town', label: 'Miasto', icon: 'castle' },
-  { id: 'char', label: 'Postać', icon: 'helmet' },
-  { id: 'quest', label: 'Questy', icon: 'scroll' },
-  { id: 'arena', label: 'Arena', icon: 'crossed' },
-  { id: 'guild', label: 'Gildia', icon: 'banner' },
+  { id: 'town', labelKey: 'tabs.town', icon: 'castle' },
+  { id: 'char', labelKey: 'tabs.char', icon: 'helmet' },
+  { id: 'quest', labelKey: 'tabs.quest', icon: 'scroll' },
+  { id: 'arena', labelKey: 'tabs.arena', icon: 'crossed' },
+  { id: 'guild', labelKey: 'tabs.guild', icon: 'banner' },
 ];
 
 export interface TabBarProps {
@@ -23,6 +25,7 @@ export interface TabBarProps {
 }
 
 export function TabBar({ tab, setTab }: TabBarProps) {
+  const t = useT();
   return (
     <div
       style={{
@@ -40,13 +43,13 @@ export function TabBar({ tab, setTab }: TabBarProps) {
         touchAction: 'manipulation',
       }}
     >
-      {TABS.map((t) => {
-        const active = tab === t.id;
+      {TABS.map((tab_def) => {
+        const active = tab === tab_def.id;
         return (
           <div
-            key={t.id}
+            key={tab_def.id}
             className="clickable no-select"
-            onClick={() => setTab(t.id)}
+            onClick={() => setTab(tab_def.id)}
             style={{
               flex: 1,
               textAlign: 'center',
@@ -69,7 +72,7 @@ export function TabBar({ tab, setTab }: TabBarProps) {
                   : 'none',
               }}
             >
-              <GameIcon name={t.icon} size={26} />
+              <GameIcon name={tab_def.icon} size={26} />
             </div>
             <div
               className="h-title"
@@ -80,7 +83,7 @@ export function TabBar({ tab, setTab }: TabBarProps) {
                 color: active ? '#d4a24c' : '#2a1810',
               }}
             >
-              {t.label}
+              {t(tab_def.labelKey)}
             </div>
           </div>
         );

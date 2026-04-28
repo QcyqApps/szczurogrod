@@ -1,11 +1,13 @@
 import { GameIcon } from '@/components/game-icons';
 import { trpc } from '@/api/trpc';
+import { useT } from '@/i18n';
 
 export interface ScreenChronicleProps {
   onBack: () => void;
 }
 
 export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
+  const t = useT();
   const q = trpc.town.chronicle.useQuery(undefined, {
     // Chronicle feed to głównie stałe wartości na dzień — nie spamuj serwera.
     staleTime: 60_000,
@@ -36,9 +38,9 @@ export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
         >
           <GameIcon name="megaphone" size={44} />
         </div>
-        <div className="h-display" style={{ fontSize: 22 }}>KRONIKI SZCZUROGRODU</div>
+        <div className="h-display" style={{ fontSize: 22 }}>{t('chronicle.title')}</div>
         <div className="flavor light" style={{ fontSize: 17, marginTop: 4 }}>
-          Co miasto widziało. Co karczmarz słyszał.
+          {t('chronicle.flavor')}
         </div>
       </div>
 
@@ -48,7 +50,7 @@ export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
             className="flavor"
             style={{ textAlign: 'center', padding: 12, color: '#5a3a2a' }}
           >
-            {q.isLoading ? 'Ładowanie kroniki…' : 'Kronikarz pisze. Wróć za chwilę.'}
+            {q.isLoading ? t('chronicle.loading') : t('chronicle.empty')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -76,8 +78,8 @@ export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
                   }}
                   title={
                     entry.source === 'event'
-                      ? 'Prawdziwy event gracza'
-                      : 'Plotka z miasta'
+                      ? t('chronicle.source.event')
+                      : t('chronicle.source.rumor')
                   }
                 >
                   {entry.source === 'event' ? '!' : '·'}
@@ -89,7 +91,7 @@ export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
                       className="mono"
                       style={{ fontSize: 10, color: '#8a6a4a', marginTop: 2 }}
                     >
-                      {formatAgo(entry.createdAt)}
+                      {formatAgo(entry.createdAt, t)}
                     </div>
                   )}
                 </div>
@@ -105,16 +107,18 @@ export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
         style={{ marginTop: 14, width: '100%' }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('btn.back')}
       </button>
     </div>
   );
 }
 
-function formatAgo(ms: number): string {
+function formatAgo(ms: number, t: ReturnType<typeof useT>): string {
   const diff = Date.now() - ms;
-  if (diff < 60_000) return 'przed chwilą';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min temu`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} h temu`;
-  return `${Math.floor(diff / 86_400_000)} dni temu`;
+  if (diff < 60_000) return t('chronicle.ago.justNow');
+  if (diff < 3_600_000)
+    return t('chronicle.ago.minutes').replace('{n}', String(Math.floor(diff / 60_000)));
+  if (diff < 86_400_000)
+    return t('chronicle.ago.hours').replace('{n}', String(Math.floor(diff / 3_600_000)));
+  return t('chronicle.ago.days').replace('{n}', String(Math.floor(diff / 86_400_000)));
 }

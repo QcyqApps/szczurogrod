@@ -3,6 +3,7 @@ import { AvatarPortrait } from '@/components/avatar';
 import type { Appearance, CharacterClass } from '@/components/avatar';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
+import { useT, type DictKey } from '@/i18n';
 
 interface TutorialChar {
   name: string;
@@ -11,14 +12,14 @@ interface TutorialChar {
 }
 
 interface StepPortrait {
-  title: string;
-  body: string;
+  titleKey: DictKey;
+  bodyKey: DictKey;
   portrait: true;
   cls: CharacterClass;
 }
 interface StepIcon {
-  title: string;
-  body: string;
+  titleKey: DictKey;
+  bodyKey: DictKey;
   icon: IconName;
 }
 type TutorialStep = StepPortrait | StepIcon;
@@ -33,38 +34,37 @@ export interface ScreenTutorialProps {
 }
 
 export function ScreenTutorial({ char, onDone }: ScreenTutorialProps) {
+  const t = useT();
   const [step, setStep] = useState(0);
 
   const steps: readonly TutorialStep[] = [
     {
-      title: `WITAJ, ${char.name.toUpperCase()}!`,
-      body:
-        'Szczurogród to spokojne miasto. Znaczy... było. Zanim pojawiły się szczury, smoki i magowie eksperymentujący z serem.',
+      titleKey: 'tutorial.step1.title',
+      bodyKey: 'tutorial.step1.body',
       cls: char.cls,
       portrait: true,
     },
     {
-      title: 'WYRUSZAJ NA QUESTY',
-      body:
-        'Pasek STAMINY regeneruje się sam. Wyruszaj, czekaj na timer, odbieraj nagrody. Nawet gdy jesteś offline, postęp się liczy.',
+      titleKey: 'tutorial.step2.title',
+      bodyKey: 'tutorial.step2.body',
       icon: 'scroll',
     },
     {
-      title: 'ZBIERAJ EKWIPUNEK',
-      body:
-        'Każdy item ma rzadkość — od zwykłych po legendarne. Wyposażaj w ekranie Postaci. Przeciągnij do slotu.',
+      titleKey: 'tutorial.step3.title',
+      bodyKey: 'tutorial.step3.body',
       icon: 'sword',
     },
     {
-      title: 'ROZWIJAJ SIĘ DALEJ',
-      body:
-        'Sklep, Lochy, Arena, Gildia, Tawerna, Daily Rewards — wszystko do twoich usług. Reszta już sama, bohaterze.',
+      titleKey: 'tutorial.step4.title',
+      bodyKey: 'tutorial.step4.body',
       icon: 'shop',
     },
   ];
 
   const s = steps[step];
   const last = step === steps.length - 1;
+  const title = t(s.titleKey).replace('{name}', char.name.toUpperCase());
+  const body = t(s.bodyKey);
 
   return (
     <div
@@ -92,7 +92,7 @@ export function ScreenTutorial({ char, onDone }: ScreenTutorialProps) {
             opacity: 0.8,
           }}
         >
-          POMIŃ →
+          {t('tutorial.skip')} →
         </button>
       </div>
 
@@ -149,9 +149,9 @@ export function ScreenTutorial({ char, onDone }: ScreenTutorialProps) {
           className="h-display clean"
           style={{ fontSize: 22, color: '#2a1810', marginBottom: 8, lineHeight: 1.1 }}
         >
-          {s.title}
+          {title}
         </div>
-        <div style={{ fontSize: 15, lineHeight: 1.35, color: '#3a1a1a' }}>{s.body}</div>
+        <div style={{ fontSize: 15, lineHeight: 1.35, color: '#3a1a1a' }}>{body}</div>
       </div>
 
       <div style={{ flex: 1 }} />
@@ -162,7 +162,7 @@ export function ScreenTutorial({ char, onDone }: ScreenTutorialProps) {
         style={{ width: '100%' }}
         onClick={() => (last ? onDone() : setStep(step + 1))}
       >
-        {last ? 'ZACZYNAMY!' : 'DALEJ →'}
+        {last ? t('tutorial.startBig') : `${t('tutorial.next')} →`}
       </button>
 
       <style>{`

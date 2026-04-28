@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useT } from '@/i18n';
+import { LangPicker } from '@/i18n/LangPicker';
 import { GrodnoNightBackdrop } from './NightBackdrop';
 
 type Mode = 'login' | 'register';
@@ -118,6 +120,7 @@ function LoginField({
 }
 
 export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
+  const t = useT();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
@@ -141,19 +144,19 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
   async function submit() {
     setErr('');
     if (!email.includes('@')) {
-      setErr('Wprowadź poprawny email');
+      setErr(t('auth.login.error.emailInvalid'));
       return;
     }
     if (mode === 'register' && pw.length < 5) {
-      setErr('Hasło min. 5 znaków');
+      setErr(t('auth.login.error.passwordTooShort'));
       return;
     }
     if (mode === 'login' && pw.length < 1) {
-      setErr('Wprowadź hasło');
+      setErr(t('auth.login.error.passwordTooShort'));
       return;
     }
     if (mode === 'register' && pw !== pw2) {
-      setErr('Hasła się różnią');
+      setErr(t('auth.login.error.passwordMismatch'));
       return;
     }
     setBusy(true);
@@ -168,7 +171,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
         clearRemembered();
       }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Błąd logowania');
+      setErr(e instanceof Error ? e.message : t('auth.login.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -180,7 +183,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
     try {
       await onGuest();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Nie udało się');
+      setErr(e instanceof Error ? e.message : t('auth.login.error.generic'));
     } finally {
       setBusy(false);
     }
@@ -211,7 +214,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
               letterSpacing: 1,
             }}
           >
-            SZCZUROGRÓD
+            {t('app.title.full')}
           </div>
           <div
             className="h-title"
@@ -224,6 +227,9 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
             }}
           >
             IDLE RPG
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
+            <LangPicker size="sm" light />
           </div>
         </div>
 
@@ -269,21 +275,21 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
                   boxShadow: mode === m ? 'inset 2px 2px 0 rgba(0,0,0,0.15)' : 'none',
                 }}
               >
-                {m === 'login' ? 'LOGOWANIE' : 'REJESTRACJA'}
+                {m === 'login' ? t('auth.login.tab.login') : t('auth.login.tab.register')}
               </button>
             ))}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <LoginField
-              label="EMAIL"
+              label={t('auth.login.email').toUpperCase()}
               value={email}
               onChange={setEmail}
               type="email"
-              placeholder="rycerz@grodno.pl"
+              placeholder="rycerz@ratburg.app"
             />
             <LoginField
-              label="HASŁO"
+              label={t('auth.login.password').toUpperCase()}
               value={pw}
               onChange={setPw}
               type="password"
@@ -291,7 +297,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
             />
             {mode === 'register' && (
               <LoginField
-                label="POWTÓRZ HASŁO"
+                label={t('auth.login.password.confirm').toUpperCase()}
                 value={pw2}
                 onChange={setPw2}
                 type="password"
@@ -336,7 +342,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
                     color: '#2a1810',
                     userSelect: 'none',
                   }}
-                  title="Email i hasło zostaną zapisane w tej przeglądarce, żeby wrócić prosto do inputów."
+                  title={t('auth.login.remember.tooltip')}
                 >
                   <input
                     type="checkbox"
@@ -356,7 +362,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
                       fontSize: 12,
                     }}
                   >
-                    ZAPAMIĘTAJ MNIE
+                    {t('auth.login.remember')}
                   </span>
                 </label>
                 <a
@@ -364,7 +370,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
                   onClick={(e) => e.preventDefault()}
                   style={{ color: '#5a3a2a', textDecoration: 'underline' }}
                 >
-                  Zapomniałeś hasła?
+                  {t('auth.login.forgot')}
                 </a>
               </div>
             )}
@@ -376,7 +382,11 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
               disabled={busy}
               onClick={submit}
             >
-              {busy ? 'CHWILA...' : mode === 'login' ? 'ZALOGUJ' : 'UTWÓRZ KONTO'}
+              {busy
+                ? t('auth.login.busy')
+                : mode === 'login'
+                  ? t('auth.login.submit.login')
+                  : t('auth.login.submit.register')}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
@@ -389,7 +399,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
                   letterSpacing: 1,
                 }}
               >
-                LUB
+                {t('auth.login.or')}
               </div>
               <div style={{ flex: 1, height: 2, background: '#c8b898' }} />
             </div>
@@ -401,7 +411,7 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
               onClick={submitGuest}
               disabled={busy}
             >
-              GRAJ JAKO GOŚĆ
+              {t('auth.login.submit.guest')}
             </button>
 
             <div
@@ -414,8 +424,8 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
               }}
             >
               {mode === 'register'
-                ? 'Rejestrując się akceptujesz Regulamin i Politykę Prywatności'
-                : 'Postęp gościa można utracić. Zarejestruj się aby zapisać!'}
+                ? t('auth.register.terms')
+                : t('auth.login.guest.warning')}
             </div>
           </div>
         </div>

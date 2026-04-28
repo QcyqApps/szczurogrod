@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@grodno/shared';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { AchievementUnlockPayload } from '@grodno/shared';
 
 const TIER_COLOR: Record<AchievementUnlockPayload['tier'], string> = {
@@ -11,18 +13,18 @@ const TIER_COLOR: Record<AchievementUnlockPayload['tier'], string> = {
   legendary: '#a04ef0',
 };
 
-const TIER_LABEL: Record<AchievementUnlockPayload['tier'], string> = {
-  bronze: 'BRĄZ',
-  silver: 'SREBRO',
-  gold: 'ZŁOTO',
-  legendary: 'LEGENDA',
+const TIER_LABEL_KEY: Record<AchievementUnlockPayload['tier'], DictKey> = {
+  bronze: 'modal.achievement.tier.bronze',
+  silver: 'modal.achievement.tier.silver',
+  gold: 'modal.achievement.tier.gold',
+  legendary: 'modal.achievement.tier.legendary',
 };
 
-const TIER_FLAVOR: Record<AchievementUnlockPayload['tier'], string> = {
-  bronze: 'Drobiazg, ale zaliczony.',
-  silver: 'Dobrze to wyszło.',
-  gold: 'Kronikarz pisze. Karczma milczy.',
-  legendary: 'Będą cię długo pamiętać.',
+const TIER_FLAVOR_KEY: Record<AchievementUnlockPayload['tier'], DictKey> = {
+  bronze: 'modal.achievement.flavor.bronze',
+  silver: 'modal.achievement.flavor.silver',
+  gold: 'modal.achievement.flavor.gold',
+  legendary: 'modal.achievement.flavor.legendary',
 };
 
 export interface AchievementUnlockModalProps {
@@ -31,6 +33,8 @@ export interface AchievementUnlockModalProps {
 }
 
 export function AchievementUnlockModal({ unlock, onClose }: AchievementUnlockModalProps) {
+  const t = useT();
+  const tc = useContentT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'Enter') onClose();
@@ -83,7 +87,7 @@ export function AchievementUnlockModal({ unlock, onClose }: AchievementUnlockMod
             marginBottom: 4,
           }}
         >
-          OSIĄGNIĘCIE ODBLOKOWANE
+          {t('modal.achievement.heading')}
         </div>
         <div
           style={{
@@ -110,7 +114,7 @@ export function AchievementUnlockModal({ unlock, onClose }: AchievementUnlockMod
             fontWeight: 700,
           }}
         >
-          {TIER_LABEL[unlock.tier]}
+          {t(TIER_LABEL_KEY[unlock.tier])}
         </span>
         <div
           className="h-display"
@@ -121,13 +125,13 @@ export function AchievementUnlockModal({ unlock, onClose }: AchievementUnlockMod
             textShadow: `0 0 10px ${tierColor}40`,
           }}
         >
-          {unlock.name}
+          {tc.achievementName(unlock.id, unlock.name)}
         </div>
         <div
           className="flavor"
           style={{ fontSize: 16, marginTop: 6, color: '#5a3a2a' }}
         >
-          {TIER_FLAVOR[unlock.tier]}
+          {t(TIER_FLAVOR_KEY[unlock.tier])}
         </div>
         {(unlock.rewardGold > 0 || unlock.rewardGems > 0) && (
           <div
@@ -145,7 +149,7 @@ export function AchievementUnlockModal({ unlock, onClose }: AchievementUnlockMod
               className="h-title"
               style={{ fontSize: 13, color: '#5a3a2a', alignSelf: 'center' }}
             >
-              NAGRODA
+              {t('modal.achievement.reward')}
             </span>
             {unlock.rewardGold > 0 && (
               <span
@@ -181,7 +185,7 @@ export function AchievementUnlockModal({ unlock, onClose }: AchievementUnlockMod
           style={{ marginTop: 14, width: '100%' }}
           onClick={onClose}
         >
-          DALEJ
+          {t('modal.achievement.next')}
         </button>
       </div>
     </div>

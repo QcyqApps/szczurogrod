@@ -51,6 +51,7 @@ import { useAuthStore } from '@/api/auth-store';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { trpc } from '@/api/trpc';
+import { tStatic } from '@/i18n';
 import type {
   Character,
   EquippedSlot,
@@ -145,7 +146,7 @@ export default function App() {
   const refillStaminaMut = trpc.me.refillStamina.useMutation({
     onSuccess: () => {
       void utils.me.get.invalidate();
-      useToastQueue.getState().push({ text: '+10 wytrzymałości.', accent: '#2a4a3a' });
+      useToastQueue.getState().push({ text: tStatic('toast.staminaRefilled'), accent: '#2a4a3a' });
     },
     onError: (err) => {
       useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
@@ -155,7 +156,7 @@ export default function App() {
     onSuccess: (data) => {
       void utils.me.get.invalidate();
       useToastQueue.getState().push({
-        text: `Nowe imię: ${data.name}.`,
+        text: tStatic('toast.renamed').replace('{name}', data.name),
         accent: '#2a4a3a',
       });
     },
@@ -280,7 +281,7 @@ export default function App() {
       void utils.shop.catalog.invalidate();
       void utils.me.get.invalidate();
       useToastQueue.getState().push({
-        text: 'Oferta odświeżona.',
+        text: tStatic('toast.shopRefreshed'),
         accent: '#2a4a3a',
       });
     },
@@ -314,7 +315,7 @@ export default function App() {
   const healInstantMut = trpc.tavern.healInstant.useMutation({
     onSuccess: () => {
       void utils.me.get.invalidate();
-      pushToast({ text: 'HP/MP przywrócone.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('toast.healInstant'), accent: '#2a4a3a' });
     },
     onError: (err) => {
       pushToast({ text: err.message, accent: '#c83232' });
@@ -482,18 +483,27 @@ export default function App() {
   const devGrantMut = trpc.dev.grantPurchase.useMutation({
     onSuccess: (data) => {
       const parts: string[] = [];
-      if (data.grantedGems > 0) parts.push(`+${data.grantedGems} gemów`);
-      if (data.grantedGold > 0) parts.push(`+${data.grantedGold.toLocaleString('pl-PL')}g`);
+      if (data.grantedGems > 0) {
+        parts.push(tStatic('toast.devGrant.gems').replace('{n}', String(data.grantedGems)));
+      }
+      if (data.grantedGold > 0) {
+        parts.push(
+          tStatic('toast.devGrant.gold').replace(
+            '{n}',
+            data.grantedGold.toLocaleString('pl-PL'),
+          ),
+        );
+      }
       pushToast({
         tag: 'DEMO',
         accent: '#3a6aa8',
-        text: parts.join(' · ') || 'Przyznano.',
+        text: parts.join(' · ') || tStatic('toast.devGrant.empty'),
       });
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: `Nie udało się przyznać: ${err.message}`,
+        text: tStatic('toast.devGrant.failed').replace('{msg}', err.message),
         accent: '#c83232',
       });
     },
@@ -538,10 +548,24 @@ export default function App() {
     );
   }
 
+  // Wrapper dla pre-game stanów (login/createChar/tutorial). Ciemne purple
+  // tło rozciąga się edge-to-edge (status bar systemu siedzi nad nim w swoim
+  // kolorze parchment). Padding pcha inner content w bezpieczną strefę:
+  // notch'e/status bar overlay na górze + home indicator/gesture nav na dole.
+  // Dzieci używają `position: absolute; inset: 0` więc respektują padding box.
+  const authWrapperStyle = {
+    height: '100%',
+    position: 'relative' as const,
+    background: '#1a0a2a',
+    paddingTop: 'var(--frame-top)',
+    paddingBottom: 'var(--frame-bottom)',
+    boxSizing: 'border-box' as const,
+  };
+
   if (appState === 'login') {
     return (
       <AppFrame>
-        <div style={{ height: '100%', position: 'relative', background: '#1a0a2a' }}>
+        <div style={authWrapperStyle}>
           <ScreenLogin onLogin={handleLogin} onGuest={handleGuest} />
         </div>
       </AppFrame>
@@ -551,7 +575,7 @@ export default function App() {
   if (appState === 'createChar') {
     return (
       <AppFrame>
-        <div style={{ height: '100%', position: 'relative', background: '#1a0a2a' }}>
+        <div style={authWrapperStyle}>
           <ScreenCreateChar
             onDone={handleCreateChar}
             onBackToLogin={() => {
@@ -567,7 +591,7 @@ export default function App() {
   if (appState === 'tutorial' && char) {
     return (
       <AppFrame>
-        <div style={{ height: '100%', position: 'relative', background: '#1a0a2a' }}>
+        <div style={authWrapperStyle}>
           <ScreenTutorial char={char} onDone={() => setAppState('game')} />
         </div>
       </AppFrame>
@@ -591,7 +615,7 @@ export default function App() {
           <div className="h-title" style={{ fontSize: 16, color: '#5a3a2a' }}>
             {meQuery.isError ? (
               <>
-                Błąd połączenia z serwerem.
+                {tStatic('app.boot.connError')}
                 <br />
                 <button
                   type="button"
@@ -602,11 +626,11 @@ export default function App() {
                     setAppState('login');
                   }}
                 >
-                  Wyloguj
+                  {tStatic('app.boot.logout')}
                 </button>
               </>
             ) : (
-              'Ładowanie postaci...'
+              tStatic('app.boot.loading')
             )}
           </div>
         </div>

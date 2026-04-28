@@ -6,6 +6,8 @@ import { IcoClock, IcoCoin, IcoGem } from '@/components/icons';
 import { Monster, monsterBySlug } from '@/components/monsters';
 import type { MonsterSlug } from '@/components/monsters';
 import { GemSinkButton } from '@/components/ui-common';
+import { useT, tStatic } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type {
   Character,
   CombatState,
@@ -24,6 +26,7 @@ export interface ScreenTowerProps {
 }
 
 export function ScreenTower({ onBack }: ScreenTowerProps) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('climb');
   /** Aktywna sesja walki w Wieży — po engage trzymamy boss meta + initial state. */
   const [activeCombat, setActiveCombat] = useState<{
@@ -41,20 +44,20 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
   const engageMut = trpc.tower.engage.useMutation({
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('tower.toast.failed'),
         accent: '#c83232',
       });
     },
   });
   const resurrectMut = trpc.tower.resurrect.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Wskrzeszony. Do boju.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('tower.toast.resurrected'), accent: '#2a4a3a' });
       void utils.tower.current.invalidate();
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('tower.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -76,7 +79,7 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
   }
 
   if (activeCombat && meQuery.data) {
-    const enemy = bossToCombatEnemyInfo(activeCombat.boss);
+    const enemy = bossToCombatEnemyInfo(activeCombat.boss, t);
     return (
       <CombatView
         char={meQuery.data as Character}
@@ -104,15 +107,20 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#c8a0ff' }}>
-          WIEŻA BEZDENNA
+          {t('tower.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          Nie ma dna. Jest tylko wyżej.
+          {t('tower.flavor')}
         </div>
         {currentQuery.data && (
           <div style={{ marginTop: 8, fontSize: 12, opacity: 0.85 }}>
-            Najlepsze w tym tygodniu:{' '}
-            <b className="mono">PIĘTRO {currentQuery.data.bestFloorThisWeek || '—'}</b>
+            {t('tower.bestThisWeek')}{' '}
+            <b className="mono">
+              {t('tower.floorLabel').replace(
+                '{n}',
+                String(currentQuery.data.bestFloorThisWeek || '—'),
+              )}
+            </b>
             {' · '}
             <ResetCountdown target={currentQuery.data.nextResetAt} />
           </div>
@@ -128,13 +136,13 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
           marginBottom: 10,
         }}
       >
-        {(['climb', 'leaderboard'] as Tab[]).map((t) => {
-          const active = t === tab;
+        {(['climb', 'leaderboard'] as Tab[]).map((tabId) => {
+          const active = tabId === tab;
           return (
             <button
-              key={t}
+              key={tabId}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabId)}
               className="h-title"
               style={{
                 padding: '6px 4px',
@@ -148,7 +156,7 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
                 cursor: 'pointer',
               }}
             >
-              {t === 'climb' ? 'WSPINACZKA' : 'RANKING TYGODNIA'}
+              {tabId === 'climb' ? t('tower.tab.climb') : t('tower.tab.leaderboard')}
             </button>
           );
         })}
@@ -178,7 +186,7 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('tower.back')}
       </button>
     </div>
   );
@@ -189,12 +197,15 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
  * w kwadratowej ramce (matching dungeon visuals: border + warm fill).
  * `flavor` trzymamy krótkie — Wieża to dry encounter, bez lore per floor.
  */
-function bossToCombatEnemyInfo(boss: TowerCurrentResponse['boss']): CombatEnemyInfo {
+function bossToCombatEnemyInfo(
+  boss: TowerCurrentResponse['boss'],
+  t: (key: DictKey) => string,
+): CombatEnemyInfo {
   const recipe = monsterBySlug(boss.monsterSlug as MonsterSlug);
   return {
     name: boss.name,
     lvl: boss.floor,
-    flavor: `Piętro ${boss.floor}. Ktoś tu zawsze czeka.`,
+    flavor: t('tower.bossFlavor').replace('{n}', String(boss.floor)),
     isBoss: true,
     renderPortrait: (size) => <Monster recipe={recipe} size={size} />,
   };
@@ -215,6 +226,7 @@ function ClimbView({
   resurrectPending: boolean;
   onResurrect: () => void;
 }) {
+  const t = useT();
   const { boss, currentFloor, failedUntil, gemResurrectCost } = data;
   const onCooldown = failedUntil !== null && failedUntil > Date.now();
 
@@ -229,7 +241,7 @@ function ClimbView({
       }}
     >
       <div className="mono" style={{ fontSize: 12, opacity: 0.7, marginBottom: 4 }}>
-        PIĘTRO
+        {t('tower.floor')}
       </div>
       <div
         className="h-display"
@@ -293,12 +305,12 @@ function ClimbView({
             <CooldownText target={failedUntil!} />
           </div>
           <GemSinkButton
-            label="WSKRZEŚ"
+            label={t('tower.resurrect.btn')}
             cost={gemResurrectCost}
             playerGems={playerGems}
             pending={resurrectPending}
             onClick={onResurrect}
-            disabledReason="Pomiń cooldown."
+            disabledReason={t('tower.resurrect.disabled')}
             variant="primary"
             size="md"
             style={{ width: '100%' }}
@@ -312,7 +324,7 @@ function ClimbView({
           disabled={engagePending}
           onClick={() => onEngage(boss)}
         >
-          {engagePending ? 'WCHODZĘ...' : 'NA GÓRĘ'}
+          {engagePending ? t('tower.btn.entering') : t('tower.btn.climb')}
         </button>
       )}
 
@@ -321,9 +333,12 @@ function ClimbView({
         {(() => {
           const nextMilestone = Math.ceil(currentFloor / 10) * 10;
           if (currentFloor % 10 === 0 && currentFloor > 0) {
-            return `Piętro ${currentFloor}: milestone!`;
+            return t('tower.milestone.hit').replace('{n}', String(currentFloor));
           }
-          return `Za ${nextMilestone - currentFloor + 1} pięter: milestone (${500 * (nextMilestone / 10) ** 2}g + ${3 + nextMilestone / 10} gemów)`;
+          return t('tower.milestone.next')
+            .replace('{n}', String(nextMilestone - currentFloor + 1))
+            .replace('{g}', String(500 * (nextMilestone / 10) ** 2))
+            .replace('{x}', String(3 + nextMilestone / 10));
         })()}
       </div>
     </div>
@@ -337,10 +352,11 @@ function LeaderboardView({
   data: TowerLeaderboardResponse | undefined;
   loading: boolean;
 }) {
+  const t = useT();
   if (loading) {
     return (
       <div style={{ textAlign: 'center', fontSize: 13, color: '#5a3a2a', padding: 20 }}>
-        Ładuję...
+        {t('tower.loading')}
       </div>
     );
   }
@@ -351,14 +367,14 @@ function LeaderboardView({
         className="flavor"
         style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 20 }}
       >
-        Nikt jeszcze nie wspiął się w tym tygodniu. Bądź pierwszy.
+        {t('tower.empty')}
       </div>
     );
   }
-  const CLS_LABEL: Record<string, string> = {
-    warrior: 'Wojownik',
-    mage: 'Mag',
-    rogue: 'Łotrzyk',
+  const CLS_LABEL_KEY: Record<string, DictKey> = {
+    warrior: 'tower.cls.warrior',
+    mage: 'tower.cls.mage',
+    rogue: 'tower.cls.rogue',
   };
   return (
     <div className="panel" style={{ padding: 4 }}>
@@ -390,14 +406,14 @@ function LeaderboardView({
               {e.name}
             </div>
             <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-              {CLS_LABEL[e.cls]} · LVL {e.lvl}
+              {t(CLS_LABEL_KEY[e.cls] ?? 'tower.cls.warrior')} · LVL {e.lvl}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
             <div className="mono" style={{ fontSize: 18, fontWeight: 700, color: '#c83232' }}>
               {e.bestFloor}
             </div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>piętro</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>{t('tower.entry.floor')}</div>
           </div>
         </div>
       ))}
@@ -406,23 +422,25 @@ function LeaderboardView({
 }
 
 function ResetCountdown({ target }: { target: number }) {
+  const t = useT();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const handle = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(handle);
   }, []);
   const diff = target - now;
-  if (diff <= 0) return <span>reset za chwilę</span>;
+  if (diff <= 0) return <span>{t('tower.reset.soon')}</span>;
   const d = Math.floor(diff / (24 * 3600_000));
   const h = Math.floor((diff % (24 * 3600_000)) / 3600_000);
   return (
     <span>
-      reset za <b className="mono">{d}d {h}h</b>
+      {t('tower.reset.in')} <b className="mono">{d}d {h}h</b>
     </span>
   );
 }
 
 function CooldownText({ target }: { target: number }) {
+  const t = useT();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const handle = setInterval(() => setNow(Date.now()), 1000);
@@ -433,7 +451,7 @@ function CooldownText({ target }: { target: number }) {
   const sec = Math.floor((diff % 60_000) / 1000);
   return (
     <>
-      Odpoczynek: <b className="mono">{min}:{String(sec).padStart(2, '0')}</b>
+      {t('tower.cooldown.label')} <b className="mono">{min}:{String(sec).padStart(2, '0')}</b>
     </>
   );
 }

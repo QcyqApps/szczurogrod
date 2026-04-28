@@ -3,6 +3,8 @@ import { AvatarPortrait } from '@/components/avatar';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { HelpIcon, StatBar } from '@/components/ui-common';
+import { useT, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { SubScreen, Tab } from '@/types/nav';
 import {
   applyEnhancementToStats,
@@ -41,19 +43,19 @@ function computeDodgePct(spd: number, cls: CharacterClass): {
 
 interface SlotDef {
   key: EquippedSlot;
-  label: string;
+  labelKey: DictKey;
   icon: IconName;
 }
 
 const SLOT_DEFS: readonly SlotDef[] = [
-  { key: 'head', label: 'HEŁM', icon: 'helm-hunter' },
-  { key: 'neck', label: 'SZYJA', icon: 'necklace' },
-  { key: 'chest', label: 'ZBROJA', icon: 'chestplate' },
-  { key: 'weapon', label: 'BROŃ', icon: 'sword-dawn' },
-  { key: 'off', label: 'TARCZA', icon: 'shield-item' },
-  { key: 'hands', label: 'RĘCE', icon: 'gloves' },
-  { key: 'ring', label: 'PIER.', icon: 'ring' },
-  { key: 'feet', label: 'STOPY', icon: 'boots' },
+  { key: 'head', labelKey: 'char.slot.head', icon: 'helm-hunter' },
+  { key: 'neck', labelKey: 'char.slot.neck', icon: 'necklace' },
+  { key: 'chest', labelKey: 'char.slot.chest', icon: 'chestplate' },
+  { key: 'weapon', labelKey: 'char.slot.weapon', icon: 'sword-dawn' },
+  { key: 'off', labelKey: 'char.slot.off', icon: 'shield-item' },
+  { key: 'hands', labelKey: 'char.slot.hands', icon: 'gloves' },
+  { key: 'ring', labelKey: 'char.slot.ring', icon: 'ring' },
+  { key: 'feet', labelKey: 'char.slot.feet', icon: 'boots' },
 ];
 
 const CLASS_COLOR: Record<string, string> = {
@@ -62,16 +64,21 @@ const CLASS_COLOR: Record<string, string> = {
   rogue: '#2a4a3a',
 };
 
-const CLASS_TITLE: Record<string, string> = {
-  warrior: 'Wojownik Bramy Wschodniej',
-  mage: 'Arcymag Katedry Ksiąg',
-  rogue: 'Łotrzyk Zaułków',
+const CLASS_TITLE_KEY: Record<string, DictKey> = {
+  warrior: 'char.class.title.warrior',
+  mage: 'char.class.title.mage',
+  rogue: 'char.class.title.rogue',
+};
+
+const RARITY_LABEL_KEY: Record<Rarity, DictKey> = {
+  common: 'rarity.common',
+  rare: 'rarity.rare',
+  epic: 'rarity.epic',
+  legendary: 'rarity.legendary',
 };
 
 const rarityClass = (r: Rarity) =>
   r === 'epic' ? 'epic' : r === 'legendary' ? 'legendary' : r === 'rare' ? 'rare' : '';
-const rarityLabel = (r: Rarity) =>
-  r === 'epic' ? 'EPICKI' : r === 'legendary' ? 'LEGENDARNY' : r === 'rare' ? 'RZADKI' : 'ZWYKŁY';
 const rarityColor = (r: Rarity) =>
   r === 'epic' ? '#a04ef0' : r === 'legendary' ? '#ffc830' : r === 'rare' ? '#3a8ac8' : '#8a8a8a';
 
@@ -115,7 +122,10 @@ export function ScreenChar({
   dailyAvailable,
   seasonPassClaimableCount,
 }: ScreenCharProps) {
+  const t = useT();
+  const tc = useContentT();
   const [modal, setModal] = useState<Modal | null>(null);
+  const rarityLabel = (r: Rarity) => t(RARITY_LABEL_KEY[r]);
 
   const equippedMap: Record<EquippedSlot, InventoryItem | null> = {
     head: null,
@@ -209,7 +219,7 @@ export function ScreenChar({
               }}
               onClick={onEditAppearance}
             >
-              <GameIcon name="spark" size={12} /> ZMIEŃ WYGLĄD
+              <GameIcon name="spark" size={12} /> {t('char.editAppearance')}
             </button>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -217,7 +227,7 @@ export function ScreenChar({
               {char.name}
             </div>
             <div style={{ fontSize: 14, color: '#5a3a2a', marginBottom: 8 }}>
-              {CLASS_TITLE[char.cls]}
+              {t(CLASS_TITLE_KEY[char.cls] ?? 'char.class.title.warrior')}
             </div>
             {(() => {
               // Per-tick cadence — mirror of apps/server/src/game/regen.ts.
@@ -243,9 +253,9 @@ export function ScreenChar({
                     </div>
                     <span
                       style={regenPip}
-                      title="Regeneracja HP. Tempo skaluje się z poziomem — pełny pasek zawsze w 60 min. Działa też offline."
+                      title={t('char.regen.hp.title')}
                     >
-                      +1 co {fmt(hpTickS)}
+                      {t('char.regen.tick').replace('{time}', fmt(hpTickS))}
                     </span>
                   </div>
                   <div style={{ height: 4 }} />
@@ -255,9 +265,9 @@ export function ScreenChar({
                     </div>
                     <span
                       style={regenPip}
-                      title="Regeneracja MP. Pełny pasek w 45 min. Działa też offline."
+                      title={t('char.regen.mp.title')}
                     >
-                      +1 co {fmt(mpTickS)}
+                      {t('char.regen.tick').replace('{time}', fmt(mpTickS))}
                     </span>
                   </div>
                 </>
@@ -277,26 +287,22 @@ export function ScreenChar({
           }}
         >
           <div className="h-title" style={{ fontSize: 12, color: '#5a3a2a' }}>
-            STATY
+            {t('char.stats.heading')}
           </div>
-          <HelpIcon title="Co robią statystyki?" label="Co to robi?" size={18}>
+          <HelpIcon title={t('char.stats.help.title')} label={t('char.stats.help.label')} size={18}>
             <p style={{ margin: '0 0 6px' }}>
-              <b>ATK</b> — obrażenia zwykłym atakiem i MOCNYM cięciem. Pompujesz jeśli
-              walisz bronią.
+              <b>{t('char.stats.help.atk.l')}</b>{t('char.stats.help.atk.body')}
             </p>
             <p style={{ margin: '0 0 6px' }}>
-              <b>DEF</b> — zmniejsza każdy cios wroga. Magia i armor pierce bossów
-              ignorują połowę, więc świętego mura nie zbudujesz.
+              <b>{t('char.stats.help.def.l')}</b>{t('char.stats.help.def.body')}
             </p>
             <p style={{ margin: '0 0 6px' }}>
-              <b>MAG</b> — obrażenia od czarów. Zaklęcia przebijają pół pancerza
-              przeciwnika — jedyna pewna droga do opancerzonego bossa.
+              <b>{t('char.stats.help.mag.l')}</b>{t('char.stats.help.mag.body')}
             </p>
             <p style={{ margin: 0 }}>
-              <b>SPD</b> — szansa na unik (1% za punkt) i celność MOCNEGO. Sufit
-              uniku jest klasowy: <b>wojownik 25%</b>, <b>mag 40%</b>, <b>rogue 40%</b>.
-              Pod kafelkiem widzisz ile faktycznie masz; przy cap-ie kolejne
-              punkty dalej pchają celność, ale nie unik.
+              <b>{t('char.stats.help.spd.l')}</b>{t('char.stats.help.spd.body')}
+              <b>{t('char.stats.help.spd.warrior')}</b>, <b>{t('char.stats.help.spd.mage')}</b>, <b>{t('char.stats.help.spd.rogue')}</b>
+              {t('char.stats.help.spd.tail')}
             </p>
           </HelpIcon>
         </div>
@@ -340,11 +346,11 @@ export function ScreenChar({
                     }}
                     title={
                       dodge.capped
-                        ? `Unik osiąga cap dla klasy (${dodge.capPct}%). Więcej SPD nie zwiększy szansy — ale nadal poprawia celność MOCNEGO.`
-                        : `Unik = SPD × 1%, max ${dodge.capPct}% dla tej klasy.`
+                        ? t('char.stats.dodge.title.capped').replace('{pct}', String(dodge.capPct))
+                        : t('char.stats.dodge.title.normal').replace('{pct}', String(dodge.capPct))
                     }
                   >
-                    {dodge.pct}% unik{dodge.capped ? ' (max)' : ''}
+                    {dodge.pct}% {t('char.stats.dodge.label')}{dodge.capped ? t('char.stats.dodge.max') : ''}
                   </div>
                 )}
               </div>
@@ -366,32 +372,32 @@ export function ScreenChar({
         }}
       >
         <CharNavButton
-          label="TRENER"
+          label={t('char.nav.trainer')}
           icon="bolt"
           bg="#c0a0a0"
           onClick={() => onNavigate('trainer')}
         />
         <CharNavButton
-          label="OSIĄGN."
+          label={t('char.nav.achievements')}
           icon="crown"
           bg="#c8b880"
           onClick={() => onNavigate('achievements')}
         />
         <CharNavButton
-          label="KOLEKCJA"
+          label={t('char.nav.scrapbook')}
           icon="scroll"
           bg="#b8a4e0"
           onClick={() => onNavigate('scrapbook')}
         />
         <CharNavButton
-          label="DZIENNA"
+          label={t('char.nav.daily')}
           icon="gift"
           bg={dailyAvailable ? '#f0d080' : '#d4c491'}
           onClick={() => onNavigate('daily')}
           badge={dailyAvailable ? '!' : undefined}
         />
         <CharNavButton
-          label="SEZON"
+          label={t('char.nav.season')}
           icon="crown"
           bg="#ffc830"
           onClick={() => onNavigate('seasonPass')}
@@ -412,7 +418,7 @@ export function ScreenChar({
             gap: 6,
           }}
         >
-          <GameIcon name="helmet" size={16} /> EKWIPUNEK NA POSTACI
+          <GameIcon name="helmet" size={16} /> {t('char.equipped.heading')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4 }}>
           {SLOT_DEFS.map((def) => {
@@ -480,7 +486,7 @@ export function ScreenChar({
                 opacity: 0.8,
               }}
             >
-              {def.label}
+              {t(def.labelKey)}
             </div>
           ))}
         </div>
@@ -497,7 +503,7 @@ export function ScreenChar({
             gap: 6,
           }}
         >
-          <GameIcon name="gift" size={16} /> PLECAK ({bag.length}/24)
+          <GameIcon name="gift" size={16} /> {t('char.bag.heading').replace('{n}', String(bag.length))}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
           {bag.map((it) => (
@@ -505,7 +511,7 @@ export function ScreenChar({
               key={it.id}
               onClick={() => setModal({ item: it, source: 'bag' })}
               className={`slot ${rarityClass(it.rarity)}`}
-              title={it.name}
+              title={tc.itemName(it.name, it.name)}
               style={{
                 width: '100%',
                 height: 44,
@@ -635,7 +641,7 @@ export function ScreenChar({
                         flexWrap: 'wrap',
                       }}
                     >
-                      <span>{it.name}</span>
+                      <span>{tc.itemName(it.name, it.name)}</span>
                       {it.enhancementLevel > 0 && (
                         <span
                           style={{
@@ -685,7 +691,7 @@ export function ScreenChar({
                     lineHeight: 1.1,
                   }}
                 >
-                  {it.desc ?? ''}
+                  {tc.itemDesc(it.name, it.desc ?? '')}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                   {(() => {
@@ -722,10 +728,10 @@ export function ScreenChar({
                   })()}
                   <span className="pip gold" style={{ textTransform: 'uppercase' }}>
                     {it.slot === 'potion'
-                      ? 'Do wypicia'
+                      ? t('char.item.slot.potion')
                       : it.slot === 'any'
-                        ? 'Losowy'
-                        : `Slot: ${it.slot}`}
+                        ? t('char.item.slot.any')
+                        : t('char.item.slot.label').replace('{slot}', it.slot)}
                   </span>
                 </div>
                 {statDiff && compareSlot ? (
@@ -771,7 +777,7 @@ export function ScreenChar({
                             className="h-title"
                             style={{ fontSize: 10, color: '#5a3a2a' }}
                           >
-                            vs
+                            {t('char.compare.vs')}
                           </span>
                           {currentEquipped ? (
                             <>
@@ -788,7 +794,7 @@ export function ScreenChar({
                                 className="h-title"
                                 style={{ fontSize: 13, color: '#2a1810' }}
                               >
-                                {currentEquipped.name}
+                                {tc.itemName(currentEquipped.name, currentEquipped.name)}
                                 {currentEquipped.enhancementLevel > 0 && (
                                   <span
                                     style={{
@@ -813,13 +819,13 @@ export function ScreenChar({
                               className="h-title"
                               style={{ fontSize: 13, color: '#5a3a2a' }}
                             >
-                              PUSTY SLOT
+                              {t('char.slot.empty')}
                             </span>
                           )}
                         </div>
                         {rows.length === 0 ? (
                           <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                            Bez różnicy w statsach.
+                            {t('char.compare.noDiff')}
                           </div>
                         ) : (
                           <>
@@ -891,7 +897,7 @@ export function ScreenChar({
                                 className="h-title"
                                 style={{ fontSize: 13, color: '#2a1810' }}
                               >
-                                SUMA
+                                {t('char.compare.total')}
                               </span>
                               <span
                                 className="pip"
@@ -932,7 +938,7 @@ export function ScreenChar({
                         setModal(null);
                       }}
                     >
-                      ZAŁÓŻ NA POSTAĆ
+                      {t('char.item.btn.equip')}
                     </button>
                   )}
                   {!inBag && (
@@ -944,7 +950,7 @@ export function ScreenChar({
                         setModal(null);
                       }}
                     >
-                      ZDEJMIJ DO PLECAKA
+                      {t('char.item.btn.unequip')}
                     </button>
                   )}
                   {isPotion && inBag && (
@@ -956,7 +962,7 @@ export function ScreenChar({
                         setModal(null);
                       }}
                     >
-                      UŻYJ
+                      {t('char.item.btn.use')}
                     </button>
                   )}
                   {inBag && (
@@ -968,7 +974,7 @@ export function ScreenChar({
                         setModal(null);
                       }}
                     >
-                      SPRZEDAJ ({it.sellPrice} g)
+                      {t('char.item.btn.sell').replace('{g}', String(it.sellPrice))}
                     </button>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -981,7 +987,7 @@ export function ScreenChar({
                         setModal(null);
                       }}
                     >
-                      WYRZUĆ
+                      {t('char.item.btn.drop')}
                     </button>
                     <button
                       type="button"
@@ -989,7 +995,7 @@ export function ScreenChar({
                       style={{ flex: 1 }}
                       onClick={() => setModal(null)}
                     >
-                      ZAMKNIJ
+                      {t('char.item.btn.close')}
                     </button>
                   </div>
                 </div>

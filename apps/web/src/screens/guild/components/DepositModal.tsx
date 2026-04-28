@@ -3,12 +3,14 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, tStatic } from '@/i18n';
 
 export interface DepositModalProps {
   onClose: () => void;
 }
 
 export function DepositModal({ onClose }: DepositModalProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const meQuery = trpc.me.get.useQuery();
@@ -19,7 +21,7 @@ export function DepositModal({ onClose }: DepositModalProps) {
 
   const depositMut = trpc.guildTreasury.deposit.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Wpłata zaksięgowana.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildDeposit.toast.success'), accent: '#2a4a3a' });
       void utils.guild.get.invalidate();
       void utils.guildTreasury.log.invalidate();
       void utils.me.get.invalidate();
@@ -27,7 +29,7 @@ export function DepositModal({ onClose }: DepositModalProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się wpłacić.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildDeposit.toast.fail'),
         accent: '#c83232',
       });
     },
@@ -59,11 +61,11 @@ export function DepositModal({ onClose }: DepositModalProps) {
         style={{ width: '100%', maxWidth: 340, background: '#f3ead9', padding: 16 }}
       >
         <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}>
-          WPŁAĆ DO SKARBCA
+          {t('guildDeposit.title')}
         </div>
 
         <AmountField
-          label="ZŁOTO"
+          label={t('guildDeposit.gold')}
           icon={<IcoCoin s={16} />}
           value={gold}
           onChange={setGold}
@@ -71,7 +73,7 @@ export function DepositModal({ onClose }: DepositModalProps) {
           myBalance={maxGold}
         />
         <AmountField
-          label="GEMY"
+          label={t('guildDeposit.gems')}
           icon={<IcoGem s={16} />}
           value={gems}
           onChange={setGems}
@@ -81,7 +83,7 @@ export function DepositModal({ onClose }: DepositModalProps) {
 
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           <button type="button" className="cbtn ghost sm" style={{ flex: 1 }} onClick={onClose}>
-            ANULUJ
+            {t('guildDeposit.cancel')}
           </button>
           <button
             type="button"
@@ -90,7 +92,7 @@ export function DepositModal({ onClose }: DepositModalProps) {
             disabled={!canSubmit}
             onClick={() => depositMut.mutate({ gold, gems })}
           >
-            {depositMut.isPending ? '...' : 'WPŁAĆ'}
+            {depositMut.isPending ? '...' : t('guildDeposit.submit')}
           </button>
         </div>
       </div>
@@ -108,6 +110,7 @@ interface AmountFieldProps {
 }
 
 function AmountField({ label, icon, value, onChange, max, myBalance }: AmountFieldProps) {
+  const t = useT();
   return (
     <div style={{ marginBottom: 10 }}>
       <div
@@ -122,7 +125,7 @@ function AmountField({ label, icon, value, onChange, max, myBalance }: AmountFie
           {icon} {label}
         </label>
         <span className="mono" style={{ fontSize: 13, opacity: 0.7 }}>
-          masz: {myBalance.toLocaleString('pl-PL')}
+          {t('guildDeposit.have').replace('{n}', myBalance.toLocaleString('pl-PL'))}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
@@ -152,7 +155,7 @@ function AmountField({ label, icon, value, onChange, max, myBalance }: AmountFie
           disabled={max === 0}
           style={{ minWidth: 60 }}
         >
-          MAX
+          {t('guildDeposit.max')}
         </button>
       </div>
     </div>

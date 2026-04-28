@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import { IcoClock, IcoCoin } from '@/components/icons';
 import { HelpIcon } from '@/components/ui-common';
+import { useT, tStatic, useContentT } from '@/i18n';
 import type { ActiveMount, IconName, MountOffer } from '@grodno/shared';
 
 function formatCountdown(ms: number): string {
-  if (ms <= 0) return 'wygasł';
+  if (ms <= 0) return tStatic('stables.countdown.expired');
   const totalSec = Math.ceil(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -35,6 +36,8 @@ export function ScreenStables({
   onRent,
   onBack,
 }: ScreenStablesProps) {
+  const t = useT();
+  const tc = useContentT();
   const hasMount = activeMount !== null;
 
   // Re-render co sekundę, żeby countdown aktywnego mountu tykał w UI.
@@ -68,31 +71,21 @@ export function ScreenStables({
           <GameIcon name="horse" size={56} />
         </div>
         <div className="h-display" style={{ fontSize: 22, position: 'relative' }}>
-          STAJNIE
+          {t('stables.title')}
         </div>
         <div
           className="flavor light"
           style={{ fontSize: 17, marginTop: 4, position: 'relative' }}
         >
-          Koń ci skróci drogę. Portfel — też.
+          {t('stables.flavor')}
         </div>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-        <HelpIcon title="Jak działa wierzchowiec?" label="Jak to działa?">
-          <p style={{ margin: '0 0 8px' }}>
-            Wynajmujesz wierzchowca na <b>24 godziny</b>. Każdy nowo wystartowany quest
-            kończy się szybciej o procent zależny od zwierzaka. Im droższy — tym większy
-            skok.
-          </p>
-          <p style={{ margin: '0 0 8px' }}>
-            Liczy się od kliknięcia <b>WYRUSZ</b>. Questy rozpoczęte przed najmem biegną
-            w swoim tempie — koń ich nie goni.
-          </p>
-          <p style={{ margin: 0 }}>
-            Jeden wierzchowiec na raz. Po wygaśnięciu najmu wolna stajnia — bierzesz
-            następnego. Bez zwrotów, bez negocjacji.
-          </p>
+        <HelpIcon title={t('stables.help.title')} label={t('stables.help.label')}>
+          <p style={{ margin: '0 0 8px' }}>{t('stables.help.p1')}</p>
+          <p style={{ margin: '0 0 8px' }}>{t('stables.help.p2')}</p>
+          <p style={{ margin: 0 }}>{t('stables.help.p3')}</p>
         </HelpIcon>
       </div>
 
@@ -128,13 +121,13 @@ export function ScreenStables({
               className="h-title"
               style={{ fontSize: 10, color: '#5a3a2a', letterSpacing: 0.6, marginBottom: 2 }}
             >
-              TWÓJ WIERZCHOWIEC
+              {t('stables.active.label')}
             </div>
             <div className="h-title" style={{ fontSize: 15, lineHeight: 1 }}>
-              {activeMount.name}
+              {tc.mountName(activeMount.slug, activeMount.name)}
             </div>
             <div style={{ fontSize: 13, color: '#2e5020', marginTop: 2, fontWeight: 600 }}>
-              Skraca quest o {activeMount.speedPct}%
+              {t('stables.active.shortens').replace('{n}', String(activeMount.speedPct))}
             </div>
             <div
               className="mono"
@@ -147,7 +140,8 @@ export function ScreenStables({
                 gap: 3,
               }}
             >
-              <IcoClock s={11} /> wygasa za {formatCountdown(msUntilExpiry)}
+              <IcoClock s={11} />{' '}
+              {t('stables.active.expiresIn').replace('{n}', formatCountdown(msUntilExpiry))}
             </div>
           </div>
         </div>
@@ -163,7 +157,7 @@ export function ScreenStables({
           gap: 6,
         }}
       >
-        <GameIcon name="horse" size={14} /> WYNAJMIJ WIERZCHOWCA
+        <GameIcon name="horse" size={14} /> {t('stables.rent.heading')}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {mounts.map((m) => {
@@ -171,12 +165,14 @@ export function ScreenStables({
           const canAfford = playerGold >= m.price;
           const disabled = hasMount || lvlLocked || !canAfford;
           const title = hasMount
-            ? 'Masz już wierzchowca — wróć po wygaśnięciu najmu.'
+            ? t('stables.title.hasMount')
             : lvlLocked
-              ? `Dostępny od LVL ${m.requiredLvl}.`
+              ? t('stables.title.lvlLocked').replace('{n}', String(m.requiredLvl))
               : !canAfford
-                ? 'Za mało złota.'
-                : `Skraca questy o ${m.speedPct}% przez ${m.rentalHours}h.`;
+                ? t('stables.title.poor')
+                : t('stables.title.ok')
+                    .replace('{p}', String(m.speedPct))
+                    .replace('{h}', String(m.rentalHours));
           return (
             <div
               key={m.slug}
@@ -224,13 +220,13 @@ export function ScreenStables({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
-                  {m.name}
+                  {tc.mountName(m.slug, m.name)}
                 </div>
                 <div
                   className="flavor"
                   style={{ fontSize: 14, color: '#5a3a2a', marginTop: 2 }}
                 >
-                  {m.desc}
+                  {tc.mountDesc(m.slug, m.desc)}
                 </div>
                 <div
                   style={{
@@ -243,7 +239,10 @@ export function ScreenStables({
                     fontWeight: 600,
                   }}
                 >
-                  <GameIcon name="spark" size={11} /> −{m.speedPct}% czasu · {m.rentalHours}h
+                  <GameIcon name="spark" size={11} />{' '}
+                  {t('stables.card.speed')
+                    .replace('{p}', String(m.speedPct))
+                    .replace('{h}', String(m.rentalHours))}
                 </div>
               </div>
               <button
@@ -273,14 +272,14 @@ export function ScreenStables({
               fontSize: 14,
             }}
           >
-            Stajnia zamknięta na klucz. Wróć później.
+            {t('stables.empty')}
           </div>
         )}
       </div>
 
       {nextUnlockLvl !== null && nextUnlockLvl > playerLvl && (
         <div style={{ textAlign: 'center', marginTop: 12, fontSize: 14, color: '#5a3a2a' }}>
-          Kolejny wierzchowiec po osiągnięciu LVL {nextUnlockLvl}
+          {t('stables.nextUnlock').replace('{n}', String(nextUnlockLvl))}
         </div>
       )}
 
@@ -290,7 +289,7 @@ export function ScreenStables({
         style={{ marginTop: 14, width: '100%' }}
         onClick={onBack}
       >
-        ← Miasto
+        {t('stables.back')}
       </button>
     </div>
   );

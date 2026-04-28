@@ -18,6 +18,7 @@ import { scrapbookRouter } from './scrapbook.js';
 import { seasonPassRouter } from './seasonPass.js';
 import { towerRouter } from './tower.js';
 import { inventoryRouter } from './inventory.js';
+import { landingRouter } from './landing.js';
 import { leaderboardsRouter } from './leaderboards.js';
 import { meRouter } from './me.js';
 import { oracleRouter } from './oracle.js';
@@ -48,6 +49,7 @@ export const appRouter = router({
   guildTreasury: guildTreasuryRouter,
   guildWars: guildWarsRouter,
   inventory: inventoryRouter,
+  landing: landingRouter,
   leaderboards: leaderboardsRouter,
   me: meRouter,
   oracle: oracleRouter,

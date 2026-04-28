@@ -11,7 +11,13 @@
 import type { ReactNode } from 'react';
 import { Fragment } from 'react';
 import { useIsMobile } from '@/api/use-is-mobile';
+import { useIsWide } from '@/api/use-is-wide';
+import { useT } from '@/i18n';
 import { IOSDevice } from './ios-frame';
+import {
+  DesktopSidePanelLeft,
+  DesktopSidePanelRight,
+} from './desktop/DesktopSidePanels';
 
 export interface AppFrameProps {
   children: ReactNode;
@@ -19,6 +25,8 @@ export interface AppFrameProps {
 
 export function AppFrame({ children }: AppFrameProps) {
   const isMobile = useIsMobile();
+  const isWide = useIsWide();
+  const t = useT();
   if (isMobile) {
     return (
       <div
@@ -40,15 +48,27 @@ export function AppFrame({ children }: AppFrameProps) {
   return (
     <Fragment>
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <h1 className="dt-title">SZCZUROGRÓD</h1>
-        <p className="dt-tagline">Walka, pierogi, szczury. W tej kolejności.</p>
+        <h1 className="dt-title">{t('app.title.full')}</h1>
+        <p className="dt-tagline">{t('app.tagline')}</p>
       </div>
-      <IOSDevice width={402} height={874}>
-        {children}
-      </IOSDevice>
-      <p className="dt-footer">
-        Ramka dla klimatu. Gra — prawdziwa.
-      </p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          gap: 24,
+          width: '100%',
+          maxWidth: 1280,
+          padding: '0 16px',
+        }}
+      >
+        {isWide && <DesktopSidePanelLeft />}
+        <IOSDevice width={402} height={874}>
+          {children}
+        </IOSDevice>
+        {isWide && <DesktopSidePanelRight />}
+      </div>
+      <p className="dt-footer">{t('app.frame.footer')}</p>
     </Fragment>
   );
 }

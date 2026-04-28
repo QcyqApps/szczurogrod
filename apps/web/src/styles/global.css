@@ -549,6 +549,12 @@ html, body {
   to   { opacity: 1; }
 }
 
+/* Online dot — gentle breathing for the desktop landing rail. */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+
 /* ===== Toast — slide from top ===== */
 @keyframes toast-slide {
   0%   { opacity: 0; transform: translateY(-20px) scale(0.96); }

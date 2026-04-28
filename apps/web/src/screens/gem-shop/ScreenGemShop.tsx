@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { Character } from '@grodno/shared';
 import type { Rarity } from '@grodno/shared';
 import { GiantGemCluster } from './GiantGemCluster';
@@ -9,12 +11,14 @@ import { GiantGemCluster } from './GiantGemCluster';
 export type BundleReward =
   | { kind: 'gems'; value: number }
   | { kind: 'gold'; value: number }
-  | { kind: 'item'; value: string; icon: IconName; rarity: Rarity };
+  | { kind: 'item'; value: string; valueKey?: DictKey; icon: IconName; rarity: Rarity };
 
 export interface BundleDef {
   id: string;
   name: string;
+  nameKey?: DictKey;
   tag?: string;
+  tagKey?: DictKey;
   price: string;
   oldPrice: string;
   rewards: readonly BundleReward[];
@@ -24,10 +28,12 @@ export interface BundleDef {
 export interface GemPack {
   id: string;
   name: string;
+  nameKey?: DictKey;
   gems: number;
   bonus: number;
   price: string;
   tag: string | null;
+  tagKey?: DictKey;
   color: string;
 }
 
@@ -42,37 +48,41 @@ export interface Purchase {
 }
 
 const PACKS: readonly GemPack[] = [
-  { id: 'p1', name: 'Garstka', gems: 80, bonus: 0, price: '4,99', tag: null, color: '#b8d4e8' },
-  { id: 'p2', name: 'Sakiewka', gems: 450, bonus: 12, price: '19,99', tag: 'POPULARNY', color: '#8ac4e0' },
-  { id: 'p3', name: 'Skrzynka', gems: 1200, bonus: 25, price: '49,99', tag: 'NAJLEPSZE', color: '#5aa8d0' },
-  { id: 'p4', name: 'Kufer', gems: 2800, bonus: 40, price: '99,99', tag: null, color: '#3a8ac8' },
-  { id: 'p5', name: 'Smoczy Skarb', gems: 6500, bonus: 55, price: '199,99', tag: 'MEGA WARTOŚĆ', color: '#2e6aa8' },
+  { id: 'p1', name: 'Garstka', nameKey: 'gemShop.pack.p1', gems: 80, bonus: 0, price: '4,99', tag: null, color: '#b8d4e8' },
+  { id: 'p2', name: 'Sakiewka', nameKey: 'gemShop.pack.p2', gems: 450, bonus: 12, price: '19,99', tag: 'POPULARNY', tagKey: 'gemShop.pack.tag.popular', color: '#8ac4e0' },
+  { id: 'p3', name: 'Skrzynka', nameKey: 'gemShop.pack.p3', gems: 1200, bonus: 25, price: '49,99', tag: 'NAJLEPSZE', tagKey: 'gemShop.pack.tag.best', color: '#5aa8d0' },
+  { id: 'p4', name: 'Kufer', nameKey: 'gemShop.pack.p4', gems: 2800, bonus: 40, price: '99,99', tag: null, color: '#3a8ac8' },
+  { id: 'p5', name: 'Smoczy Skarb', nameKey: 'gemShop.pack.p5', gems: 6500, bonus: 55, price: '199,99', tag: 'MEGA WARTOŚĆ', tagKey: 'gemShop.pack.tag.mega', color: '#2e6aa8' },
 ];
 
 const BUNDLES: readonly BundleDef[] = [
   {
     id: 'b1',
     name: 'Pakiet Startowy',
+    nameKey: 'gemShop.bundle.b1.name',
     tag: 'TYLKO RAZ',
+    tagKey: 'gemShop.bundle.b1.tag',
     price: '9,99',
     oldPrice: '29,99',
     rewards: [
       { kind: 'gems', value: 300 },
       { kind: 'gold', value: 5000 },
-      { kind: 'item', value: 'Miecz Żarliwy', icon: 'sword-dawn', rarity: 'rare' },
+      { kind: 'item', value: 'Miecz Żarliwy', valueKey: 'gemShop.item.swordZarliwy', icon: 'sword-dawn', rarity: 'rare' },
     ],
     bg: 'linear-gradient(135deg, #4a7c3a 0%, #2e5020 100%)',
   },
   {
     id: 'b2',
     name: 'Zestaw Maga',
+    nameKey: 'gemShop.bundle.b2.name',
     tag: '-60%',
+    tagKey: 'gemShop.bundle.b2.tag',
     price: '24,99',
     oldPrice: '59,99',
     rewards: [
       { kind: 'gems', value: 800 },
-      { kind: 'item', value: 'Kostur Chaosu', icon: 'orb', rarity: 'epic' },
-      { kind: 'item', value: 'Eliksir Many ×5', icon: 'potion', rarity: 'rare' },
+      { kind: 'item', value: 'Kostur Chaosu', valueKey: 'gemShop.item.kosturChaosu', icon: 'orb', rarity: 'epic' },
+      { kind: 'item', value: 'Eliksir Many ×5', valueKey: 'gemShop.item.eliksirManyX5', icon: 'potion', rarity: 'rare' },
     ],
     bg: 'linear-gradient(135deg, #5a3a8a 0%, #3a1a5a 100%)',
   },
@@ -81,7 +91,8 @@ const BUNDLES: readonly BundleDef[] = [
 const SPECIAL = {
   id: 'sp1',
   name: 'KRÓLEWSKA OFERTA',
-  sub: 'Kończy się za 2h 47min',
+  nameKey: 'gemShop.special.name' as DictKey,
+  subKey: 'gemShop.special.subTime' as DictKey,
   price: '14,99',
   oldPrice: '49,99',
   gems: 1500,
@@ -89,15 +100,15 @@ const SPECIAL = {
 };
 
 const VIP = {
-  name: 'SZCZUROGRÓD+ SUBSKRYPCJA',
-  sub: '30 dni premium',
-  price: '19,99/mies.',
-  perks: [
-    '100 gemów dziennie',
-    '+50% złota z questów',
-    'Brak reklam',
-    'Ekskluzywna korona',
-  ],
+  nameKey: 'gemShop.vip.name' as DictKey,
+  subKey: 'gemShop.vip.sub' as DictKey,
+  priceKey: 'gemShop.vip.price' as DictKey,
+  perkKeys: [
+    'gemShop.vip.perk1',
+    'gemShop.vip.perk2',
+    'gemShop.vip.perk3',
+    'gemShop.vip.perk4',
+  ] as readonly DictKey[],
 };
 
 const PACK_SIZE: Record<string, { size: number; count: number }> = {
@@ -126,11 +137,12 @@ export interface ScreenGemShopProps {
 }
 
 export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) {
+  const t = useT();
   const [pulse, setPulse] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<{ pack: Purchase } | null>(null);
+  const [confirm, setConfirm] = useState<{ pack: Purchase; displayName: string } | null>(null);
 
-  function buy(pack: Purchase) {
-    setConfirm({ pack });
+  function buy(pack: Purchase, displayName: string) {
+    setConfirm({ pack, displayName });
   }
   function confirmBuy() {
     if (!confirm) return;
@@ -181,10 +193,10 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           </div>
           <div style={{ flex: 1 }}>
             <div className="h-display" style={{ fontSize: 22, color: '#a0d8f0', lineHeight: 1 }}>
-              MAGICZNY BAZAR
+              {t('gemShop.title')}
             </div>
             <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-              Błyszczące kamyki. Niezbędne.
+              {t('gemShop.flavor')}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -196,7 +208,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 letterSpacing: 1,
               }}
             >
-              Twoje
+              {t('gemShop.yours')}
             </div>
             <div
               className="pip"
@@ -273,13 +285,13 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 marginBottom: 4,
               }}
             >
-              ⏰ {SPECIAL.sub}
+              ⏰ {t(SPECIAL.subKey)}
             </div>
             <div
               className="h-display clean"
               style={{ fontSize: 16, lineHeight: 1, color: '#2a1810' }}
             >
-              {SPECIAL.name}
+              {t(SPECIAL.nameKey)}
             </div>
             <div
               className="h-title"
@@ -303,10 +315,10 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                   textDecoration: 'line-through',
                 }}
               >
-                {SPECIAL.oldPrice}zł
+                {SPECIAL.oldPrice}{t('gemShop.currency')}
               </span>
               <span className="h-title" style={{ fontSize: 16, color: '#c83232' }}>
-                {SPECIAL.price}zł
+                {SPECIAL.price}{t('gemShop.currency')}
               </span>
             </div>
           </div>
@@ -324,21 +336,24 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
             borderTop: '2.5px solid #2a1810',
           }}
           onClick={() =>
-            buy({
-              id: SPECIAL.id,
-              name: SPECIAL.name,
-              gems: SPECIAL.gems,
-              price: SPECIAL.price,
-              real: true,
-            })
+            buy(
+              {
+                id: SPECIAL.id,
+                name: SPECIAL.name,
+                gems: SPECIAL.gems,
+                price: SPECIAL.price,
+                real: true,
+              },
+              t(SPECIAL.nameKey),
+            )
           }
         >
-          CHWYTAJ OKAZJĘ!
+          {t('gemShop.special.cta')}
         </button>
       </div>
 
       <div className="h-title" style={{ fontSize: 14, marginBottom: 8, color: '#5a3a2a' }}>
-        PAKIETY GEMÓW
+        {t('gemShop.packs.heading')}
       </div>
       <div
         style={{
@@ -375,9 +390,9 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                     left: '50%',
                     transform: 'translateX(-50%)',
                     background:
-                      p.tag === 'MEGA WARTOŚĆ'
+                      p.tagKey === 'gemShop.pack.tag.mega'
                         ? '#c83232'
-                        : p.tag === 'NAJLEPSZE'
+                        : p.tagKey === 'gemShop.pack.tag.best'
                           ? '#4a7c3a'
                           : '#d4a24c',
                     color: '#fff',
@@ -392,7 +407,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                     zIndex: 2,
                   }}
                 >
-                  {p.tag}
+                  {p.tagKey ? t(p.tagKey) : p.tag}
                 </div>
               )}
 
@@ -431,7 +446,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
               </div>
 
               <div className="h-title" style={{ fontSize: 12, lineHeight: 1, color: '#5a3a2a' }}>
-                {p.name}
+                {p.nameKey ? t(p.nameKey) : p.name}
               </div>
               <div
                 className="h-title"
@@ -452,16 +467,19 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 className="cbtn sm"
                 style={{ width: '100%', background: '#4a7c3a', color: '#fff3e0' }}
                 onClick={() =>
-                  buy({
-                    id: p.id,
-                    name: p.name,
-                    gems: p.gems,
-                    price: p.price,
-                    real: true,
-                  })
+                  buy(
+                    {
+                      id: p.id,
+                      name: p.name,
+                      gems: p.gems,
+                      price: p.price,
+                      real: true,
+                    },
+                    p.nameKey ? t(p.nameKey) : p.name,
+                  )
                 }
               >
-                {p.price} zł
+                {p.price} {t('gemShop.currency')}
               </button>
             </div>
           );
@@ -469,7 +487,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
       </div>
 
       <div className="h-title" style={{ fontSize: 14, marginBottom: 8, color: '#5a3a2a' }}>
-        ZESTAWY SPECJALNE
+        {t('gemShop.bundles.heading')}
       </div>
       <div
         style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}
@@ -503,7 +521,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                   zIndex: 2,
                 }}
               >
-                {b.tag}
+                {b.tagKey ? t(b.tagKey) : b.tag}
               </div>
             )}
             <div style={{ padding: 12 }}>
@@ -511,7 +529,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 className="h-display"
                 style={{ fontSize: 18, color: '#ffc830', lineHeight: 1, marginBottom: 8 }}
               >
-                {b.name}
+                {b.nameKey ? t(b.nameKey) : b.name}
               </div>
               <div
                 style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}
@@ -555,7 +573,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                     {r.kind === 'item' && (
                       <>
                         <GameIcon name={r.icon} size={16} />
-                        <span style={{ fontSize: 13 }}>{r.value}</span>
+                        <span style={{ fontSize: 13 }}>{r.valueKey ? t(r.valueKey) : r.value}</span>
                       </>
                     )}
                   </div>
@@ -577,10 +595,10 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                       textDecoration: 'line-through',
                     }}
                   >
-                    {b.oldPrice}zł
+                    {b.oldPrice}{t('gemShop.currency')}
                   </span>
                   <span className="h-title" style={{ fontSize: 20, color: '#ffc830' }}>
-                    {b.price}zł
+                    {b.price}{t('gemShop.currency')}
                   </span>
                 </div>
                 <button
@@ -588,16 +606,19 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                   className="cbtn sm"
                   style={{ background: '#ffc830', minWidth: 100 }}
                   onClick={() =>
-                    buy({
-                      id: b.id,
-                      name: b.name,
-                      bundle: b,
-                      price: b.price,
-                      real: true,
-                    })
+                    buy(
+                      {
+                        id: b.id,
+                        name: b.name,
+                        bundle: b,
+                        price: b.price,
+                        real: true,
+                      },
+                      b.nameKey ? t(b.nameKey) : b.name,
+                    )
                   }
                 >
-                  KUP ZESTAW
+                  {t('gemShop.bundles.cta')}
                 </button>
               </div>
             </div>
@@ -634,10 +655,10 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
               className="h-display"
               style={{ fontSize: 17, color: '#ffc830', lineHeight: 1 }}
             >
-              {VIP.name}
+              {t(VIP.nameKey)}
             </div>
             <div className="flavor light" style={{ fontSize: 14 }}>
-              {VIP.sub}
+              {t(VIP.subKey)}
             </div>
           </div>
         </div>
@@ -649,7 +670,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
             marginBottom: 10,
           }}
         >
-          {VIP.perks.map((perk, i) => (
+          {VIP.perkKeys.map((perkKey, i) => (
             <div
               key={i}
               style={{
@@ -659,7 +680,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 gap: 6,
               }}
             >
-              <GameIcon name="check" size={13} /> {perk}
+              <GameIcon name="check" size={13} /> {t(perkKey)}
             </div>
           ))}
         </div>
@@ -668,17 +689,20 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           className="cbtn"
           style={{ width: '100%', background: '#ffc830' }}
           onClick={() =>
-            buy({
-              id: 'vip',
-              name: VIP.name,
-              gems: 100,
-              price: VIP.price,
-              real: true,
-              vip: true,
-            })
+            buy(
+              {
+                id: 'vip',
+                name: t(VIP.nameKey),
+                gems: 100,
+                price: t(VIP.priceKey),
+                real: true,
+                vip: true,
+              },
+              t(VIP.nameKey),
+            )
           }
         >
-          {VIP.price}
+          {t(VIP.priceKey)}
         </button>
       </div>
 
@@ -692,7 +716,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           lineHeight: 1.3,
         }}
       >
-        Ceny zawierają VAT. Zakupy wspierają rozwój gry. Miłej zabawy!
+        {t('gemShop.disclaimer')}
       </div>
 
       <button
@@ -701,7 +725,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
         style={{ width: '100%' }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('gemShop.back')}
       </button>
 
       {confirm && (
@@ -731,10 +755,10 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
             }}
           >
             <div className="h-display clean" style={{ fontSize: 18, marginBottom: 4 }}>
-              POTWIERDŹ ZAKUP
+              {t('gemShop.confirm.title')}
             </div>
             <div className="flavor" style={{ fontSize: 14, marginBottom: 12 }}>
-              {confirm.pack.name}
+              {confirm.displayName}
             </div>
             <div
               style={{
@@ -761,7 +785,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
               )}
               <div className="h-title" style={{ fontSize: 22, color: '#c83232', marginTop: 4 }}>
                 {confirm.pack.price}
-                {confirm.pack.price.includes('/') ? '' : ' zł'}
+                {confirm.pack.price.includes('/') ? '' : ` ${t('gemShop.currency')}`}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -771,7 +795,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 style={{ flex: 1 }}
                 onClick={() => setConfirm(null)}
               >
-                ANULUJ
+                {t('gemShop.confirm.cancel')}
               </button>
               <button
                 type="button"
@@ -779,11 +803,11 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
                 style={{ flex: 1 }}
                 onClick={confirmBuy}
               >
-                KUP
+                {t('gemShop.confirm.buy')}
               </button>
             </div>
             <div style={{ marginTop: 10, fontSize: 10, color: '#7a5a4a' }}>
-              Demo: brak rzeczywistej opłaty
+              {t('gemShop.confirm.demo')}
             </div>
           </div>
         </div>

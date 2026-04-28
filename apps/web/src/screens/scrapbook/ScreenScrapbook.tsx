@@ -3,15 +3,16 @@ import { trpc } from '@/api/trpc';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@grodno/shared';
 import { SCRAPBOOK_THRESHOLDS, type Rarity, type ScrapbookEntry } from '@grodno/shared';
+import { useT, useContentT, type DictKey } from '@/i18n';
 
 type RarityFilter = 'all' | Rarity;
 
-const RARITY_LABEL: Record<RarityFilter, string> = {
-  all: 'WSZYSTKO',
-  common: 'POSPOLITE',
-  rare: 'RZADKIE',
-  epic: 'EPICKIE',
-  legendary: 'LEGENDARNE',
+const RARITY_LABEL_KEY: Record<RarityFilter, DictKey> = {
+  all: 'scrapbook.filter.all',
+  common: 'scrapbook.filter.common',
+  rare: 'scrapbook.filter.rare',
+  epic: 'scrapbook.filter.epic',
+  legendary: 'scrapbook.filter.legendary',
 };
 
 const RARITY_COLOR: Record<Rarity, string> = {
@@ -26,6 +27,7 @@ export interface ScreenScrapbookProps {
 }
 
 export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
+  const t = useT();
   const listQuery = trpc.scrapbook.list.useQuery();
   const [filter, setFilter] = useState<RarityFilter>('all');
 
@@ -33,7 +35,7 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
     return (
       <div className="screen-in" style={{ padding: 12 }}>
         <div style={{ textAlign: 'center', fontSize: 14, color: '#5a3a2a' }}>
-          Ładuję kolekcję...
+          {t('scrapbook.loading')}
         </div>
       </div>
     );
@@ -58,13 +60,13 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830' }}>
-          KOLEKCJA SZCZUROGRODA
+          {t('scrapbook.title')}
         </div>
         <div
           className="flavor light"
           style={{ fontSize: 14, marginTop: 4, marginBottom: 10 }}
         >
-          Kto raz był w bagu, ten w księdze zostaje.
+          {t('scrapbook.flavor')}
         </div>
 
         {/* Progress bar */}
@@ -115,25 +117,25 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
           }}
         >
           <BuffPip
-            label="+XP"
+            label={t('scrapbook.buff.xp')}
             value={buffs.xpPct}
             unlocked={buffs.xpPct > 0}
             threshold={SCRAPBOOK_THRESHOLDS.xp.pct}
           />
           <BuffPip
-            label="+ZŁOTO"
+            label={t('scrapbook.buff.gold')}
             value={buffs.goldPct}
             unlocked={buffs.goldPct > 0}
             threshold={SCRAPBOOK_THRESHOLDS.gold.pct}
           />
           <BuffPip
-            label="+DMG"
+            label={t('scrapbook.buff.dmg')}
             value={buffs.damagePct}
             unlocked={buffs.damagePct > 0}
             threshold={SCRAPBOOK_THRESHOLDS.damage.pct}
           />
           <BuffPip
-            label="+DROP"
+            label={t('scrapbook.buff.drop')}
             value={buffs.dropPct}
             unlocked={buffs.dropPct > 0}
             threshold={SCRAPBOOK_THRESHOLDS.drop.pct}
@@ -142,7 +144,7 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
         <div
           style={{ fontSize: 10, marginTop: 6, opacity: 0.75, lineHeight: 1.4 }}
         >
-          Buffy działają w arenie i rajdach. PvE bez zmian.
+          {t('scrapbook.buffsNote')}
         </div>
       </div>
 
@@ -155,7 +157,7 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
           marginBottom: 8,
         }}
       >
-        {(Object.keys(RARITY_LABEL) as RarityFilter[]).map((r) => {
+        {(Object.keys(RARITY_LABEL_KEY) as RarityFilter[]).map((r) => {
           const active = r === filter;
           return (
             <button
@@ -176,7 +178,7 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
                 cursor: 'pointer',
               }}
             >
-              {RARITY_LABEL[r]}
+              {t(RARITY_LABEL_KEY[r])}
             </button>
           );
         })}
@@ -201,20 +203,22 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('btn.back')}
       </button>
     </div>
   );
 }
 
 function ItemCell({ entry }: { entry: ScrapbookEntry }) {
+  const t = useT();
+  const tc = useContentT();
   const found = entry.foundAt !== null;
   return (
     <div
       title={
         found
-          ? `${entry.name} (${entry.rarity})`
-          : `Nieznany przedmiot (${entry.rarity})`
+          ? `${tc.itemName(entry.name, entry.name)} (${entry.rarity})`
+          : `${t('scrapbook.cell.unknown')} (${entry.rarity})`
       }
       style={{
         aspectRatio: '1',
@@ -267,6 +271,15 @@ function BuffPip({
   unlocked: boolean;
   threshold: number;
 }) {
+  const t = useT();
+  const title = unlocked
+    ? t('scrapbook.buff.unlocked')
+        .replace('{label}', label)
+        .replace('{val}', String(value))
+        .replace('{th}', String(threshold))
+    : t('scrapbook.buff.locked')
+        .replace('{label}', label)
+        .replace('{th}', String(threshold));
   return (
     <div
       style={{
@@ -280,11 +293,7 @@ function BuffPip({
         fontWeight: 700,
         fontFamily: 'Luckiest Guy, sans-serif',
       }}
-      title={
-        unlocked
-          ? `${label}: +${value}% (odblokowane przy ${threshold}%)`
-          : `${label}: zablokowane. Wymaga ${threshold}% kolekcji.`
-      }
+      title={title}
     >
       {unlocked ? `+${value}%` : `${threshold}%`}
       <div style={{ fontSize: 8, opacity: 0.85, marginTop: 1 }}>{label}</div>

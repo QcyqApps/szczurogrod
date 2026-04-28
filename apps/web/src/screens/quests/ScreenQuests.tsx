@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
 import { GemSinkButton, HelpIcon, StatBar } from '@/components/ui-common';
+import { useT, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import {
   GEM_SINK_COSTS,
   computeQuestSkipFullCost,
@@ -19,21 +21,20 @@ const DIFF_COLOR: Record<QuestDifficulty, string> = {
   Boss: '#2a1810',
 };
 
-/**
- * Long-form blurbs shown as tooltips on the diff badge, in the voice of the
- * game. Key thing to communicate: quest = idle timer, badge = reward tier, not
- * combat difficulty. (Players were reading "Boss" as "you'll fight a boss".)
- */
-const DIFF_HINT: Record<QuestDifficulty, string> = {
-  Łatwe: 'Krótkie zadanie w tle (kilkadziesiąt sekund). Niewielka szansa na łup, zwykła jakość.',
-  Średnie:
-    'Dłuższe zadanie (ok. 1–2 min). Przeciętna szansa na łup, zwykłe lub rzadkie przedmioty.',
-  Trudne:
-    'Poważne zlecenie (kilka minut). Spora szansa na łup, w tym epickie przedmioty.',
-  'Ekstr.':
-    'Ekstremalne zlecenie (5+ min). Wysoka szansa na łup, w tym rzeczy epickie i legendarne.',
-  Boss:
-    'Zlecenie-finał rozdziału (10 min). Gwarantowany unikalny przedmiot dla twojej klasy.',
+const DIFF_LABEL_KEY: Record<QuestDifficulty, DictKey> = {
+  Łatwe: 'quests.diff.easy',
+  Średnie: 'quests.diff.medium',
+  Trudne: 'quests.diff.hard',
+  'Ekstr.': 'quests.diff.extreme',
+  Boss: 'quests.diff.boss',
+};
+
+const DIFF_HINT_KEY: Record<QuestDifficulty, DictKey> = {
+  Łatwe: 'quests.diff.hint.easy',
+  Średnie: 'quests.diff.hint.medium',
+  Trudne: 'quests.diff.hint.hard',
+  'Ekstr.': 'quests.diff.hint.extreme',
+  Boss: 'quests.diff.hint.boss',
 };
 
 export interface ScreenQuestsProps {
@@ -71,31 +72,32 @@ export function ScreenQuests({
   charLvl,
   mountSpeedPct = 0,
 }: ScreenQuestsProps) {
+  const t = useT();
   return (
     <div className="screen-in" style={{ padding: 12 }}>
       <div className="panel" style={{ padding: 12, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <GameIcon name="bolt" size={32} />
           <div style={{ flex: 1 }}>
-            <StatBar cur={stamina.cur} max={stamina.max} kind="stam" label="WYTRZYMAŁOŚĆ" />
+            <StatBar cur={stamina.cur} max={stamina.max} kind="stam" label={t('quests.stamina.label')} />
           </div>
           <div
             className="pip gold"
             style={{ fontSize: 13 }}
-            title="Regeneracja wytrzymałości. Każdy quest kosztuje 1 punkt."
+            title={t('quests.stamina.regen.title')}
           >
-            {stamina.cur >= stamina.max ? 'pełna' : '+1 za 0:15'}
+            {stamina.cur >= stamina.max ? t('quests.stamina.full') : t('quests.stamina.regen')}
           </div>
         </div>
         {stamina.cur < stamina.max && (
           <div style={{ marginTop: 8, textAlign: 'center' }}>
             <GemSinkButton
-              label="+10 WYTRZ."
+              label={t('quests.stamina.refill')}
               cost={GEM_SINK_COSTS.staminaRefill}
               playerGems={gems}
               pending={refillStaminaPending}
               onClick={onRefillStamina}
-              disabledReason="Natychmiastowy refill staminy."
+              disabledReason={t('quests.stamina.refill.reason')}
             />
           </div>
         )}
@@ -118,16 +120,12 @@ export function ScreenQuests({
       </div>
 
       {(() => {
-        // Teaser pokazujemy tylko gdy server NIE pokazał już questa frontowego
-        // (`requiredLvl === charLvl + 1`) — czyli gracz dogonił widoczną pulę
-        // i kolejna fala czeka na konkretny LVL. Bez tego napis był stale i
-        // mylił graczy past L6.
         const maxVisibleLvl = quests.reduce((m, q) => Math.max(m, q.requiredLvl), 0);
         if (maxVisibleLvl > charLvl) return null;
         const nextLvl = charLvl + 1;
         return (
           <div style={{ textAlign: 'center', marginTop: 12, fontSize: 14, color: '#5a3a2a' }}>
-            Więcej questów po osiągnięciu LVL {nextLvl}
+            {t('quests.moreAt').replace('{lvl}', String(nextLvl))}
           </div>
         );
       })()}
@@ -139,19 +137,15 @@ export function ScreenQuests({
           marginTop: 10,
         }}
       >
-        <HelpIcon title="Jak działają questy?" label="Jak to działa?">
+        <HelpIcon title={t('quests.help.title')} label={t('quests.help.label')}>
           <p style={{ margin: '0 0 8px' }}>
-            Zadanie w tle. Klikasz <b>WYRUSZ</b>, idziesz zaparzyć herbatę, wracasz po
-            odbiór złota, XP i czasem łupu. <b>Walki tu nie ma</b> — od bicia masz lochy.
+            {t('quests.help.p1.a')}<b>{t('quests.help.p1.b')}</b>{t('quests.help.p1.c')}<b>{t('quests.help.p1.d')}</b>{t('quests.help.p1.e')}
           </p>
           <p style={{ margin: '0 0 8px' }}>
-            Badge przy nazwie (<b>Łatwe</b>, <b>Średnie</b>, <b>Trudne</b>,{' '}
-            <b>Ekstr.</b>, <b>Boss</b>) mówi, jak długo quest trwa i jak obfity łup.
-            Im wyżej — tym dłużej stoi herbata i tym rzadsze przedmioty wpadają.
+            {t('quests.help.p2.a')}<b>{t('quests.help.p2.b')}</b>{t('quests.help.p2.c')}<b>{t('quests.help.p2.d')}</b>{t('quests.help.p2.c')}<b>{t('quests.help.p2.e')}</b>{t('quests.help.p2.c')}<b>{t('quests.help.p2.f')}</b>{t('quests.help.p2.c')}<b>{t('quests.help.p2.g')}</b>{t('quests.help.p2.h')}
           </p>
           <p style={{ margin: 0 }}>
-            <b>Boss</b> to finał rozdziału. Dziesięć minut cierpliwości — i
-            gwarantowany unikalny przedmiot dla twojej klasy. Bez większych niespodzianek.
+            <b>{t('quests.help.p2.g')}</b>{t('quests.help.p3.a')}
           </p>
         </HelpIcon>
       </div>
@@ -162,7 +156,7 @@ export function ScreenQuests({
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Miasto
+        {t('quests.back')}
       </button>
     </div>
   );
@@ -198,6 +192,8 @@ function QuestCard({
   charLvl,
   mountSpeedPct,
 }: QuestCardProps) {
+  const t = useT();
+  const tc = useContentT();
   const locked = q.requiredLvl > charLvl;
   const [now, setNow] = useState(Date.now());
   const cooldown =
@@ -255,18 +251,18 @@ function QuestCard({
             style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}
           >
             <div className="h-title" style={{ fontSize: 15, lineHeight: 1, flex: 1 }}>
-              {q.title}
+              {tc.questTitle(q.id, q.title)}
             </div>
             <span
               className="pip"
               style={{ fontSize: 10, background: diffColor, color: '#fff', cursor: 'help' }}
-              title={DIFF_HINT[q.diff]}
+              title={t(DIFF_HINT_KEY[q.diff])}
             >
-              {q.diff}
+              {t(DIFF_LABEL_KEY[q.diff])}
             </span>
           </div>
           <div style={{ fontSize: 14, color: '#5a3a2a', lineHeight: 1.2, marginBottom: 4 }}>
-            {q.desc}
+            {tc.questDesc(q.id, q.desc)}
           </div>
           <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
             <span className="pip gold" style={{ fontSize: 13 }}>
@@ -317,7 +313,7 @@ function QuestCard({
               borderRadius: 8,
             }}
           >
-            🔒 ODBLOKOWANE OD LVL {q.requiredLvl}
+            🔒 {t('quests.locked').replace('{lvl}', String(q.requiredLvl))}
           </div>
         )}
         {q.state === 'idle' && !locked && (
@@ -333,7 +329,7 @@ function QuestCard({
             }}
             onClick={() => onStart(q.id)}
           >
-            WYRUSZ · {startMin} MIN
+            {t('quests.start.btn').replace('{min}', String(startMin))}
             {mountActive && (
               <span
                 style={{
@@ -343,7 +339,7 @@ function QuestCard({
                   fontSize: 13,
                   opacity: 0.9,
                 }}
-                title={`Wierzchowiec skraca quest o ${cappedPct}%`}
+                title={t('quests.mount.title').replace('{pct}', String(cappedPct))}
               >
                 <GameIcon name="horse" size={12} /> −{cappedPct}%
               </span>
@@ -359,7 +355,7 @@ function QuestCard({
             <div
               style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}
             >
-              <span style={{ fontSize: 12, color: '#5a3a2a' }}>W drodze...</span>
+              <span style={{ fontSize: 12, color: '#5a3a2a' }}>{t('quests.active.travel')}</span>
               <span className="mono" style={{ fontSize: 14, fontWeight: 700 }}>
                 {String(mm).padStart(2, '0')}:{String(ss).padStart(2, '0')}
               </span>
@@ -389,17 +385,17 @@ function QuestCard({
                     disabled={!canAfford}
                     onClick={() => canAfford && onSkip(q.id, skipCost)}
                   >
-                    ZAKOŃCZ TERAZ · <IcoGem s={13} /> {skipCost}
+                    {t('quests.skip.full')}<IcoGem s={13} /> {skipCost}
                   </button>
                   {halfEligible && (
                     <div style={{ marginTop: 6, textAlign: 'center' }}>
                       <GemSinkButton
-                        label="SKRÓĆ O 50%"
+                        label={t('quests.skip.half')}
                         cost={halfCost}
                         playerGems={gems}
                         pending={false}
                         onClick={() => onSkipHalf(q.id)}
-                        disabledReason="Zmniejsza pozostały czas questa o połowę."
+                        disabledReason={t('quests.skip.half.reason')}
                       />
                     </div>
                   )}
@@ -421,7 +417,7 @@ function QuestCard({
             }}
             onClick={() => onCollect(q.id)}
           >
-            <GameIcon name="gift" size={16} /> ODBIERZ NAGRODĘ!
+            <GameIcon name="gift" size={16} /> {t('quests.collect.btn')}
           </button>
         )}
         {q.state === 'done' && cooldown && (
@@ -448,10 +444,10 @@ function QuestCard({
                 fontWeight: 600,
               }}
             >
-              <GameIcon name="check" size={14} /> Ukończono dzisiaj
+              <GameIcon name="check" size={14} /> {t('quests.done.today')}
             </div>
             <div className="mono" style={{ fontSize: 12 }}>
-              Dostępne ponownie za <b>{refreshIn}</b>
+              {t('quests.done.refreshIn')}<b>{refreshIn}</b>
             </div>
           </div>
         )}

@@ -3,6 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { PortraitByClass } from '@/components/portraits';
+import { useT, tStatic } from '@/i18n';
 import type { GuildWarParticipant } from '@grodno/shared';
 
 export interface WarLineupEditorProps {
@@ -16,6 +17,7 @@ export function WarLineupEditor({
   mySideParticipants,
   onClose,
 }: WarLineupEditorProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
 
@@ -26,13 +28,13 @@ export function WarLineupEditor({
 
   const reorderMut = trpc.guildWars.reorder.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Szyk ustawiony.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildWars.lineup.toast.saved'), accent: '#2a4a3a' });
       void utils.guildWars.get.invalidate({ warId });
       onClose();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.lineup.toast.fail'),
         accent: '#c83232',
       });
     },
@@ -81,13 +83,13 @@ export function WarLineupEditor({
         }}
       >
         <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 6 }}>
-          USTAW SZYK
+          {t('guildWars.lineup.title')}
         </div>
         <div
           className="flavor"
           style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginBottom: 10 }}
         >
-          Pierwszy walczy z pierwszym przeciwnika. Zwycięzca zostaje z resztką HP.
+          {t('guildWars.lineup.flavor')}
         </div>
 
         {order.length === 0 && (
@@ -95,7 +97,7 @@ export function WarLineupEditor({
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 12 }}
           >
-            Nikt nie zgłoszony. Najpierw członkowie, potem szyk.
+            {t('guildWars.lineup.empty')}
           </div>
         )}
 
@@ -150,7 +152,7 @@ export function WarLineupEditor({
                 cursor: i === 0 ? 'not-allowed' : 'pointer',
                 fontWeight: 700,
               }}
-              aria-label="W górę"
+              aria-label={t('guildWars.lineup.up')}
             >
               ↑
             </button>
@@ -167,7 +169,7 @@ export function WarLineupEditor({
                 cursor: i === order.length - 1 ? 'not-allowed' : 'pointer',
                 fontWeight: 700,
               }}
-              aria-label="W dół"
+              aria-label={t('guildWars.lineup.down')}
             >
               ↓
             </button>
@@ -176,7 +178,7 @@ export function WarLineupEditor({
 
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <button type="button" className="cbtn ghost sm" style={{ flex: 1 }} onClick={onClose}>
-            ANULUJ
+            {t('guildWars.lineup.cancel')}
           </button>
           <button
             type="button"
@@ -185,7 +187,7 @@ export function WarLineupEditor({
             disabled={reorderMut.isPending || order.length === 0}
             onClick={onSave}
           >
-            {reorderMut.isPending ? '...' : 'ZAPISZ'}
+            {reorderMut.isPending ? '...' : t('guildWars.lineup.save')}
           </button>
         </div>
       </div>

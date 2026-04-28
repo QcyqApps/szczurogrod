@@ -5,6 +5,7 @@ import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { PortraitByClass } from '@/components/portraits';
+import { useT, tStatic, type DictKey } from '@/i18n';
 import type { GuildGetResponse, GuildMember, GuildRank } from '@grodno/shared';
 import { GuildInviteModal } from './components/GuildInviteModal';
 
@@ -13,7 +14,15 @@ export interface GuildTabMembersProps {
   myCharId: string;
 }
 
+const RANK_LABEL_KEY: Record<GuildRank, DictKey> = {
+  leader: 'guildMembers.rank.leader',
+  officer: 'guildMembers.rank.officer',
+  member: 'guildMembers.rank.member',
+  recruit: 'guildMembers.rank.recruit',
+};
+
 export function GuildTabMembers({ data, myCharId }: GuildTabMembersProps) {
+  const t = useT();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [appsOpen, setAppsOpen] = useState(false);
   const [confirmLeader, setConfirmLeader] = useState<GuildMember | null>(null);
@@ -32,7 +41,7 @@ export function GuildTabMembers({ data, myCharId }: GuildTabMembersProps) {
             style={{ flex: 1 }}
             onClick={() => setInviteOpen(true)}
           >
-            ZAPROŚ GRACZA
+            {t('guildMembers.invite')}
           </button>
           <button
             type="button"
@@ -40,7 +49,7 @@ export function GuildTabMembers({ data, myCharId }: GuildTabMembersProps) {
             style={{ flex: 1 }}
             onClick={() => setAppsOpen(true)}
           >
-            PODANIA
+            {t('guildMembers.applications')}
           </button>
         </div>
       )}
@@ -49,7 +58,10 @@ export function GuildTabMembers({ data, myCharId }: GuildTabMembersProps) {
         className="h-title"
         style={{ fontSize: 14, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}
       >
-        <GameIcon name="helmet" size={14} /> CZŁONKOWIE ({data.members.length}/{data.guild.memberCap})
+        <GameIcon name="helmet" size={14} />{' '}
+        {t('guildMembers.title')
+          .replace('{count}', String(data.members.length))
+          .replace('{cap}', String(data.guild.memberCap))}
       </div>
 
       {data.members.length === 1 && (
@@ -57,7 +69,7 @@ export function GuildTabMembers({ data, myCharId }: GuildTabMembersProps) {
           className="flavor"
           style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 8 }}
         >
-          Pusto jak w kasie podatkowej po audycie.
+          {t('guildMembers.empty')}
         </div>
       )}
 
@@ -97,6 +109,7 @@ interface MemberRowProps {
 }
 
 function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: MemberRowProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -109,7 +122,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
 
   const handleError = (err: unknown) => {
     pushToast({
-      text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+      text: err instanceof TRPCClientError ? err.message : tStatic('guildMembers.toast.failed'),
       accent: '#c83232',
     });
   };
@@ -173,14 +186,14 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
           {member.name}
-          {isMe && ' (Ty)'}
+          {isMe && t('guildMembers.you')}
         </div>
         <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-          {rankLabel(member.rank)} · LVL {member.lvl} · {timeAgo(member.lastActiveAt)}
+          {t(RANK_LABEL_KEY[member.rank])} · LVL {member.lvl} · {timeAgo(member.lastActiveAt)}
         </div>
         {member.contributedGold > 0 && (
           <div className="mono" style={{ fontSize: 10, color: '#7a6040' }}>
-            wpłata: {member.contributedGold}g
+            {t('guildMembers.contributedGold').replace('{n}', String(member.contributedGold))}
           </div>
         )}
       </div>
@@ -189,7 +202,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
         <span
           className="pip gold"
           style={{ fontSize: 10, lineHeight: 0, padding: 4 }}
-          title="Mistrz gildii"
+          title={t('guildMembers.leaderTitle')}
         >
           <GameIcon name="crown" size={14} />
         </span>
@@ -210,7 +223,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
             fontWeight: 700,
             padding: 0,
           }}
-          aria-label="Akcje"
+          aria-label={t('guildMembers.actionsAria')}
         >
           ···
         </button>
@@ -238,7 +251,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
           >
             {canPromote && (
               <MenuItem
-                label="Promuj"
+                label={t('guildMembers.action.promote')}
                 disabled={promoteMut.isPending}
                 onClick={() => {
                   setMenuOpen(false);
@@ -248,7 +261,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
             )}
             {canDemote && (
               <MenuItem
-                label="Degraduj"
+                label={t('guildMembers.action.demote')}
                 disabled={demoteMut.isPending}
                 onClick={() => {
                   setMenuOpen(false);
@@ -258,7 +271,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
             )}
             {canTransfer && (
               <MenuItem
-                label="Przekaż przywództwo"
+                label={t('guildMembers.action.transfer')}
                 onClick={() => {
                   setMenuOpen(false);
                   onTransferLeader();
@@ -267,7 +280,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
             )}
             {canKick && (
               <MenuItem
-                label="Wykop"
+                label={t('guildMembers.action.kick')}
                 danger
                 disabled={kickMut.isPending}
                 onClick={() => {
@@ -326,19 +339,20 @@ interface ApplicationsModalProps {
 }
 
 function ApplicationsModal({ onClose }: ApplicationsModalProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const listQuery = trpc.guild.pendingApplications.useQuery();
 
   const approveMut = trpc.guild.approveApplication.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Przyjęty.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildMembers.toast.accepted'), accent: '#2a4a3a' });
       void utils.guild.get.invalidate();
       void utils.guild.pendingApplications.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildMembers.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -379,17 +393,19 @@ function ApplicationsModal({ onClose }: ApplicationsModalProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}>
-          PODANIA ({applications.length})
+          {t('guildMembers.apps.title').replace('{count}', String(applications.length))}
         </div>
         {listQuery.isLoading && (
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a' }}>Ładuję...</div>
+          <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a' }}>
+            {t('guildMembers.apps.loading')}
+          </div>
         )}
         {!listQuery.isLoading && applications.length === 0 && (
           <div
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 12 }}
           >
-            Nikt nie aplikował. Cisza.
+            {t('guildMembers.apps.empty')}
           </div>
         )}
         {applications.map((a) => (
@@ -423,7 +439,7 @@ function ApplicationsModal({ onClose }: ApplicationsModalProps) {
                 {a.name}
               </div>
               <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                {rankLabel('recruit' as GuildRank)} · LVL {a.lvl} · {timeAgo(a.createdAt)}
+                {t(RANK_LABEL_KEY.recruit)} · LVL {a.lvl} · {timeAgo(a.createdAt)}
               </div>
             </div>
             <button
@@ -432,7 +448,7 @@ function ApplicationsModal({ onClose }: ApplicationsModalProps) {
               disabled={approveMut.isPending}
               onClick={() => approveMut.mutate({ characterId: a.characterId })}
             >
-              PRZYJMIJ
+              {t('guildMembers.apps.accept')}
             </button>
             <button
               type="button"
@@ -445,7 +461,7 @@ function ApplicationsModal({ onClose }: ApplicationsModalProps) {
           </div>
         ))}
         <button type="button" className="cbtn ghost sm" style={{ width: '100%' }} onClick={onClose}>
-          ZAMKNIJ
+          {t('guildMembers.apps.close')}
         </button>
       </div>
     </div>
@@ -460,6 +476,7 @@ interface ConfirmTransferModalProps {
 }
 
 function ConfirmTransferModal({ target, onClose }: ConfirmTransferModalProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -472,7 +489,7 @@ function ConfirmTransferModal({ target, onClose }: ConfirmTransferModalProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildMembers.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -499,17 +516,17 @@ function ConfirmTransferModal({ target, onClose }: ConfirmTransferModalProps) {
         style={{ width: '100%', maxWidth: 320, background: '#f3ead9', padding: 16 }}
       >
         <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}>
-          PRZEKAZAĆ ROLĘ?
+          {t('guildMembers.transfer.title')}
         </div>
         <div
           className="flavor"
           style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginBottom: 12 }}
         >
-          Po zmianie {target.name} zostaje Mistrzem. Ty spadasz na Oficera. Decyzja nieodwracalna.
+          {t('guildMembers.transfer.body').replace('{name}', target.name)}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" className="cbtn ghost sm" style={{ flex: 1 }} onClick={onClose}>
-            ANULUJ
+            {t('guildMembers.transfer.cancel')}
           </button>
           <button
             type="button"
@@ -518,7 +535,7 @@ function ConfirmTransferModal({ target, onClose }: ConfirmTransferModalProps) {
             disabled={transferMut.isPending}
             onClick={() => transferMut.mutate({ characterId: target.characterId })}
           >
-            PRZEKAŻ
+            {t('guildMembers.transfer.confirm')}
           </button>
         </div>
       </div>
@@ -554,17 +571,12 @@ function canKickClient(myRank: GuildRank, targetRank: GuildRank): boolean {
   return false;
 }
 
-function rankLabel(rank: GuildRank): string {
-  if (rank === 'leader') return 'Mistrz';
-  if (rank === 'officer') return 'Oficer';
-  if (rank === 'member') return 'Członek';
-  return 'Rekrut';
-}
-
 function timeAgo(ms: number): string {
   const delta = Date.now() - ms;
-  if (delta < 60_000) return 'przed chwilą';
-  if (delta < 3600_000) return `${Math.floor(delta / 60_000)} min temu`;
-  if (delta < 86400_000) return `${Math.floor(delta / 3600_000)}h temu`;
-  return `${Math.floor(delta / 86400_000)}d temu`;
+  if (delta < 60_000) return tStatic('guildMembers.time.justNow');
+  if (delta < 3600_000)
+    return tStatic('guildMembers.time.minAgo').replace('{n}', String(Math.floor(delta / 60_000)));
+  if (delta < 86400_000)
+    return tStatic('guildMembers.time.hAgo').replace('{n}', String(Math.floor(delta / 3600_000)));
+  return tStatic('guildMembers.time.dAgo').replace('{n}', String(Math.floor(delta / 86400_000)));
 }

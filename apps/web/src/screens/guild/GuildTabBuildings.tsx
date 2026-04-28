@@ -3,6 +3,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, tStatic, useContentT } from '@/i18n';
 import type {
   GuildBuildingBuffSpec,
   GuildBuildingEntry,
@@ -15,13 +16,14 @@ export interface GuildTabBuildingsProps {
 }
 
 export function GuildTabBuildings({ myRank }: GuildTabBuildingsProps) {
+  const t = useT();
   const listQuery = trpc.guildBuildings.list.useQuery();
   const canUpgrade = myRank === 'leader' || myRank === 'officer';
 
   if (listQuery.isLoading) {
     return (
       <div style={{ padding: 12, textAlign: 'center', fontSize: 13, color: '#5a3a2a' }}>
-        Ładuję budynki...
+        {t('guildBuildings.loading')}
       </div>
     );
   }
@@ -33,7 +35,7 @@ export function GuildTabBuildings({ myRank }: GuildTabBuildingsProps) {
         className="flavor"
         style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginBottom: 10 }}
       >
-        Buffy Ołtarza działają w arenie i rajdach. Nie w PvE.
+        {t('guildBuildings.flavor')}
       </div>
       {listQuery.data.buildings.map((b) => (
         <BuildingCard
@@ -64,13 +66,18 @@ function BuildingCard({
   treasuryGems,
   guildLevel,
 }: BuildingCardProps) {
+  const t = useT();
+  const tc = useContentT();
+  const buildingName = tc.guildBuildingName(building.slug, building.name);
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
 
   const upgradeMut = trpc.guildBuildings.upgrade.useMutation({
     onSuccess: () => {
       pushToast({
-        text: `${building.name} L${building.level + 1}.`,
+        text: tStatic('guildBuildings.toast.upgraded')
+          .replace('{name}', buildingName)
+          .replace('{lvl}', String(building.level + 1)),
         accent: '#2a4a3a',
       });
       void utils.guildBuildings.list.invalidate();
@@ -79,7 +86,7 @@ function BuildingCard({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Upgrade odmówiony.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildBuildings.toast.refused'),
         accent: '#c83232',
       });
     },
@@ -112,7 +119,7 @@ function BuildingCard({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="h-title" style={{ fontSize: 15, lineHeight: 1 }}>
-            {building.name}{' '}
+            {buildingName}{' '}
             <span className="mono" style={{ fontSize: 12, opacity: 0.7 }}>
               L{building.level}/{building.maxLevel}
             </span>
@@ -130,12 +137,12 @@ function BuildingCard({
           className="flavor"
           style={{ fontSize: 14, color: '#2a4a3a', textAlign: 'center', marginTop: 8 }}
         >
-          Maksymalnie. Dalej już nie rośnie.
+          {t('guildBuildings.atMax')}
         </div>
       ) : (
         <>
           <div style={{ fontSize: 12, color: '#5a3a2a', marginTop: 8 }}>
-            Następny poziom (L{building.level + 1}):{' '}
+            {t('guildBuildings.nextLevel').replace('{n}', String(building.level + 1))}{' '}
             <span style={{ display: 'inline-flex', gap: 6, verticalAlign: 'middle' }}>
               {cost && cost.gold > 0 && (
                 <span
@@ -156,23 +163,23 @@ function BuildingCard({
             </span>
             {cost && cost.guildLvl > 1 && (
               <span style={{ marginLeft: 6, opacity: 0.7 }}>
-                · wymaga gildii LVL {cost.guildLvl}
+                {t('guildBuildings.requiresGuildLvl').replace('{n}', String(cost.guildLvl))}
               </span>
             )}
           </div>
           {!guildLvlOk && (
             <div style={{ fontSize: 13, color: '#8a3030', marginTop: 2 }}>
-              Gildia zbyt młoda.
+              {t('guildBuildings.tooYoung')}
             </div>
           )}
           {guildLvlOk && !goldOk && (
             <div style={{ fontSize: 13, color: '#8a3030', marginTop: 2 }}>
-              Skarbiec nie uciągnie.
+              {t('guildBuildings.notEnoughGold')}
             </div>
           )}
           {guildLvlOk && goldOk && !gemsOk && (
             <div style={{ fontSize: 13, color: '#8a3030', marginTop: 2 }}>
-              Za mało gemów w skarbcu.
+              {t('guildBuildings.notEnoughGems')}
             </div>
           )}
           {canUpgrade ? (
@@ -183,7 +190,7 @@ function BuildingCard({
               onClick={() => upgradeMut.mutate({ slug: building.slug })}
               style={{ width: '100%', marginTop: 6 }}
             >
-              {upgradeMut.isPending ? '...' : 'ULEPSZ'}
+              {upgradeMut.isPending ? '...' : t('guildBuildings.upgrade')}
             </button>
           ) : (
             <div
@@ -195,7 +202,7 @@ function BuildingCard({
                 fontStyle: 'italic',
               }}
             >
-              Tylko oficerowie i lider.
+              {t('guildBuildings.officersOnly')}
             </div>
           )}
         </>
@@ -205,6 +212,7 @@ function BuildingCard({
 }
 
 function BuffPreview({ building }: { building: GuildBuildingEntry }) {
+  const t = useT();
   const lvl = building.level;
   const spec: GuildBuildingBuffSpec = building.buffSpec;
 
@@ -214,8 +222,12 @@ function BuffPreview({ building }: { building: GuildBuildingEntry }) {
       lvl < building.maxLevel ? spec.memberCapByLevel[lvl] : null;
     return (
       <BuffLine
-        currentText={`+${current ?? 0} członków`}
-        nextText={next !== null ? `→ +${next}` : null}
+        currentText={t('guildBuildings.fortress.current').replace('{n}', String(current ?? 0))}
+        nextText={
+          next !== null && next !== undefined
+            ? t('guildBuildings.fortress.next').replace('{n}', String(next))
+            : null
+        }
       />
     );
   }
@@ -233,9 +245,17 @@ function BuffPreview({ building }: { building: GuildBuildingEntry }) {
         : null;
     return (
       <BuffLine
-        currentText={`ATK +${pct(curAtk)} · MAG +${pct(curMag)} · DEF +${pct(curDef)}`}
+        currentText={t('guildBuildings.altar.current')
+          .replace('{atk}', pct(curAtk))
+          .replace('{mag}', pct(curMag))
+          .replace('{def}', pct(curDef))}
         nextText={
-          nxt !== null ? `→ ATK +${pct(nxt.atk)} · MAG +${pct(nxt.mag)} · DEF +${pct(nxt.def)}` : null
+          nxt !== null
+            ? t('guildBuildings.altar.next')
+                .replace('{atk}', pct(nxt.atk))
+                .replace('{mag}', pct(nxt.mag))
+                .replace('{def}', pct(nxt.def))
+            : null
         }
       />
     );
@@ -246,8 +266,12 @@ function BuffPreview({ building }: { building: GuildBuildingEntry }) {
       lvl < building.maxLevel ? (spec.extraWithdrawPctByLevel[lvl] ?? 0) : null;
     return (
       <BuffLine
-        currentText={`limit wypłaty: ${pct(0.2 + cur)}/dzień`}
-        nextText={nxt !== null ? `→ ${pct(0.2 + nxt)}/dzień` : null}
+        currentText={t('guildBuildings.vault.current').replace('{pct}', pct(0.2 + cur))}
+        nextText={
+          nxt !== null
+            ? t('guildBuildings.vault.next').replace('{pct}', pct(0.2 + nxt))
+            : null
+        }
       />
     );
   }

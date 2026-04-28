@@ -3,6 +3,7 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@grodno/shared';
 import { IcoCoin, IcoGem } from '@/components/icons';
 import { trpc } from '@/api/trpc';
+import { useT, useContentT, type DictKey } from '@/i18n';
 
 type AchCategory = 'combat' | 'loot' | 'progression' | 'economy';
 type AchTier = 'bronze' | 'silver' | 'gold' | 'legendary';
@@ -21,11 +22,11 @@ interface AchItem {
   unlockedAt: number | null;
 }
 
-const CATEGORY_LABEL: Record<AchCategory, string> = {
-  combat: 'WALKA',
-  loot: 'ŁUP',
-  progression: 'POSTĘP',
-  economy: 'GOSPODARKA',
+const CATEGORY_LABEL_KEY: Record<AchCategory, DictKey> = {
+  combat: 'achievements.cat.combat',
+  loot: 'achievements.cat.loot',
+  progression: 'achievements.cat.progression',
+  economy: 'achievements.cat.economy',
 };
 
 const TIER_COLOR: Record<AchTier, string> = {
@@ -35,11 +36,11 @@ const TIER_COLOR: Record<AchTier, string> = {
   legendary: '#a04ef0',
 };
 
-const TIER_LABEL: Record<AchTier, string> = {
-  bronze: 'BRĄZ',
-  silver: 'SREBRO',
-  gold: 'ZŁOTO',
-  legendary: 'LEGENDA',
+const TIER_LABEL_KEY: Record<AchTier, DictKey> = {
+  bronze: 'achievements.tier.bronze',
+  silver: 'achievements.tier.silver',
+  gold: 'achievements.tier.gold',
+  legendary: 'achievements.tier.legendary',
 };
 
 export interface ScreenAchievementsProps {
@@ -47,6 +48,7 @@ export interface ScreenAchievementsProps {
 }
 
 export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
+  const t = useT();
   const q = trpc.achievements.list.useQuery();
   const items: readonly AchItem[] = (q.data?.items ?? []) as readonly AchItem[];
   const [activeCat, setActiveCat] = useState<AchCategory>('combat');
@@ -68,12 +70,14 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
           marginBottom: 12,
         }}
       >
-        <div className="h-display" style={{ fontSize: 22 }}>OSIĄGNIĘCIA</div>
+        <div className="h-display" style={{ fontSize: 22 }}>{t('achievements.title')}</div>
         <div className="flavor light" style={{ fontSize: 17, marginTop: 4 }}>
-          Robisz i tak. Czasem ktoś to liczy.
+          {t('achievements.flavor')}
         </div>
         <div className="mono" style={{ fontSize: 13, marginTop: 6 }}>
-          {unlockedCount} / {total} odblokowanych
+          {t('achievements.progress')
+            .replace('{a}', String(unlockedCount))
+            .replace('{b}', String(total))}
         </div>
       </div>
 
@@ -85,7 +89,7 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
           marginBottom: 10,
         }}
       >
-        {(Object.keys(CATEGORY_LABEL) as AchCategory[]).map((cat) => {
+        {(Object.keys(CATEGORY_LABEL_KEY) as AchCategory[]).map((cat) => {
           const total = items.filter((it) => it.category === cat).length;
           const unlocked = items.filter(
             (it) => it.category === cat && it.unlockedAt !== null,
@@ -112,7 +116,7 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
               }}
             >
               <span className="h-title" style={{ fontSize: 10, letterSpacing: 0.3 }}>
-                {CATEGORY_LABEL[cat]}
+                {t(CATEGORY_LABEL_KEY[cat])}
               </span>
               <span className="mono" style={{ fontSize: 10, opacity: 0.75 }}>
                 {unlocked}/{total}
@@ -128,7 +132,7 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
             className="flavor"
             style={{ padding: 12, textAlign: 'center', color: '#5a3a2a', fontSize: 14 }}
           >
-            {q.isLoading ? 'Ładowanie…' : 'Brak osiągnięć w tej kategorii.'}
+            {q.isLoading ? t('achievements.loading') : t('achievements.empty')}
           </div>
         )}
         {filtered.map((it) => (
@@ -142,13 +146,15 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
         style={{ marginTop: 14, width: '100%' }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('btn.back')}
       </button>
     </div>
   );
 }
 
 function AchievementCard({ item }: { item: AchItem }) {
+  const t = useT();
+  const tc = useContentT();
   const unlocked = item.unlockedAt !== null;
   const pct = Math.min(100, (item.progress / item.threshold) * 100);
   const tierColor = TIER_COLOR[item.tier];
@@ -194,7 +200,7 @@ function AchievementCard({ item }: { item: AchItem }) {
               color: unlocked ? '#2a1810' : '#5a4a3a',
             }}
           >
-            {item.name}
+            {tc.achievementName(item.id, item.name)}
           </div>
           <span
             className="pip"
@@ -205,10 +211,10 @@ function AchievementCard({ item }: { item: AchItem }) {
               fontWeight: 700,
             }}
           >
-            {TIER_LABEL[item.tier]}
+            {t(TIER_LABEL_KEY[item.tier])}
           </span>
         </div>
-        <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 2 }}>{item.desc}</div>
+        <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 2 }}>{tc.achievementDesc(item.id, item.desc)}</div>
         {/* Progress bar (tylko gdy threshold > 1 lub niedodblokowane) */}
         {(!unlocked || item.threshold > 1) && (
           <div style={{ marginTop: 5 }}>

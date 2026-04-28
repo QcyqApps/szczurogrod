@@ -67,6 +67,31 @@ services:
       retries: 5
       start_period: 30s
 
+  web:
+    # Statyczny SPA build (Vite → nginx alpine) serwowany pod ratburg.com /
+    # szczurogrod.pl przez front nginx'a w shared-proxy. Backend zostaje na
+    # tidle.ovh — VITE_API_URL bake'owany w bundle pod build.
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Override przez `VITE_API_URL=https://staging.tidle.ovh/grodno docker
+        # compose --profile app build web` jeśli inny env. Default to prod.
+        VITE_API_URL: ${VITE_API_URL:-https://tidle.ovh/grodno}
+    container_name: grodno-web
+    restart: unless-stopped
+    networks:
+      # Tylko shared-proxy — web nie potrzebuje dostępu do bazy.
+      - shared-proxy
+    # Brak `ports:` — front nginx proxy_pass'uje na grodno-web:80.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 volumes:
   postgres_data:
     # `name:` wymusza dokładną nazwę volume'u, bez auto-prefixu compose project

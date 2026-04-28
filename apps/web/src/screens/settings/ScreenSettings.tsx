@@ -4,6 +4,8 @@ import { GameIcon } from '@/components/game-icons';
 import { IcoGem, IcoRefresh } from '@/components/icons';
 import { useAdminStore } from '@/api/admin-store';
 import { trpc } from '@/api/trpc';
+import { useT } from '@/i18n';
+import { LangPicker } from '@/i18n/LangPicker';
 import { GEM_SINK_COSTS } from '@grodno/shared';
 
 // Bumped manually until we wire a build-time constant via Vite's `define`.
@@ -36,6 +38,7 @@ export function ScreenSettings({
   onRename,
   renamePending,
 }: ScreenSettingsProps) {
+  const t = useT();
   const [renameOpen, setRenameOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [legalOpen, setLegalOpen] = useState<null | 'privacy' | 'terms'>(null);
@@ -53,20 +56,27 @@ export function ScreenSettings({
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830' }}>
-          USTAWIENIA
+          {t('settings.heading')}
         </div>
         <div className="flavor light" style={{ fontSize: 15, marginTop: 2 }}>
-          Pokręcisz, poskrobiesz, wyjdziesz.
+          {t('settings.flavor')}
         </div>
       </div>
 
-      <Section title="KONTO" icon="helmet">
-        <Row label={isGuest ? 'Gość bez nazwiska' : 'Email'}>
+      <Section title={t('settings.section.lang')} icon="scroll">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span style={{ color: '#5a3a2a', fontSize: 14 }}>{t('settings.lang.heading')}</span>
+          <LangPicker size="sm" />
+        </div>
+      </Section>
+
+      <Section title={t('settings.section.account')} icon="helmet">
+        <Row label={isGuest ? t('settings.guest.label') : t('settings.email')}>
           <span className="mono" style={{ fontSize: 14 }}>
             {isGuest ? '—' : (email ?? '—')}
           </span>
         </Row>
-        <Row label="Twoja postać">
+        <Row label={t('settings.character')}>
           <span className="h-title" style={{ fontSize: 14 }}>
             {characterName}
           </span>
@@ -82,11 +92,11 @@ export function ScreenSettings({
           disabled={playerGems < GEM_SINK_COSTS.renameCharacter}
           title={
             playerGems < GEM_SINK_COSTS.renameCharacter
-              ? `Potrzeba ${GEM_SINK_COSTS.renameCharacter} gemów.`
-              : 'Zmień imię postaci. 30-dniowy cooldown.'
+              ? t('settings.rename.title.notEnough').replace('{n}', String(GEM_SINK_COSTS.renameCharacter))
+              : t('settings.rename.title')
           }
         >
-          ZMIEŃ IMIĘ · <IcoGem s={12} /> {GEM_SINK_COSTS.renameCharacter}
+          {t('settings.rename.btn')} · <IcoGem s={12} /> {GEM_SINK_COSTS.renameCharacter}
         </button>
         {renameOpen && (
           <div
@@ -109,7 +119,7 @@ export function ScreenSettings({
               style={{ width: '100%', maxWidth: 320, background: '#f3ead9', padding: 16 }}
             >
               <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}>
-                NOWE IMIĘ
+                {t('settings.rename.heading')}
               </div>
               <input
                 value={newName}
@@ -126,7 +136,7 @@ export function ScreenSettings({
                 }}
               />
               <div style={{ fontSize: 13, color: '#5a3a2a', textAlign: 'center', marginBottom: 10 }}>
-                Koszt: <IcoGem s={10} /> {GEM_SINK_COSTS.renameCharacter} · cooldown 30 dni
+                {t('settings.rename.cost')}<IcoGem s={10} /> {GEM_SINK_COSTS.renameCharacter}{t('settings.rename.cooldown')}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -135,7 +145,7 @@ export function ScreenSettings({
                   style={{ flex: 1 }}
                   onClick={() => setRenameOpen(false)}
                 >
-                  ANULUJ
+                  {t('settings.btn.cancel')}
                 </button>
                 <button
                   type="button"
@@ -147,7 +157,7 @@ export function ScreenSettings({
                     setRenameOpen(false);
                   }}
                 >
-                  ZMIEŃ
+                  {t('settings.btn.change')}
                 </button>
               </div>
             </div>
@@ -166,8 +176,7 @@ export function ScreenSettings({
               lineHeight: 1.3,
             }}
           >
-            <b>Uwaga gościu:</b> konto bez emaila znika razem z pamięcią
-            przeglądarki. Zarejestruj się aby nie stracić postępu.
+            <b>{t('settings.guest.warningPrefix')}</b> {t('settings.guest.warning')}
           </div>
         )}
         <button
@@ -176,29 +185,29 @@ export function ScreenSettings({
           style={{ width: '100%', marginTop: 10 }}
           onClick={onLogout}
         >
-          WYLOGUJ
+          {t('settings.logout')}
         </button>
       </Section>
 
-      <Section title="GRA" icon="dice">
-        <Button onClick={onEditAppearance} iconName="spark" label="ZMIEŃ WYGLĄD" />
-        <Button onClick={onReplayTutorial} iconName="scroll" label="POWTÓRZ TUTORIAL" />
+      <Section title={t('settings.section.game')} icon="dice">
+        <Button onClick={onEditAppearance} iconName="spark" label={t('settings.btn.editAppearance')} />
+        <Button onClick={onReplayTutorial} iconName="scroll" label={t('settings.btn.replayTutorial')} />
       </Section>
 
-      <Section title="ZASADY" icon="scroll">
+      <Section title={t('settings.section.legal')} icon="scroll">
         <Button
           onClick={() => setLegalOpen('privacy')}
           iconName="scroll"
-          label="POLITYKA PRYWATNOŚCI"
+          label={t('settings.btn.privacy')}
         />
         <Button
           onClick={() => setLegalOpen('terms')}
           iconName="scroll"
-          label="REGULAMIN"
+          label={t('settings.btn.terms')}
         />
       </Section>
 
-      <Section title="STREFA ZAGROŻENIA" icon="skull-lich">
+      <Section title={t('settings.section.danger')} icon="skull-lich">
         <div
           style={{
             fontSize: 13,
@@ -207,8 +216,7 @@ export function ScreenSettings({
             marginBottom: 8,
           }}
         >
-          Usunięcie konta jest <b>nieodwracalne</b>. Postać, ekwipunek, gildia,
-          historia — wszystko znika. Gemy też.
+          {t('settings.danger.body.before')}<b>{t('settings.danger.body.bold')}</b>{t('settings.danger.body.after')}
         </div>
         <button
           type="button"
@@ -216,7 +224,7 @@ export function ScreenSettings({
           style={{ width: '100%' }}
           onClick={() => setDeleteOpen(true)}
         >
-          USUŃ KONTO
+          {t('settings.deleteAccount')}
         </button>
       </Section>
 
@@ -234,15 +242,15 @@ export function ScreenSettings({
 
       <AdminSection />
 
-      <Section title="O GRZE" icon="crown">
-        <Row label="Wersja">
+      <Section title={t('settings.section.about')} icon="crown">
+        <Row label={t('settings.about.version')}>
           <span className="mono" style={{ fontSize: 14 }}>
             {APP_VERSION}
           </span>
         </Row>
-        <Row label="Silnik">
+        <Row label={t('settings.about.engine')}>
           <span className="mono" style={{ fontSize: 14 }}>
-            Szczurogród Engine v1
+            Ratburg Engine v1
           </span>
         </Row>
         <div
@@ -254,7 +262,7 @@ export function ScreenSettings({
             textAlign: 'center',
           }}
         >
-          Zrobiono z miłości i sera.
+          {t('settings.about.flavor')}
         </div>
       </Section>
 
@@ -264,7 +272,7 @@ export function ScreenSettings({
         style={{ width: '100%', marginTop: 4 }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('settings.back')}
       </button>
     </div>
   );
@@ -325,6 +333,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  * Bearer JWT — osobna dimensja auth.
  */
 function AdminSection() {
+  const t = useT();
   const token = useAdminStore((s) => s.token);
   const setToken = useAdminStore((s) => s.setToken);
   const [input, setInput] = useState('');
@@ -378,11 +387,10 @@ function AdminSection() {
           color: '#5a3a2a',
         }}
       >
-        <GameIcon name="bolt" size={16} /> ADMIN — RELOAD CONTENT
+        <GameIcon name="bolt" size={16} /> {t('settings.admin.title')}
       </div>
       <div style={{ fontSize: 12, color: '#5a3a2a', marginBottom: 8, lineHeight: 1.3 }}>
-        Wpisz <b>ADMIN_TOKEN</b> (z .env serwera). Przeładowuje REGISTRY po
-        edycjach w DataGrip bez restartu.
+        {t('settings.admin.body.prefix')}<b>ADMIN_TOKEN</b> {t('settings.admin.body')}
       </div>
       {!token ? (
         <div style={{ display: 'flex', gap: 6 }}>
@@ -409,7 +417,7 @@ function AdminSection() {
             onClick={() => setToken(input)}
             style={{ fontSize: 13 }}
           >
-            ZAPISZ
+            {t('settings.admin.save')}
           </button>
         </div>
       ) : (
@@ -438,7 +446,7 @@ function AdminSection() {
                 padding: 0,
               }}
             >
-              zapomnij
+              {t('settings.admin.forget')}
             </button>
           </div>
           <button
@@ -449,7 +457,7 @@ function AdminSection() {
             style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
           >
             <IcoRefresh s={16} />
-            {status.kind === 'loading' ? 'ŁADUJĘ…' : 'RELOAD CONTENT'}
+            {status.kind === 'loading' ? t('settings.admin.loading') : t('settings.admin.reload')}
           </button>
         </>
       )}
@@ -482,7 +490,7 @@ function AdminSection() {
             wordBreak: 'break-all',
           }}
         >
-          BŁĄD · {status.message}
+          {t('settings.admin.err')}{status.message}
         </div>
       )}
     </div>
@@ -517,93 +525,6 @@ function Button({
   );
 }
 
-const PRIVACY_TEXT = `POLITYKA PRYWATNOŚCI · Szczurogród
-
-OSTATNIA AKTUALIZACJA: kwiecień 2026
-
-1. KTO PRZETWARZA TWOJE DANE
-Administratorem danych jest deweloper gry Szczurogród. Kontakt: support@szczurogrod.pl (placeholder — uzupełnij przed launchem).
-
-2. JAKIE DANE ZBIERAMY
-• Konto z emailem: adres email + hash hasła (argon2id, hasła nie da się odwrócić).
-• Konto-gość: tylko anonimowe ID. Bez emaila.
-• Stan gry: postać, ekwipunek, postępy, statystyki walk, członkostwo w gildii, czat gildii.
-• Logi techniczne: czas zapytań, błędy. Bez adresu IP w logach aplikacji.
-
-3. PO CO TO ZBIERAMY
-• Identyfikacja konta i logowanie (podstawa: wykonanie umowy, art. 6 ust. 1 lit. b RODO).
-• Działanie mechanik gry server-authoritative — bez tego serwer nie wie kim jesteś.
-• Anty-cheat: weryfikacja, że klient nie zmienia stanu samowolnie.
-
-4. KOMU UDOSTĘPNIAMY
-Nie sprzedajemy ani nie udostępniamy danych firmom trzecim do celów marketingowych. Hosting bazy: VPS UE (placeholder — wpisz konkretną lokalizację). Dane nie wychodzą poza EOG.
-
-5. JAK DŁUGO TRZYMAMY
-Konto aktywne — bezterminowo. Po usunięciu konta przez Ciebie (Ustawienia → STREFA ZAGROŻENIA → USUŃ KONTO) Twoje dane są kasowane natychmiast z bazy produkcyjnej. Backupy są nadpisywane w cyklu 30 dni.
-
-6. TWOJE PRAWA (RODO)
-• Prawo dostępu do danych — napisz na support, wyślemy export.
-• Prawo do sprostowania — możesz zmienić email/hasło/imię postaci w grze.
-• Prawo do usunięcia („prawo do bycia zapomnianym") — Ustawienia → USUŃ KONTO. Realizowane natychmiastowo, bez kosztu.
-• Prawo do ograniczenia / sprzeciwu — napisz na support.
-• Prawo do skargi do Prezesa UODO (uodo.gov.pl).
-
-7. CIASTECZKA / LOCALSTORAGE
-Używamy localStorage do przechowywania tokenów sesji (access + refresh JWT). Bez tego musiałbyś logować się przy każdym otwarciu. Brak ciasteczek śledzących.
-
-8. DZIECI
-Gra nie jest skierowana do osób poniżej 13 roku życia (COPPA). Nie zbieramy świadomie ich danych.
-
-9. ZMIANY
-Gdy zmienimy tę politykę, zobaczysz nowy banner przy logowaniu. Stara wersja zostaje w archiwum (link na żądanie).
-`;
-
-const TERMS_TEXT = `REGULAMIN · Szczurogród
-
-OSTATNIA AKTUALIZACJA: kwiecień 2026
-
-1. POSTANOWIENIA OGÓLNE
-Gra Szczurogród (dalej: „gra") jest dostarczana „tak jak jest". Korzystając z niej akceptujesz ten regulamin.
-
-2. KONTO
-• Możesz założyć konto z emailem albo grać jako gość.
-• Konto-gość znika razem z pamięcią przeglądarki — żadnej gwarancji odzyskania postępu.
-• Jedno konto = jedna postać.
-• Zakaz udostępniania konta osobom trzecim.
-
-3. ZASADY GRY
-• Zabronione: cheaty, exploity, modyfikowanie klienta, automatyzacja (boty, makra, skrypty).
-• Zabronione: kupowanie/sprzedawanie kont, gemów, przedmiotów za prawdziwą walutę poza oficjalnymi kanałami.
-• Zabronione w czacie gildii: spam, mowa nienawiści, doxing, treści nielegalne.
-
-4. SANKCJE
-Naruszenie zasad = ban czasowy lub permanentny. W skrajnych przypadkach (cheating, oszustwa płatnicze) konto kasowane bez zwrotu wpłat.
-
-5. PŁATNOŚCI (gemy / season pass)
-• Gemy są walutą wirtualną. Nie podlegają zwrotowi po wydaniu w grze.
-• Premium Season Pass jest sezonowy — kupujesz dostęp do drugiego tracka nagród. Po sezonie premium-only nagrody przepadają (free tier zostaje).
-• Płatności obsługuje Google Play (kanał mobilny) lub Stripe (web — placeholder).
-• Reklamacje: support@szczurogrod.pl w ciągu 14 dni od transakcji.
-
-6. ODPOWIEDZIALNOŚĆ
-Gra jest udostępniana bezpłatnie. Nie odpowiadamy za:
-• Przerwy w działaniu serwera (planowane lub awaryjne).
-• Utratę progresu konta-gościa po wyczyszczeniu pamięci przeglądarki.
-• Decyzje gracza (sprzedaż uniqua, brak healera przed bossem).
-
-7. WŁASNOŚĆ INTELEKTUALNA
-Wszystkie grafiki, teksty, kod, mechaniki gry są chronione prawem autorskim. Zakazane: kopiowanie assetów do innych projektów.
-
-8. ZAKOŃCZENIE USŁUGI
-Możemy zakończyć działanie gry z 30-dniowym wyprzedzeniem (banner w grze). Po wygaszeniu serwerów konta przestają działać; dane są kasowane.
-
-9. ROZSTRZYGANIE SPORÓW
-Prawo polskie. Sąd właściwy: miejsce siedziby konsumenta. Pierwsza droga: support@szczurogrod.pl.
-
-10. KONTAKT
-support@szczurogrod.pl (placeholder — uzupełnij przed launchem)
-`;
-
 function LegalOverlay({
   kind,
   onClose,
@@ -611,7 +532,8 @@ function LegalOverlay({
   kind: 'privacy' | 'terms';
   onClose: () => void;
 }) {
-  const text = kind === 'privacy' ? PRIVACY_TEXT : TERMS_TEXT;
+  const t = useT();
+  const text = kind === 'privacy' ? t('settings.legal.privacy') : t('settings.legal.terms');
   return (
     <div
       onClick={onClose}
@@ -660,7 +582,7 @@ function LegalOverlay({
           style={{ width: '100%', marginTop: 10 }}
           onClick={onClose}
         >
-          ZAMKNIJ
+          {t('settings.legal.close')}
         </button>
       </div>
     </div>
@@ -676,20 +598,20 @@ function DeleteAccountModal({
   onClose: () => void;
   onDeleted: () => void;
 }) {
+  const t = useT();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const confirmKeyword = t('settings.delete.confirmKeyword');
   const deleteMut = trpc.me.deleteAccount.useMutation({
     onSuccess: () => onDeleted(),
     onError: (e) => {
       setErr(
-        e instanceof TRPCClientError
-          ? e.message
-          : 'Coś poszło nie tak. Spróbuj ponownie.',
+        e instanceof TRPCClientError ? e.message : t('settings.delete.errFallback'),
       );
     },
   });
-  const ready = confirm === 'USUŃ' && (isGuest || password.length > 0);
+  const ready = confirm.toUpperCase() === confirmKeyword && (isGuest || password.length > 0);
   return (
     <div
       onClick={onClose}
@@ -714,7 +636,7 @@ function DeleteAccountModal({
           className="h-display"
           style={{ fontSize: 18, textAlign: 'center', marginBottom: 8, color: '#8a3030' }}
         >
-          USUWASZ KONTO
+          {t('settings.delete.heading')}
         </div>
         <div
           style={{
@@ -728,13 +650,12 @@ function DeleteAccountModal({
             marginBottom: 12,
           }}
         >
-          Postać, ekwipunek, gemy, gildia, historia walk — znikną. Nie da się
-          tego cofnąć. Jeśli prowadzisz gildię, najpierw przekaż przywództwo.
+          {t('settings.delete.warning')}
         </div>
         {!isGuest && (
           <>
             <div style={{ fontSize: 13, color: '#5a3a2a', marginBottom: 4 }}>
-              Hasło:
+              {t('settings.delete.password')}
             </div>
             <input
               type="password"
@@ -755,13 +676,13 @@ function DeleteAccountModal({
           </>
         )}
         <div style={{ fontSize: 13, color: '#5a3a2a', marginBottom: 4 }}>
-          Wpisz <b>USUŃ</b> żeby potwierdzić:
+          {t('settings.delete.confirmAsk')}<b>{confirmKeyword}</b>{t('settings.delete.confirmAsk.suffix')}
         </div>
         <input
           type="text"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          placeholder="USUŃ"
+          placeholder={confirmKeyword}
           style={{
             width: '100%',
             padding: '8px 10px',
@@ -795,7 +716,7 @@ function DeleteAccountModal({
             onClick={onClose}
             disabled={deleteMut.isPending}
           >
-            ANULUJ
+            {t('settings.btn.cancel')}
           </button>
           <button
             type="button"
@@ -810,7 +731,7 @@ function DeleteAccountModal({
               });
             }}
           >
-            {deleteMut.isPending ? 'KASUJĘ…' : 'USUŃ KONTO'}
+            {deleteMut.isPending ? t('settings.delete.deleting') : t('settings.deleteAccount')}
           </button>
         </div>
       </div>

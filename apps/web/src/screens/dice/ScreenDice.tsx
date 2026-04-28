@@ -11,6 +11,8 @@ import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoClock, IcoCoin, IcoGem } from '@/components/icons';
 import { GameIcon } from '@/components/game-icons';
 import { GemSinkButton } from '@/components/ui-common';
+import { useT, tStatic, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { DiceRollResponse } from '@grodno/shared';
 
 export interface ScreenDiceProps {
@@ -25,6 +27,7 @@ const RARITY_COLOR: Record<string, string> = {
 };
 
 export function ScreenDice({ onBack }: ScreenDiceProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const statusQuery = trpc.dice.status.useQuery();
@@ -52,7 +55,7 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Franek odmówił.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('dice.toast.refused'),
         accent: '#c83232',
       });
     },
@@ -86,10 +89,10 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830' }}>
-          KARCIARZ FRANEK
+          {t('dice.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          Kości są proste. Matematyka też, tylko Franek udaje że nie.
+          {t('dice.flavor')}
         </div>
       </div>
 
@@ -109,13 +112,13 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
         </div>
 
         {!status ? (
-          <div style={{ fontSize: 13 }}>Franek tasuje kości…</div>
+          <div style={{ fontSize: 13 }}>{t('dice.shuffling')}</div>
         ) : (
           <>
             <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 8 }}>
               {status.freeAvailable
-                ? 'Darmowy rzut dostępny.'
-                : 'Darmowy zużyty — wróć jutro albo płać gemami.'}
+                ? t('dice.freeAvailable')
+                : t('dice.freeUsed')}
             </div>
             <div
               style={{
@@ -133,18 +136,18 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
                 style={{ minWidth: 150 }}
               >
                 {rollMut.isPending && rollMut.variables?.useFree
-                  ? 'RZUCAM...'
-                  : 'RZUĆ ZA DARMO'}
+                  ? t('dice.btn.rolling')
+                  : t('dice.btn.rollFree')}
               </button>
               <GemSinkButton
-                label="RZUĆ ZA GEMY"
+                label={t('dice.btn.rollGems')}
                 cost={status.extraCostGems}
                 playerGems={gems}
                 pending={
                   rollMut.isPending && rollMut.variables?.useFree === false
                 }
                 onClick={() => void handleRoll(false)}
-                disabledReason="Drugi rzut i kolejne."
+                disabledReason={t('dice.btn.rollGems.disabled')}
                 variant="primary"
                 size="md"
               />
@@ -171,12 +174,12 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
       {/* Tabela wygranych — zawsze widoczna (edukacja gracza) */}
       <div className="panel" style={{ padding: 12, marginBottom: 10 }}>
         <div className="h-title" style={{ fontSize: 14, marginBottom: 8 }}>
-          TABELA WYGRANYCH
+          {t('dice.payouts.title')}
         </div>
-        <PayoutRow roll="1–3" label="Szkło" />
+        <PayoutRow roll="1–3" label={t('dice.payouts.glass')} />
         <PayoutRow
           roll="4–6"
-          label="500 gold'a"
+          label={t('dice.payouts.gold500')}
           value={
             <>
               <IcoCoin s={12} /> 500
@@ -185,7 +188,7 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
         />
         <PayoutRow
           roll="7–9"
-          label="1500 gold'a"
+          label={t('dice.payouts.gold1500')}
           value={
             <>
               <IcoCoin s={12} /> 1500
@@ -194,7 +197,7 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
         />
         <PayoutRow
           roll="10"
-          label="Jackpot — rare item lub 20 gemów"
+          label={t('dice.payouts.jackpot')}
           value={
             <>
               <IcoGem s={12} /> 20 / item
@@ -202,12 +205,12 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
           }
         />
         <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 6, fontStyle: 'italic' }}>
-          Franek nie pamięta co dał Ci wczoraj. Ale pamięta co mu jesteś winien.
+          {t('dice.payouts.flavor')}
         </div>
       </div>
 
       <button type="button" className="cbtn ghost" style={{ width: '100%' }} onClick={onBack}>
-        ← WRÓĆ
+        {t('dice.back')}
       </button>
 
       {result && <RewardModal result={result} onClose={() => setResult(null)} />}
@@ -309,14 +312,15 @@ function RewardModal({
   result: DiceRollResponse;
   onClose: () => void;
 }) {
-  const headline =
-    result.kind === 'nothing'
-      ? 'PUDŁO.'
-      : result.kind === 'gold'
-        ? 'ZŁOTO!'
-        : result.kind === 'gems'
-          ? 'GEMY!'
-          : 'JACKPOT!';
+  const t = useT();
+  const tc = useContentT();
+  const HEADLINE_KEY: Record<DiceRollResponse['kind'], DictKey> = {
+    nothing: 'dice.result.miss',
+    gold: 'dice.result.gold',
+    gems: 'dice.result.gems',
+    rare_item: 'dice.result.jackpot',
+  };
+  const headline = t(HEADLINE_KEY[result.kind]);
   const accent =
     result.kind === 'nothing'
       ? '#8a5a3a'
@@ -353,7 +357,7 @@ function RewardModal({
         }}
       >
         <div style={{ fontSize: 15, color: '#5a3a2a', marginBottom: 6 }}>
-          RZUT: <b className="mono" style={{ fontSize: 22, color: '#2a1810' }}>{result.roll}</b>
+          {t('dice.result.rollLabel')} <b className="mono" style={{ fontSize: 22, color: '#2a1810' }}>{result.roll}</b>
         </div>
         <div
           className="h-display"
@@ -421,7 +425,7 @@ function RewardModal({
             <GameIcon name={result.item.icon as never} size={40} />
             <div style={{ textAlign: 'left', flex: 1 }}>
               <div className="h-title" style={{ fontSize: 13 }}>
-                {result.item.name}
+                {tc.itemName(result.item.name, result.item.name)}
               </div>
               <div
                 style={{
@@ -443,7 +447,7 @@ function RewardModal({
           style={{ width: '100%' }}
           onClick={onClose}
         >
-          DALEJ
+          {t('dice.result.continue')}
         </button>
       </div>
     </div>
@@ -451,17 +455,18 @@ function RewardModal({
 }
 
 function CountdownToNextFree({ target }: { target: number }) {
+  const t = useT();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(t);
+    const handle = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(handle);
   }, []);
   const diff = Math.max(0, target - now);
   const h = Math.floor(diff / 3_600_000);
   const m = Math.floor((diff % 3_600_000) / 60_000);
   return (
     <span>
-      Darmowy za <b className="mono">{h}h:{String(m).padStart(2, '0')}m</b>
+      {t('dice.countdown.next')} <b className="mono">{h}h:{String(m).padStart(2, '0')}m</b>
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '@/api/trpc';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, tStatic, type DictKey } from '@/i18n';
 import type { GuildGetResponse } from '@grodno/shared';
 import { DepositModal } from './components/DepositModal';
 import { WithdrawModal } from './components/WithdrawModal';
@@ -9,7 +10,18 @@ export interface GuildTabTreasuryProps {
   data: GuildGetResponse;
 }
 
+type LogKind = 'deposit' | 'withdraw' | 'building_upgrade' | 'war_reward' | 'raid_reward';
+
+const KIND_LABEL_KEY: Record<LogKind, DictKey> = {
+  deposit: 'guildTreasury.kind.deposit',
+  withdraw: 'guildTreasury.kind.withdraw',
+  building_upgrade: 'guildTreasury.kind.building_upgrade',
+  war_reward: 'guildTreasury.kind.war_reward',
+  raid_reward: 'guildTreasury.kind.raid_reward',
+};
+
 export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
+  const t = useT();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const logQuery = trpc.guildTreasury.log.useQuery();
@@ -23,7 +35,7 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
     <div style={{ padding: 12 }}>
       <div className="panel" style={{ padding: 14, marginBottom: 12, textAlign: 'center' }}>
         <div className="h-title" style={{ fontSize: 14, marginBottom: 10 }}>
-          SKARBIEC
+          {t('guildTreasury.title')}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 10 }}>
           <div>
@@ -40,7 +52,7 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
                 {data.guild.treasuryGold.toLocaleString('pl-PL')}
               </span>
             </div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>ZŁOTO</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>{t('guildTreasury.gold')}</div>
           </div>
           <div>
             <div
@@ -56,7 +68,7 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
                 {data.guild.treasuryGems.toLocaleString('pl-PL')}
               </span>
             </div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>GEMY</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>{t('guildTreasury.gems')}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -66,7 +78,7 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
             style={{ flex: 1 }}
             onClick={() => setDepositOpen(true)}
           >
-            WPŁAĆ
+            {t('guildTreasury.deposit')}
           </button>
           {canWithdraw && (
             <button
@@ -75,7 +87,7 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
               style={{ flex: 1 }}
               onClick={() => setWithdrawOpen(true)}
             >
-              WYPŁAĆ
+              {t('guildTreasury.withdraw')}
             </button>
           )}
         </div>
@@ -88,12 +100,12 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
       />
 
       <div className="h-title" style={{ fontSize: 14, marginBottom: 6, marginTop: 12 }}>
-        HISTORIA
+        {t('guildTreasury.history')}
       </div>
       <div className="panel" style={{ padding: 4 }}>
         {logQuery.isLoading && (
           <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a', padding: 8 }}>
-            Ładuję log...
+            {t('guildTreasury.loading')}
           </div>
         )}
         {logQuery.data?.entries.length === 0 && (
@@ -101,7 +113,7 @@ export function GuildTabTreasury({ data }: GuildTabTreasuryProps) {
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 8 }}
           >
-            Pusto. Nikt niczego nie ruszył.
+            {t('guildTreasury.empty')}
           </div>
         )}
         {logQuery.data?.entries.map((e, i, arr) => (
@@ -135,6 +147,7 @@ function WithdrawCapInfo({
   dailyCap: number | undefined;
   canWithdraw: boolean;
 }) {
+  const t = useT();
   if (!canWithdraw) return null;
   if (dailyUsed === undefined || dailyCap === undefined) return null;
   const remaining = Math.max(0, dailyCap - dailyUsed);
@@ -147,7 +160,7 @@ function WithdrawCapInfo({
         marginBottom: 4,
       }}
     >
-      Dzienny limit wypłaty:{' '}
+      {t('guildTreasury.dailyLimit')}{' '}
       <b className="mono">
         {remaining.toLocaleString('pl-PL')}g / {dailyCap.toLocaleString('pl-PL')}g
       </b>
@@ -162,7 +175,7 @@ function LogRow({
   entry: {
     id: string;
     actorName: string;
-    kind: 'deposit' | 'withdraw' | 'building_upgrade' | 'war_reward' | 'raid_reward';
+    kind: LogKind;
     goldDelta: number;
     gemsDelta: number;
     memo: string;
@@ -170,13 +183,7 @@ function LogRow({
   };
   lastInList: boolean;
 }) {
-  const KIND_LABEL: Record<typeof entry.kind, string> = {
-    deposit: 'wpłata',
-    withdraw: 'wypłata',
-    building_upgrade: 'upgrade',
-    war_reward: 'wojna',
-    raid_reward: 'rajd',
-  };
+  const t = useT();
   const gold = entry.goldDelta;
   const gems = entry.gemsDelta;
   const color = gold > 0 || gems > 0 ? '#2a4a3a' : '#8a3030';
@@ -193,7 +200,7 @@ function LogRow({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12 }}>
           <b>{entry.actorName}</b>{' '}
-          <span style={{ opacity: 0.7 }}>· {KIND_LABEL[entry.kind]}</span>
+          <span style={{ opacity: 0.7 }}>· {t(KIND_LABEL_KEY[entry.kind])}</span>
           {entry.memo && <span style={{ opacity: 0.7 }}> · {entry.memo}</span>}
         </div>
         <div className="mono" style={{ fontSize: 10, opacity: 0.6 }}>
@@ -220,6 +227,7 @@ function LogRow({
 }
 
 function TopContributors({ members }: { members: GuildGetResponse['members'] }) {
+  const t = useT();
   const top = [...members]
     .filter((m) => m.contributedGold > 0 || m.contributedGems > 0)
     .sort((a, b) => b.contributedGold - a.contributedGold)
@@ -228,7 +236,7 @@ function TopContributors({ members }: { members: GuildGetResponse['members'] }) 
   return (
     <>
       <div className="h-title" style={{ fontSize: 14, marginBottom: 6, marginTop: 12 }}>
-        NAJHOJNIEJSI
+        {t('guildTreasury.topContributors')}
       </div>
       <div className="panel" style={{ padding: 4 }}>
         {top.map((m, i, arr) => (
@@ -260,9 +268,10 @@ function TopContributors({ members }: { members: GuildGetResponse['members'] }) 
 
 function timeAgo(ms: number): string {
   const delta = Date.now() - ms;
-  if (delta < 60_000) return 'przed chwilą';
-  if (delta < 3600_000) return `${Math.floor(delta / 60_000)} min temu`;
-  if (delta < 86400_000) return `${Math.floor(delta / 3600_000)}h temu`;
-  return `${Math.floor(delta / 86400_000)}d temu`;
+  if (delta < 60_000) return tStatic('guildTreasury.time.justNow');
+  if (delta < 3600_000)
+    return tStatic('guildTreasury.time.minAgo').replace('{n}', String(Math.floor(delta / 60_000)));
+  if (delta < 86400_000)
+    return tStatic('guildTreasury.time.hAgo').replace('{n}', String(Math.floor(delta / 3600_000)));
+  return tStatic('guildTreasury.time.dAgo').replace('{n}', String(Math.floor(delta / 86400_000)));
 }
-

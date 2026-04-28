@@ -6,10 +6,13 @@ import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { GemSinkButton } from '@/components/ui-common';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, tStatic, useContentT } from '@/i18n';
 import { GEM_SINK_COSTS, type GuildRaidHitResponse, type IconName } from '@grodno/shared';
 import { RaidHitResultModal } from './components/RaidHitResultModal';
 
 export function GuildTabRaids() {
+  const t = useT();
+  const tc = useContentT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -20,13 +23,13 @@ export function GuildTabRaids() {
   const historyQuery = trpc.guildRaids.history.useQuery();
   const buyHitMut = trpc.guildRaids.buyExtraHit.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Wykupiono uderzenie.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildRaids.toast.bought'), accent: '#2a4a3a' });
       void utils.guildRaids.current.invalidate();
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildRaids.toast.fail'),
         accent: '#c83232',
       });
     },
@@ -46,7 +49,7 @@ export function GuildTabRaids() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się uderzyć.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildRaids.toast.hitFail'),
         accent: '#c83232',
       });
     },
@@ -55,7 +58,7 @@ export function GuildTabRaids() {
   if (currentQuery.isLoading) {
     return (
       <div style={{ padding: 12, textAlign: 'center', fontSize: 13, color: '#5a3a2a' }}>
-        Ładuję raid...
+        {t('guildRaids.loading')}
       </div>
     );
   }
@@ -80,7 +83,7 @@ export function GuildTabRaids() {
         }}
       >
         <div className="mono" style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}>
-          TIER {boss.tier}
+          {t('guildRaids.tier').replace('{n}', String(boss.tier))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
           <div
@@ -100,10 +103,10 @@ export function GuildTabRaids() {
           </div>
         </div>
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830', marginBottom: 2 }}>
-          {boss.name}
+          {tc.raidBossName(boss.slug, boss.name)}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginBottom: 10 }}>
-          {boss.flavor}
+          {tc.raidBossFlavor(boss.slug, boss.flavor)}
         </div>
 
         {/* HP bar */}
@@ -146,7 +149,7 @@ export function GuildTabRaids() {
         </div>
 
         <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 8 }}>
-          Twoje uderzenia: <b className="mono">{myHitsToday}/{myHitsMax}</b> · reset 00:00 UTC
+          {t('guildRaids.hits.line')}<b className="mono">{myHitsToday}/{myHitsMax}</b>{t('guildRaids.hits.reset')}
         </div>
 
         <button
@@ -155,20 +158,20 @@ export function GuildTabRaids() {
           style={{ width: '100%' }}
           disabled={!canHit}
           onClick={() => {
-            setPrevBossName(boss.name);
+            setPrevBossName(tc.raidBossName(boss.slug, boss.name));
             hitMut.mutate();
           }}
         >
           {hitMut.isPending
-            ? '...'
+            ? t('guildRaids.btn.pending')
             : hitsLeft === 0
-              ? 'BRAK UDERZEŃ DZIŚ'
-              : `UDERZ (${hitsLeft} zostało)`}
+              ? t('guildRaids.btn.none')
+              : t('guildRaids.btn.hit').replace('{n}', String(hitsLeft))}
         </button>
         {hitsLeft === 0 && (
           <div style={{ marginTop: 6, textAlign: 'center' }}>
             <GemSinkButton
-              label="DOKUP"
+              label={t('guildRaids.btn.buy')}
               cost={GEM_SINK_COSTS.extraRaidHit}
               playerGems={meQuery.data?.gems ?? 0}
               pending={buyHitMut.isPending}
@@ -182,7 +185,7 @@ export function GuildTabRaids() {
       {leaderboard.length > 0 && (
         <>
           <div className="h-title" style={{ fontSize: 14, marginBottom: 6 }}>
-            TOP BICIE (ten boss)
+            {t('guildRaids.top')}
           </div>
           <div className="panel" style={{ padding: 4, marginBottom: 12 }}>
             {leaderboard.map((l, i, arr) => (
@@ -206,7 +209,9 @@ export function GuildTabRaids() {
                   {l.name}
                 </span>
                 <span className="mono" style={{ fontSize: 12, color: '#7a6040' }}>
-                  {l.totalDmg.toLocaleString('pl-PL')} dmg · {l.hitCount}×
+                  {t('guildRaids.top.line')
+                    .replace('{dmg}', l.totalDmg.toLocaleString('pl-PL'))
+                    .replace('{n}', String(l.hitCount))}
                 </span>
               </div>
             ))}
@@ -218,7 +223,7 @@ export function GuildTabRaids() {
       {historyQuery.data && historyQuery.data.entries.length > 0 && (
         <>
           <div className="h-title" style={{ fontSize: 14, marginBottom: 6 }}>
-            TROFEA
+            {t('guildRaids.trophies')}
           </div>
           <div className="panel" style={{ padding: 4 }}>
             {historyQuery.data.entries.map((e, i, arr) => (
@@ -241,7 +246,9 @@ export function GuildTabRaids() {
                     </span>
                   </div>
                   <div style={{ fontSize: 10, color: '#5a3a2a' }}>
-                    {e.killingBlowCharName ? `cios kończący: ${e.killingBlowCharName}` : ''}
+                    {e.killingBlowCharName
+                      ? t('guildRaids.trophy.kb').replace('{name}', e.killingBlowCharName)
+                      : ''}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 3, alignItems: 'center', fontSize: 13 }}>

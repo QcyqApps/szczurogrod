@@ -1,5 +1,6 @@
 import type { GuildWarDetails } from '@grodno/shared';
 import { IcoCoin } from '@/components/icons';
+import { useT } from '@/i18n';
 
 export interface WarResultModalProps {
   war: GuildWarDetails;
@@ -7,12 +8,17 @@ export interface WarResultModalProps {
 }
 
 export function WarResultModal({ war, onClose }: WarResultModalProps) {
+  const t = useT();
   const isAttackerWinner = war.winnerGuildId === war.attackerGuildId;
   const winnerName = isAttackerWinner ? war.attackerGuildName : war.defenderGuildName;
   const loserName = isAttackerWinner ? war.defenderGuildName : war.attackerGuildName;
   const myWon = war.mySide && war.winnerGuildId
     ? (war.mySide === 'attacker' ? isAttackerWinner : !isAttackerWinner)
     : null;
+
+  const summaryKey = isAttackerWinner
+    ? 'guildWars.result.summary.attacker'
+    : 'guildWars.result.summary.defender';
 
   return (
     <div
@@ -50,17 +56,20 @@ export function WarResultModal({ war, onClose }: WarResultModalProps) {
             color: myWon === true ? '#2a4a3a' : myWon === false ? '#8a3030' : '#2a1810',
           }}
         >
-          {myWon === true ? 'ZWYCIĘSTWO' : myWon === false ? 'PORAŻKA' : 'WOJNA'}
+          {myWon === true
+            ? t('guildWars.result.victory')
+            : myWon === false
+              ? t('guildWars.result.defeat')
+              : t('guildWars.result.war')}
         </div>
         <div
           className="flavor"
           style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginBottom: 10 }}
         >
-          „{winnerName}" {isAttackerWinner ? 'wygrała' : 'obroniła'}{' '}
-          <b className="mono">
-            {war.attackerScore}:{war.defenderScore}
-          </b>{' '}
-          z „{loserName}".
+          {t(summaryKey)
+            .replace('{w}', winnerName)
+            .replace('{score}', `${war.attackerScore}:${war.defenderScore}`)
+            .replace('{l}', loserName)}
         </div>
 
         {war.goldPrize > 0 && (
@@ -79,20 +88,20 @@ export function WarResultModal({ war, onClose }: WarResultModalProps) {
           >
             <IcoCoin s={16} />
             <span className="mono" style={{ fontSize: 14 }}>
-              +{war.goldPrize.toLocaleString('pl-PL')} do skarbca zwycięzcy
+              {t('guildWars.result.toTreasury').replace('{n}', war.goldPrize.toLocaleString('pl-PL'))}
             </span>
           </div>
         )}
 
         <div className="h-title" style={{ fontSize: 13, marginBottom: 4 }}>
-          PRZEBIEG
+          {t('guildWars.result.rounds')}
         </div>
         {(!war.rounds || war.rounds.length === 0) && (
           <div
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 8 }}
           >
-            Forfeit — jedna strona nie stawiła się.
+            {t('guildWars.result.forfeit')}
           </div>
         )}
         {war.rounds?.map((r) => (
@@ -109,7 +118,7 @@ export function WarResultModal({ war, onClose }: WarResultModalProps) {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="mono" style={{ fontSize: 13, opacity: 0.7 }}>
-                runda {r.round + 1}
+                {t('guildWars.result.round').replace('{n}', String(r.round + 1))}
               </span>
               <span
                 className="h-title"
@@ -118,7 +127,9 @@ export function WarResultModal({ war, onClose }: WarResultModalProps) {
                   color: r.winner === 'attacker' ? '#c83232' : '#3a5a8a',
                 }}
               >
-                {r.winner === 'attacker' ? 'ATAK' : 'OBRONA'}
+                {r.winner === 'attacker'
+                  ? t('guildWars.result.attack')
+                  : t('guildWars.result.defense')}
               </span>
             </div>
             <div style={{ marginTop: 2 }}>
@@ -126,7 +137,9 @@ export function WarResultModal({ war, onClose }: WarResultModalProps) {
               <b>{r.defenderName}</b> ({r.defenderHpBefore} HP)
             </div>
             <div className="mono" style={{ fontSize: 13, opacity: 0.7 }}>
-              zwycięzca zostaje z {r.winnerHpAfter} HP · tur: {r.duelLog.length}
+              {t('guildWars.result.duelLine')
+                .replace('{hp}', String(r.winnerHpAfter))
+                .replace('{turns}', String(r.duelLog.length))}
             </div>
           </div>
         ))}
@@ -137,7 +150,7 @@ export function WarResultModal({ war, onClose }: WarResultModalProps) {
           style={{ width: '100%', marginTop: 10 }}
           onClick={onClose}
         >
-          ZAMKNIJ
+          {t('guildWars.result.close')}
         </button>
       </div>
     </div>

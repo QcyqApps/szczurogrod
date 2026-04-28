@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { useT } from '@/i18n';
+import { LangPicker } from '@/i18n/LangPicker';
 import { GrodnoNightBackdrop } from './NightBackdrop';
 
 export interface ScreenSplashProps {
@@ -6,9 +8,10 @@ export interface ScreenSplashProps {
 }
 
 export function ScreenSplash({ onContinue }: ScreenSplashProps) {
+  const t = useT();
   useEffect(() => {
-    const t = setTimeout(onContinue, 2400);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onContinue, 2400);
+    return () => clearTimeout(timer);
   }, [onContinue]);
 
   return (
@@ -84,7 +87,7 @@ export function ScreenSplash({ onContinue }: ScreenSplashProps) {
             letterSpacing: 1,
           }}
         >
-          SZCZUROGRÓD
+          {t('app.title.full')}
         </div>
         <div
           className="h-title"
@@ -97,6 +100,20 @@ export function ScreenSplash({ onContinue }: ScreenSplashProps) {
           }}
         >
           IDLE RPG
+        </div>
+
+        {/* Language picker — kotwiczony do prawego górnego rogu, dyskretny.
+            Klik nie propaguje do parent onClick (advance) żeby user mógł
+            spokojnie wybrać język bez przypadkowego przejścia. */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+          }}
+        >
+          <LangPicker size="sm" light />
         </div>
 
         <div
@@ -112,7 +129,7 @@ export function ScreenSplash({ onContinue }: ScreenSplashProps) {
             animation: 'splash-pulse 1.4s ease-in-out infinite 1.5s',
           }}
         >
-          Dotknij aby kontynuować
+          {t('splash.tap')}
         </div>
       </div>
 

@@ -1725,6 +1725,31 @@ export const leaderboardsResponseSchema = z.object({
 });
 export type LeaderboardsResponse = z.infer<typeof leaderboardsResponseSchema>;
 
+// ========== Public landing page (desktop side panels) ==========
+//
+// Cached, lightweight snapshot for unauthenticated visitors on the desktop
+// shell. One round-trip wraps top players, latest chronicle entries, and
+// quick stats so anonymous browsers see life in the world before they sign in.
+
+export const landingPublicResponseSchema = z.object({
+  topByLevel: z.array(leaderboardCharEntrySchema),
+  chronicle: z.array(chronicleEntrySchema),
+  stats: z.object({
+    onlineCount: z.number().int().min(0),
+    totalCharacters: z.number().int().min(0),
+    totalGuilds: z.number().int().min(0),
+  }),
+  myRank: z
+    .object({
+      lvl: z.number().int().min(1),
+      levelPos: z.number().int().min(1).nullable(),
+      arenaPoints: z.number().int().min(0),
+      arenaPos: z.number().int().min(1).nullable(),
+    })
+    .nullable(),
+});
+export type LandingPublicResponse = z.infer<typeof landingPublicResponseSchema>;
+
 // Type re-exports for convenience
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;

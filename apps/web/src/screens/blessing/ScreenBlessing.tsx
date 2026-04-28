@@ -13,6 +13,7 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoClock, IcoCoin } from '@/components/icons';
 import { HelpIcon } from '@/components/ui-common';
+import { useT, tStatic, useContentT } from '@/i18n';
 import type { BlessingOffer } from '@grodno/shared';
 
 export interface ScreenBlessingProps {
@@ -20,6 +21,8 @@ export interface ScreenBlessingProps {
 }
 
 export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
+  const t = useT();
+  const tc = useContentT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const statusQuery = trpc.blessing.status.useQuery();
@@ -45,15 +48,17 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
       const offer = status?.offers.find((o) => o.id === vars.id);
       pushToast({
         text: offer
-          ? `Panteleon błogosławi. +${offer.magnitude}${offer.kind.endsWith('_pct') ? '%' : ''} na godzinę.`
-          : 'Panteleon błogosławi.',
+          ? tStatic('blessing.toast.success')
+              .replace('{n}', String(offer.magnitude))
+              .replace('{u}', offer.kind.endsWith('_pct') ? '%' : '')
+          : tStatic('blessing.toast.successFallback'),
         accent: '#4a7c3a',
       });
       void data; // unused but keep param
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Panteleon odmówił.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('blessing.toast.refused'),
         accent: '#c83232',
       });
     },
@@ -66,7 +71,10 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
   async function handleBuy(offer: BlessingOffer) {
     if (buyMut.isPending || cooldownActive) return;
     if (gold < offer.costGold) {
-      pushToast({ text: `Brak gold'a (${offer.costGold}).`, accent: '#c83232' });
+      pushToast({
+        text: tStatic('blessing.toast.noGold').replace('{n}', String(offer.costGold)),
+        accent: '#c83232',
+      });
       return;
     }
     await buyMut.mutateAsync({ id: offer.id });
@@ -85,10 +93,10 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#e8c870' }}>
-          MNICH PANTELEON
+          {t('blessing.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          Medytuje pół godziny, błogosławi minutę, liczy złoto szybko.
+          {t('blessing.flavor')}
         </div>
       </div>
 
@@ -110,7 +118,7 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
         >
           <IcoClock s={16} />
           <div style={{ flex: 1, fontSize: 13 }}>
-            Panteleon medytuje —{' '}
+            {t('blessing.cooldown.text')}{' '}
             <b className="mono">{formatCountdown(status.cooldownReadyAt - now)}</b>
           </div>
         </div>
@@ -127,7 +135,7 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
       >
         {!status ? (
           <div style={{ fontSize: 13, color: '#5a3a2a', padding: 20, gridColumn: '1 / -1', textAlign: 'center' }}>
-            Panteleon szuka okularów…
+            {t('blessing.loading')}
           </div>
         ) : (
           status.offers.map((offer) => {
@@ -178,11 +186,11 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
                       color: '#2a1810',
                     }}
                   >
-                    {offer.name}
+                    {tc.blessingName(offer.id, offer.name)}
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: '#5a3a2a', lineHeight: 1.2 }}>
-                  {offer.desc}
+                  {tc.blessingDesc(offer.id, offer.desc)}
                 </div>
                 <div
                   style={{
@@ -208,18 +216,13 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-        <HelpIcon title="Jak działają błogosławieństwa?" label="Jak to działa?">
-          <p style={{ margin: 0 }}>
-            Każde błogosławieństwo trwa <b>1 godzinę</b>. Po kupnie Panteleon medytuje{' '}
-            <b>30 minut</b>, zanim pobłogosławi ponownie. Buffy dzielą sloty z elixirami
-            ze sklepu — jeśli masz już silniejszy aktywny buff danej kategorii,
-            Panteleon go nie ruszy.
-          </p>
+        <HelpIcon title={t('blessing.help.title')} label={t('blessing.help.label')}>
+          <p style={{ margin: 0 }}>{t('blessing.help.body')}</p>
         </HelpIcon>
       </div>
 
       <button type="button" className="cbtn ghost" style={{ width: '100%' }} onClick={onBack}>
-        ← WRÓĆ
+        {t('blessing.back')}
       </button>
     </div>
   );

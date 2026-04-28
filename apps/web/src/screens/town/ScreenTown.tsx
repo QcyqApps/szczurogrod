@@ -1,15 +1,15 @@
 import { GameIcon } from '@/components/game-icons';
 import { LocTile } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
+import { useT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { Character } from '@grodno/shared';
 import type { SubScreen, Tab } from '@/types/nav';
 
-// Fallback quips shown only if the server is unreachable or the daily batch
-// hasn't been generated yet — the server itself also uses per-class defaults.
-const FALLBACK: Record<string, string> = {
-  warrior: 'Jeszcze jeden smok i wracam na piwo.',
-  mage: 'Czy wszyscy widzą tę fioletową mgłę, czy tylko ja?',
-  rogue: 'Nie ukradłem. Przesunąłem do swojej kieszeni.',
+const FALLBACK_KEY: Record<string, DictKey> = {
+  warrior: 'town.flavor.warrior',
+  mage: 'town.flavor.mage',
+  rogue: 'town.flavor.rogue',
 };
 
 /**
@@ -38,12 +38,14 @@ export function ScreenTown({
   questsDone,
   seasonPassClaimableCount,
 }: ScreenTownProps) {
+  const t = useT();
   // Fresh flavor quip per mount — each entry into town re-queries.
   const flavorQuery = trpc.town.flavor.useQuery(undefined, {
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
-  const flavor = flavorQuery.data?.text ?? FALLBACK[char.cls];
+  const fallbackKey = FALLBACK_KEY[char.cls] ?? 'town.flavor.warrior';
+  const flavor = flavorQuery.data?.text ?? t(fallbackKey);
 
   // Dynamic counts previously hardcoded.
   const catalogQuery = trpc.shop.catalog.useQuery();
@@ -102,10 +104,19 @@ export function ScreenTown({
           <GameIcon name="banner" size={28} />
           <div style={{ flex: 1 }}>
             <div className="h-title" style={{ fontSize: 13 }}>
-              ZAPROSZENIA GILDYJNE
+              {t('town.banner.guildInvites.title')}
             </div>
             <div style={{ fontSize: 12, color: '#5a3a2a' }}>
-              Masz <b className="mono">{invitesCount}</b> — ktoś chce cię w swoim sztandarze.
+              {(() => {
+                const [before, after] = t('town.banner.guildInvites.body').split('{count}');
+                return (
+                  <>
+                    {before}
+                    <b className="mono">{invitesCount}</b>
+                    {after}
+                  </>
+                );
+              })()}
             </div>
           </div>
           <GameIcon name="arrow-right" size={18} />
@@ -136,11 +147,14 @@ export function ScreenTown({
           <GameIcon name="crown" size={28} />
           <div style={{ flex: 1 }}>
             <div className="h-title" style={{ fontSize: 13 }}>
-              PRZEPUSTKA SEZONOWA
+              {t('town.banner.seasonPass.title')}
             </div>
             <div style={{ fontSize: 12, color: '#3a1a00' }}>
               <b className="mono">{seasonPassClaimableCount}</b>{' '}
-              {seasonPassClaimableCount === 1 ? 'tier do odebrania' : 'tierów do odebrania'}.
+              {seasonPassClaimableCount === 1
+                ? t('town.banner.seasonPass.tier')
+                : t('town.banner.seasonPass.tiers')}
+              .
             </div>
           </div>
           <GameIcon name="arrow-right" size={18} />
@@ -172,10 +186,10 @@ export function ScreenTown({
           <GameIcon name="gift" size={28} />
           <div style={{ flex: 1 }}>
             <div className="h-title" style={{ fontSize: 13 }}>
-              NAGRODA DZIENNA
+              {t('town.banner.daily.title')}
             </div>
             <div style={{ fontSize: 12, color: '#5a3a2a' }}>
-              Czeka na odebranie — szkoda zostawiać.
+              {t('town.banner.daily.body')}
             </div>
           </div>
           <GameIcon name="arrow-right" size={18} />
@@ -311,7 +325,7 @@ export function ScreenTown({
           className="h-display"
           style={{ fontSize: 22, textAlign: 'center', marginTop: 4, position: 'relative' }}
         >
-          WITAJ W SZCZUROGRODZIE!
+          {t('town.welcome')}
         </div>
         <div
           className="bubble flavor"
@@ -343,9 +357,13 @@ export function ScreenTown({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <LocTile
-          label="QUESTY"
+          label={t('town.tile.quests')}
           sub={
-            questsTotal > 0 ? `${questsDone}/${questsTotal} gotowe` : 'Ładowanie…'
+            questsTotal > 0
+              ? t('town.tile.quests.sub')
+                  .replace('{done}', String(questsDone))
+                  .replace('{total}', String(questsTotal))
+              : t('town.tile.quests.loading')
           }
           bg="#e8c870"
           badge={questsDone > 0 ? questsDone : undefined}
@@ -353,61 +371,72 @@ export function ScreenTown({
           icon={<GameIcon name="scroll" size={54} />}
         />
         <LocTile
-          label="LOCHY"
+          label={t('town.tile.dungeons')}
           sub={
             enemiesAvailable > 0
-              ? `${enemiesAvailable} przeciwników`
-              : 'Brak dostępnych'
+              ? t('town.tile.dungeons.sub').replace('{count}', String(enemiesAvailable))
+              : t('town.tile.dungeons.none')
           }
           bg="#c8a090"
           onClick={() => nav('world')}
           icon={<GameIcon name="sword" size={54} />}
         />
         <LocTile
-          label="ARENA"
-          sub="#247 ranking"
+          label={t('town.tile.arena')}
+          sub={t('town.tile.arena.sub')}
           bg="#c89090"
           onClick={() => nav('arena')}
           icon={<GameIcon name="crossed" size={54} />}
         />
         <LocTile
-          label="SKLEP"
-          sub={shopOffers > 0 ? `${shopOffers} ofert` : 'Zamknięte'}
+          label={t('town.tile.shop')}
+          sub={
+            shopOffers > 0
+              ? t('town.tile.shop.sub').replace('{count}', String(shopOffers))
+              : t('town.tile.shop.closed')
+          }
           bg="#b0d8a0"
           onClick={() => nav('shop')}
           icon={<GameIcon name="shop" size={54} />}
         />
         <LocTile
-          label="TAWERNA"
-          sub="Rekrutacja"
+          label={t('town.tile.tavern')}
+          sub={t('town.tile.tavern.sub')}
           bg="#d8b880"
           onClick={() => nav('tavern')}
           icon={<GameIcon name="tavern" size={54} />}
         />
         <LocTile
-          label="STAJNIE"
-          sub={char.activeMount ? `−${char.activeMount.speedPct}% czasu` : 'Szybsze questy'}
+          label={t('town.tile.stables')}
+          sub={
+            char.activeMount
+              ? t('town.tile.stables.sub.speed').replace(
+                  '{pct}',
+                  String(char.activeMount.speedPct),
+                )
+              : t('town.tile.stables.sub.fast')
+          }
           bg="#b8906a"
           onClick={() => nav('stables')}
           icon={<GameIcon name="horse" size={54} />}
         />
         <LocTile
-          label="KOWAL"
-          sub="Ulepsz · rozpruj"
+          label={t('town.tile.blacksmith')}
+          sub={t('town.tile.blacksmith.sub')}
           bg="#9a6a4a"
           onClick={() => nav('blacksmith')}
           icon={<GameIcon name="sword" size={54} />}
         />
         <LocTile
-          label="WIEŻA"
-          sub="Nieskończona"
+          label={t('town.tile.tower')}
+          sub={t('town.tile.tower.sub')}
           bg="#6a4a8a"
           onClick={() => nav('tower')}
           icon={<GameIcon name="castle" size={54} />}
         />
         <LocTile
-          label="SŁAWA"
-          sub="Top 10"
+          label={t('town.tile.fame')}
+          sub={t('town.tile.fame.sub')}
           bg="#d8a850"
           onClick={() => nav('leaderboards')}
           icon={<GameIcon name="crown" size={54} />}
@@ -425,11 +454,11 @@ export function ScreenTown({
             gap: 6,
           }}
         >
-          <GameIcon name="megaphone" size={16} /> KRONIKI SZCZUROGRODU
+          <GameIcon name="megaphone" size={16} /> {t('town.chronicle.title')}
         </div>
         {chroniclePreview.length === 0 ? (
           <div style={{ fontSize: 14, lineHeight: 1.3, minHeight: 36 }}>
-            Kronikarz pisze. Wróć za chwilę.
+            {t('town.chronicle.empty')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -476,7 +505,7 @@ export function ScreenTown({
             }}
             onClick={() => nav('chronicle')}
           >
-            WIĘCEJ · {chronicleEntries.length} wpisów
+            {t('town.chronicle.more').replace('{count}', String(chronicleEntries.length))}
           </button>
         )}
       </div>

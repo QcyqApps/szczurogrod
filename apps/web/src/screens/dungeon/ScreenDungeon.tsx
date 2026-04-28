@@ -14,6 +14,7 @@ import type { MonsterRecipe, MonsterSlug, MonsterTier } from '@/components/monst
 import { GemSinkButton, HelpIcon } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
+import { useT, tStatic, useContentT, type DictKey } from '@/i18n';
 import {
   GEM_SINK_COSTS,
   type Character,
@@ -32,25 +33,21 @@ const ABILITY_PIP_STYLE: Record<EnemyAbility['kind'], CSSProperties> = {
   poison: { background: '#4a7c3a', color: '#fff', fontWeight: 700 },
   armor_pierce: { background: '#c83232', color: '#fff', fontWeight: 700 },
 };
-const ABILITY_LABEL: Record<EnemyAbility['kind'], string> = {
-  magic: 'MAG',
-  poison: 'JAD',
-  armor_pierce: 'PIERCE',
-};
-const ABILITY_TOOLTIP: Record<EnemyAbility['kind'], (ab: EnemyAbility) => string> = {
-  magic: (ab) =>
-    ab.kind === 'magic'
-      ? `${Math.round(ab.chance * 100)}% szans na atak ignorujący połowę DEF.`
-      : '',
-  poison: (ab) =>
-    ab.kind === 'poison'
-      ? `${Math.round(ab.chance * 100)}% szans na trucizny ${ab.dmgPerTurn}/turę przez ${ab.turns} tury.`
-      : '',
-  armor_pierce: (ab) =>
-    ab.kind === 'armor_pierce'
-      ? `Każde uderzenie przebija połowę DEF (${Math.round(ab.chance * 100)}%).`
-      : '',
-};
+function abilityLabel(kind: EnemyAbility['kind']): string {
+  if (kind === 'magic') return tStatic('dungeon.ability.magic');
+  if (kind === 'poison') return tStatic('dungeon.ability.poison');
+  return tStatic('dungeon.ability.armor_pierce');
+}
+function abilityTooltip(ab: EnemyAbility): string {
+  const pct = String(Math.round(ab.chance * 100));
+  if (ab.kind === 'magic') return tStatic('dungeon.ability.tooltip.magic').replace('{pct}', pct);
+  if (ab.kind === 'poison')
+    return tStatic('dungeon.ability.tooltip.poison')
+      .replace('{pct}', pct)
+      .replace('{dmg}', String(ab.dmgPerTurn))
+      .replace('{turns}', String(ab.turns));
+  return tStatic('dungeon.ability.tooltip.armor_pierce').replace('{pct}', pct);
+}
 
 /** Per-mob server state — kill counter + cooldown expiry + procowe abilities. */
 interface EnemyGate {
@@ -79,27 +76,30 @@ export interface DungeonEnemy {
   requiredLvl: number;
 }
 
-const ENEMY_ROSTER: readonly Omit<DungeonEnemy, 'name' | 'tier' | 'recipe'>[] = [
-  { slug: 'goblin-scav', lvl: 2, hp: 60, atk: 5, gold: 35, xp: 22, flavor: 'Twoje buty śmierdzą!', requiredLvl: 1 },
-  { slug: 'rat-giant', lvl: 3, hp: 75, atk: 6, gold: 40, xp: 28, flavor: '*piszczy*', requiredLvl: 2 },
-  { slug: 'slime-green', lvl: 3, hp: 110, atk: 4, gold: 50, xp: 32, flavor: 'splosh.', requiredLvl: 2 },
-  { slug: 'kobold-thief', lvl: 4, hp: 70, atk: 8, gold: 70, xp: 38, flavor: 'Twoje złoto będzie moje!', requiredLvl: 3 },
-  { slug: 'goblin-warrior', lvl: 4, hp: 95, atk: 9, gold: 80, xp: 45, flavor: 'Za króla!', requiredLvl: 3 },
-  { slug: 'cave-spider', lvl: 5, hp: 85, atk: 11, gold: 90, xp: 55, flavor: '*syczy*', requiredLvl: 5 },
-  { slug: 'skeleton-soldier', lvl: 5, hp: 130, atk: 10, gold: 100, xp: 60, flavor: '*klekocze*', requiredLvl: 5 },
-  { slug: 'bat-dire', lvl: 6, hp: 100, atk: 12, gold: 110, xp: 70, flavor: 'skrzyyy!', requiredLvl: 6 },
-  { slug: 'troll-cave', lvl: 7, hp: 220, atk: 14, gold: 180, xp: 110, flavor: 'GRRRR!', requiredLvl: 7 },
-  { slug: 'demon-imp', lvl: 7, hp: 150, atk: 16, gold: 200, xp: 125, flavor: 'hihihi~', requiredLvl: 7 },
-  { slug: 'ogre-brute', lvl: 8, hp: 280, atk: 15, gold: 240, xp: 150, flavor: 'OGR SMASH!', requiredLvl: 8 },
-  { slug: 'skeleton-captain', lvl: 8, hp: 200, atk: 17, gold: 260, xp: 165, flavor: '*za życia!*', requiredLvl: 8 },
-  { slug: 'goblin-shaman', lvl: 9, hp: 170, atk: 22, gold: 320, xp: 200, flavor: 'Mana płonie!', requiredLvl: 10 },
-  { slug: 'minotaur', lvl: 9, hp: 340, atk: 18, gold: 360, xp: 220, flavor: 'MUUUUU!', requiredLvl: 10 },
-  { slug: 'slime-shadow', lvl: 10, hp: 260, atk: 16, gold: 380, xp: 240, flavor: 'spluurk...', requiredLvl: 11 },
-  { slug: 'wraith', lvl: 10, hp: 180, atk: 26, gold: 420, xp: 270, flavor: 'uuuuuuu...', requiredLvl: 12 },
-  { slug: 'hobgoblin-king', lvl: 12, hp: 520, atk: 22, gold: 800, xp: 500, flavor: 'KLĘCZEĆ!', requiredLvl: 13 },
-  { slug: 'bone-dragon', lvl: 14, hp: 680, atk: 28, gold: 1200, xp: 780, flavor: 'RRRRR-klekklek', requiredLvl: 16 },
-  { slug: 'void-horror', lvl: 16, hp: 850, atk: 32, gold: 1800, xp: 1100, flavor: '...gyyyrrr...', requiredLvl: 18 },
-];
+// Slugs whose intro flavor we keep locally — server delivers stats; only the
+// one-liner („*piszczy*") is client text and lives in i18n dict as
+// `dungeon.enemy.flavor.<slug>`.
+const FLAVORED_SLUGS = [
+  'goblin-scav',
+  'rat-giant',
+  'slime-green',
+  'kobold-thief',
+  'goblin-warrior',
+  'cave-spider',
+  'skeleton-soldier',
+  'bat-dire',
+  'troll-cave',
+  'demon-imp',
+  'ogre-brute',
+  'skeleton-captain',
+  'goblin-shaman',
+  'minotaur',
+  'slime-shadow',
+  'wraith',
+  'hobgoblin-king',
+  'bone-dragon',
+  'void-horror',
+] as const;
 
 export interface ScreenDungeonProps {
   char: Character;
@@ -126,6 +126,8 @@ export function ScreenDungeon({
   dungeonDesc,
   onCombatStateChange,
 }: ScreenDungeonProps) {
+  const t = useT();
+  const tc = useContentT();
   const [activeCombat, setActiveCombat] = useState<{
     state: CombatState;
     enemy: DungeonEnemy;
@@ -144,38 +146,38 @@ export function ScreenDungeon({
   const endMut = trpc.combat.end.useMutation();
   const buyKeyMut = trpc.combat.buyExtraKey.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Dokupiono klucz.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('dungeon.toast.keyBought'), accent: '#2a4a3a' });
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('toast.failed'),
         accent: '#c83232',
       });
     },
   });
   const resetDailyMobsMut = trpc.combat.resetDailyMobs.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Liczniki dzienne wyzerowane.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('dungeon.toast.dailyReset'), accent: '#2a4a3a' });
       void utils.combat.enemies.invalidate();
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('toast.failed'),
         accent: '#c83232',
       });
     },
   });
   const skipCooldownMut = trpc.combat.skipBossCooldown.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Cooldown zdjęty.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('dungeon.toast.cooldownSkipped'), accent: '#2a4a3a' });
       void utils.combat.enemies.invalidate();
       void utils.me.get.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('toast.failed'),
         accent: '#c83232',
       });
     },
@@ -266,9 +268,11 @@ export function ScreenDungeon({
 
   // Server (`combat.enemies`) is source of truth for stats — balance passes
   // (HP bumps etc.) land in DB and we want the dungeon list to read them fresh
-  // without redeploy. Local ENEMY_ROSTER keeps only the flavor line (lore) and
-  // the slug→recipe mapping lives in `monsters/recipes.ts`.
-  const flavorBySlug = new Map(ENEMY_ROSTER.map((e) => [e.slug, e.flavor]));
+  // without redeploy. Flavor one-liners live in i18n dict (PL/EN); slug→recipe
+  // mapping lives in `monsters/recipes.ts`.
+  const flavorBySlug = new Map<string, string>(
+    FLAVORED_SLUGS.map((slug) => [slug, t(`dungeon.enemy.flavor.${slug}` as DictKey)]),
+  );
   const enriched: DungeonEnemy[] = (enemiesQuery.data ?? []).map((server) => {
     const rec = monsterBySlug(server.slug as MonsterSlug);
     return {
@@ -336,7 +340,7 @@ export function ScreenDungeon({
         }}
       >
         <div className="h-display" style={{ fontSize: 22, textAlign: 'center' }}>
-          {(dungeonName ?? 'Loch Zapomnienia').toUpperCase()}
+          {tc.dungeonName(dungeonSlug, dungeonName ?? t('dungeon.fallback.name')).toUpperCase()}
         </div>
         <div
           style={{
@@ -347,7 +351,7 @@ export function ScreenDungeon({
             opacity: 0.85,
           }}
         >
-          {dungeonDesc ?? 'Wybierz przeciwnika'}
+          {tc.dungeonDesc(dungeonSlug, dungeonDesc ?? t('dungeon.fallback.desc'))}
         </div>
       </div>
       {(() => {
@@ -398,21 +402,26 @@ export function ScreenDungeon({
                 className="h-title"
                 style={{ fontSize: 14, color: char.dungeonKeys === 0 ? '#5a1818' : '#2a1810' }}
               >
-                KLUCZE DO LOCHU: {char.dungeonKeys}/{char.dungeonKeysMax}
+                {t('dungeon.keys.label')
+                  .replace('{n}', String(char.dungeonKeys))
+                  .replace('{max}', String(char.dungeonKeysMax))}
               </div>
               <div style={{ fontSize: 14, color: '#5a3a2a', marginTop: 2 }}>
                 {untilNextMs === null
-                  ? 'Pełna pula. Idź i siej zamęt.'
-                  : `+1 za ${mm}:${String(ss).padStart(2, '0')}`}
+                  ? t('dungeon.keys.full')
+                  : t('dungeon.keys.next').replace(
+                      '{time}',
+                      `${mm}:${String(ss).padStart(2, '0')}`,
+                    )}
               </div>
             </div>
             <GemSinkButton
-              label="KUP"
+              label={t('dungeon.keys.buy')}
               cost={GEM_SINK_COSTS.extraKey}
               playerGems={char.gems}
               pending={buyKeyMut.isPending}
               onClick={() => buyKeyMut.mutate()}
-              disabledReason="Dokup klucz (bypass cap)."
+              disabledReason={t('dungeon.keys.buy.reason')}
             />
           </div>
         );
@@ -432,19 +441,19 @@ export function ScreenDungeon({
         >
           <div style={{ flex: 1 }}>
             <div className="h-title" style={{ fontSize: 13, color: '#5a3a2a' }}>
-              KILKA MOBÓW ZA CAPEM
+              {t('dungeon.dailyMaxed.title')}
             </div>
             <div className="flavor" style={{ fontSize: 14, color: '#7a4a2a', marginTop: 2 }}>
-              Nie chcesz czekać do północy? Wyzeruj wszystkie liczniki dzienne.
+              {t('dungeon.dailyMaxed.body')}
             </div>
           </div>
           <GemSinkButton
-            label="RESET"
+            label={t('dungeon.dailyMaxed.reset')}
             cost={GEM_SINK_COSTS.resetDailyMobs}
             playerGems={char.gems}
             pending={resetDailyMobsMut.isPending}
             onClick={() => resetDailyMobsMut.mutate()}
-            disabledReason="Wyzeruj kills_today wszystkich mobów dla dziś UTC."
+            disabledReason={t('dungeon.dailyMaxed.reset.reason')}
           />
         </div>
       )}
@@ -475,7 +484,7 @@ export function ScreenDungeon({
                 gap: 6,
               }}
             >
-              <IcoPaw s={16} /> TROPY · bonusy ×2 gold/XP + 1.5× łup
+              <IcoPaw s={16} /> {t('dungeon.tracks.title')}
             </div>
             <div
               style={{
@@ -505,7 +514,7 @@ export function ScreenDungeon({
                         gap: 4,
                       }}
                     >
-                      <div style={{ fontWeight: 600 }}>pusty slot</div>
+                      <div style={{ fontWeight: 600 }}>{t('dungeon.tracks.empty')}</div>
                       <button
                         type="button"
                         className="cbtn sm"
@@ -583,7 +592,7 @@ export function ScreenDungeon({
                       type="button"
                       disabled={char.gems < rerollCost || rerollMut.isPending}
                       onClick={() => void rerollMut.mutateAsync({ slot: i })}
-                      title={`Reroll za ${rerollCost} gemów`}
+                      title={t('dungeon.tracks.reroll.title').replace('{n}', String(rerollCost))}
                       style={{
                         position: 'absolute',
                         top: 2,
@@ -623,7 +632,7 @@ export function ScreenDungeon({
                   fontStyle: 'italic',
                 }}
               >
-                Pusty slot sam się zapełni{' '}
+                {t('dungeon.tracks.fillIn')}
                 {nextRollAt !== null && (() => {
                   const msLeft = Math.max(0, nextRollAt - now);
                   const totalSec = Math.ceil(msLeft / 1000);
@@ -640,11 +649,11 @@ export function ScreenDungeon({
                         color: '#2a1810',
                       }}
                     >
-                      za <IcoClock s={10} /> {label}
+                      {t('dungeon.tracks.in')} <IcoClock s={10} /> {label}
                     </span>
                   );
                 })()}
-                . Nie chcesz czekać — wymień za <IcoGem s={10} /> {rerollCost}.
+                {t('dungeon.tracks.fillIn.reroll')}<IcoGem s={10} /> {rerollCost}{t('dungeon.tracks.fillIn.suffix')}
               </div>
             )}
           </div>
@@ -666,7 +675,7 @@ export function ScreenDungeon({
             lineHeight: 1.4,
           }}
         >
-          Za mało HP aby ruszyć w bój (min. 20). Odpocznij chwilę lub odwiedź uzdrowicielkę w karczmie.
+          {t('dungeon.lowHp')}
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -727,15 +736,15 @@ export function ScreenDungeon({
               }}
               title={
                 chainLocked
-                  ? (gate?.chainReason ?? 'Zablokowany — pokonaj poprzednika.')
+                  ? (gate?.chainReason ?? t('dungeon.lock.chain'))
                   : levelLocked
-                    ? `Wymagany LVL ${e.requiredLvl}`
+                    ? t('dungeon.lock.lvl').replace('{lvl}', String(e.requiredLvl))
                     : hpLocked
-                      ? 'Za mało HP — wylecz się.'
+                      ? t('dungeon.lock.hp')
                       : cooldownOnly
-                        ? `Potwór odpoczywa. Wróć za ${cooldownLabel}.`
+                        ? t('dungeon.cooldown.title').replace('{time}', cooldownLabel)
                         : dailyMaxed
-                          ? 'Dzienny limit osiągnięty. Reset o północy UTC.'
+                          ? t('dungeon.daily.title')
                           : undefined
               }
             >
@@ -765,14 +774,14 @@ export function ScreenDungeon({
                   }}
                 >
                   <div className="h-title" style={{ fontSize: 14 }}>
-                    {e.name}
+                    {tc.enemyName(e.slug, e.name)}
                   </div>
                   {e.tier === 'elite' && (
                     <span
                       className="pip"
                       style={{ fontSize: 9, background: '#8a3a8a', color: '#fff' }}
                     >
-                      ELITE
+                      {t('dungeon.tag.elite')}
                     </span>
                   )}
                   {e.tier === 'boss' && (
@@ -780,7 +789,7 @@ export function ScreenDungeon({
                       className="pip"
                       style={{ fontSize: 9, background: '#c83232', color: '#fff' }}
                     >
-                      BOSS
+                      {t('dungeon.tag.boss')}
                     </span>
                   )}
                   {trackedSlugs.has(e.slug) && (
@@ -796,9 +805,9 @@ export function ScreenDungeon({
                         alignItems: 'center',
                         gap: 3,
                       }}
-                      title="Wytropiony! ×2 gold, ×2 XP, 1.5× szansa na łup."
+                      title={t('dungeon.tracked.title')}
                     >
-                      <IcoPaw s={10} /> TROP ×2
+                      <IcoPaw s={10} /> {t('dungeon.track.tag')}
                     </span>
                   )}
                   {(gate?.abilities ?? []).map((ab) => (
@@ -809,14 +818,17 @@ export function ScreenDungeon({
                         fontSize: 9,
                         ...ABILITY_PIP_STYLE[ab.kind],
                       }}
-                      title={ABILITY_TOOLTIP[ab.kind](ab)}
+                      title={abilityTooltip(ab)}
                     >
-                      {ABILITY_LABEL[ab.kind]}
+                      {abilityLabel(ab.kind)}
                     </span>
                   ))}
                 </div>
                 <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                  Lvl {e.lvl} · HP {e.hp} · ATK {e.atk}
+                  {t('dungeon.statline')
+                    .replace('{lvl}', String(e.lvl))
+                    .replace('{hp}', String(e.hp))
+                    .replace('{atk}', String(e.atk))}
                 </div>
                 <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
                   <span className="pip gold" style={{ fontSize: 9 }}>
@@ -845,9 +857,11 @@ export function ScreenDungeon({
                         alignItems: 'center',
                         gap: 3,
                       }}
-                      title={`Dzienny limit ubitych: ${gate.dailyLimit}. Reset o północy UTC.`}
+                      title={t('dungeon.daily.body').replace('{n}', String(gate.dailyLimit))}
                     >
-                      {gate.killsToday}/{gate.dailyLimit} dzisiaj
+                      {t('dungeon.daily.kills')
+                        .replace('{cur}', String(gate.killsToday))
+                        .replace('{max}', String(gate.dailyLimit))}
                     </span>
                   )}
                 </div>
@@ -892,8 +906,8 @@ export function ScreenDungeon({
                       }
                       title={
                         char.gems < GEM_SINK_COSTS.skipBossCooldown
-                          ? `Brak gemów (${GEM_SINK_COSTS.skipBossCooldown}).`
-                          : 'Pomiń cooldown za gemy.'
+                          ? t('dungeon.skip.noGems').replace('{n}', String(GEM_SINK_COSTS.skipBossCooldown))
+                          : t('dungeon.skip.title')
                       }
                       style={{
                         marginTop: 2,
@@ -944,7 +958,7 @@ export function ScreenDungeon({
                   }}
                   title={gate?.chainReason ?? undefined}
                 >
-                  PO KOLEI
+                  {t('dungeon.tag.byOrder')}
                 </div>
               ) : levelLocked ? (
                 <div
@@ -961,7 +975,7 @@ export function ScreenDungeon({
                     border: '2px solid #ffc830',
                   }}
                 >
-                  LVL {e.requiredLvl}
+                  {t('dungeon.tag.lvl').replace('{lvl}', String(e.requiredLvl))}
                 </div>
               ) : null}
             </div>
@@ -969,31 +983,22 @@ export function ScreenDungeon({
         })}
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-        <HelpIcon title="Klucze, tropy, cooldowny" label="Jak to działa?">
+        <HelpIcon title={t('dungeon.help.title')} label={t('dungeon.help.label')}>
           <p style={{ margin: '0 0 8px' }}>
-            Każda walka kosztuje <b>jeden klucz do lochu</b>. Nosisz ich maks.{' '}
-            <b>15</b>, a jeden dopisuje się <b>co 15 minut</b> — też gdy gra
-            jest zamknięta. Bez klucza stróż nie wpuści.
+            {t('dungeon.help.p1.a')}<b>{t('dungeon.help.p1.b')}</b>{t('dungeon.help.p1.c')}
+            <b>{t('dungeon.help.p1.d')}</b>{t('dungeon.help.p1.e')}<b>{t('dungeon.help.p1.f')}</b>{t('dungeon.help.p1.g')}
           </p>
           <p style={{ margin: '0 0 8px' }}>
-            <b>Tropy</b> to trzy aktywne leady na konkretne moby. Zabicie
-            wytropionego = <b>×2 gold, ×2 XP, 1.5× szansa na łup</b>. Trop
-            wygasa po 2h; pusty slot odnawia się co godzinę. Słaby trop?
-            Za <b>10 gemów</b> rerollujesz go (przycisk odśwież w rogu kafelka).
+            <b>{t('dungeon.help.p2.a')}</b>{t('dungeon.help.p2.b')}<b>{t('dungeon.help.p2.c')}</b>{t('dungeon.help.p2.d')}<b>{t('dungeon.help.p2.e')}</b>{t('dungeon.help.p2.f')}
           </p>
           <p style={{ margin: '0 0 8px' }}>
-            Dodatkowe klucze wpadają z <b>codziennej skrzyni</b> (dzień 3 =
-            +2) i z <b>boss-questów</b> (q5, q10, q15 — po 5 kluczy). Jeśli
-            pula jest pełna, nadmiar przepada.
+            {t('dungeon.help.p3.a')}<b>{t('dungeon.help.p3.b')}</b>{t('dungeon.help.p3.c')}<b>{t('dungeon.help.p3.d')}</b>{t('dungeon.help.p3.e')}
           </p>
           <p style={{ margin: '0 0 8px' }}>
-            Każdy potwór po ubiciu <b>odpoczywa</b> — goblin pół minuty, boss
-            20. A do tego ma <b>dzienny limit</b>: goblinów 25, widm 6,
-            kościanych smoków 2 (chowają się w skałach). Liczniki resetują się
-            o <b>00:00 UTC</b>.
+            {t('dungeon.help.p4.a')}<b>{t('dungeon.help.p4.b')}</b>{t('dungeon.help.p4.c')}<b>{t('dungeon.help.p4.d')}</b>{t('dungeon.help.p4.e')}<b>{t('dungeon.help.p4.f')}</b>{t('dungeon.help.p4.g')}
           </p>
           <p style={{ margin: 0, fontStyle: 'italic' }}>
-            Tak, można przespać cały refill. Tak, to idle RPG.
+            {t('dungeon.help.p5')}
           </p>
         </HelpIcon>
       </div>
@@ -1003,7 +1008,7 @@ export function ScreenDungeon({
         style={{ marginTop: 14, width: '100%' }}
         onClick={onBack}
       >
-        {dungeonSlug ? '← Mapa świata' : '← Miasto'}
+        {dungeonSlug ? t('dungeon.back.world') : t('common.backToTown')}
       </button>
     </div>
   );

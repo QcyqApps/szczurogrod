@@ -30,6 +30,10 @@ import {
 } from '@grodno/shared';
 import { GameIcon } from '@/components/game-icons';
 import { IcoGem } from '@/components/icons';
+import { useT } from '@/i18n';
+import type { DictKey } from '@/i18n';
+
+type Translator = (key: DictKey) => string;
 
 const ACCENT_CHOICES = [
   '#c83232',
@@ -42,84 +46,84 @@ const ACCENT_CHOICES = [
   '#b0b0b0',
 ];
 
-const SKIN_LABELS: Record<SkinKey, string> = {
-  pale: 'Jasna',
-  medium: 'Śr.',
-  tan: 'Opal.',
-  dark: 'Ciemna',
-  green: 'Ork!',
+const SKIN_LABEL_KEY: Record<SkinKey, DictKey> = {
+  pale: 'cc.skin.pale',
+  medium: 'cc.skin.medium',
+  tan: 'cc.skin.tan',
+  dark: 'cc.skin.dark',
+  green: 'cc.skin.green',
 };
-const HAIR_STYLE_LABELS: Record<HairStyle, string> = {
-  bald: 'Łysy',
-  short: 'Krótka',
-  messy: 'Nieład',
-  long: 'Długa',
-  mohawk: 'Mohawk',
-  ponytail: 'Kucyk',
+const HAIR_STYLE_LABEL_KEY: Record<HairStyle, DictKey> = {
+  bald: 'cc.hair.bald',
+  short: 'cc.hair.short',
+  messy: 'cc.hair.messy',
+  long: 'cc.hair.long',
+  mohawk: 'cc.hair.mohawk',
+  ponytail: 'cc.hair.ponytail',
 };
-const HAIR_COLOR_LABELS: Record<HairColorKey, string> = {
-  black: 'Czar.',
-  brown: 'Brąz',
-  blond: 'Blond',
-  red: 'Rudy',
-  white: 'Siwy',
-  purple: 'Fiol.',
+const HAIR_COLOR_LABEL_KEY: Record<HairColorKey, DictKey> = {
+  black: 'cc.hairColor.black',
+  brown: 'cc.hairColor.brown',
+  blond: 'cc.hairColor.blond',
+  red: 'cc.hairColor.red',
+  white: 'cc.hairColor.white',
+  purple: 'cc.hairColor.purple',
 };
-const BEARD_LABELS: Record<BeardStyle, string> = {
-  none: 'Brak',
-  stubble: 'Zarost',
-  goatee: 'Kozia',
-  full: 'Pełna',
+const BEARD_LABEL_KEY: Record<BeardStyle, DictKey> = {
+  none: 'cc.beard.none',
+  stubble: 'cc.beard.stubble',
+  goatee: 'creator.beard.goatee',
+  full: 'cc.beard.full',
 };
-const EYE_LABELS: Record<EyeStyle, string> = {
-  normal: 'Norm.',
-  angry: 'Wkurz.',
-  sleepy: 'Senne',
-  glow: 'Świec.',
+const EYE_LABEL_KEY: Record<EyeStyle, DictKey> = {
+  normal: 'cc.eyes.normal',
+  angry: 'cc.eyes.angry',
+  sleepy: 'cc.eyes.sleepy',
+  glow: 'cc.eyes.glow',
 };
-const EYE_COLOR_LABELS: Record<EyeColorKey, string> = {
-  brown: 'Brąz',
-  blue: 'Nieb.',
-  green: 'Ziel.',
-  yellow: 'Żółty',
-  red: 'Czer.',
+const EYE_COLOR_LABEL_KEY: Record<EyeColorKey, DictKey> = {
+  brown: 'cc.eyeColor.brown',
+  blue: 'cc.eyeColor.blue',
+  green: 'cc.eyeColor.green',
+  yellow: 'cc.eyeColor.yellow',
+  red: 'cc.eyeColor.red',
 };
-const MOUTH_LABELS: Record<MouthStyle, string> = {
-  neutral: 'Neutr.',
-  smirk: 'Uśmieszek',
-  grin: 'Zęby',
-  grim: 'Ponury',
+const MOUTH_LABEL_KEY: Record<MouthStyle, DictKey> = {
+  neutral: 'creator.mouth.neutral',
+  smirk: 'creator.mouth.smirk',
+  grin: 'creator.mouth.grin',
+  grim: 'creator.mouth.grim',
 };
-const ACCESSORY_LABELS: Record<AccessoryStyle, string> = {
-  none: 'Brak',
-  scar: 'Blizna',
-  eyepatch: 'Opaska',
-  monocle: 'Monokl',
-  mask: 'Maska',
+const ACCESSORY_LABEL_KEY: Record<AccessoryStyle, DictKey> = {
+  none: 'creator.acc.none',
+  scar: 'creator.acc.scar',
+  eyepatch: 'creator.acc.eyepatch',
+  monocle: 'creator.acc.monocle',
+  mask: 'creator.acc.mask',
 };
-const HEADWEAR_LABELS: Record<HeadwearStyle, string> = {
-  auto: 'Auto',
-  none: 'Brak',
-  helmet: 'Hełm',
-  wizardHat: 'Kapelusz',
-  hood: 'Kaptur',
-  crown: 'Korona',
-  bandana: 'Bandana',
-  dragonHelm: 'Smoczy hełm',
-  lichCrown: 'Korona licha',
-  valkyrieHelm: 'Hełm walkirii',
-  archmageHat: 'Kapelusz arcymaga',
-  shadowVeil: 'Welon cienia',
-  goldenLaurel: 'Laur',
-  hornedHelm: 'Rogi',
+const HEADWEAR_LABEL_KEY: Record<HeadwearStyle, DictKey> = {
+  auto: 'cc.hw.auto',
+  none: 'cc.hw.none',
+  helmet: 'cc.hw.helmet',
+  wizardHat: 'cc.hw.wizardHat',
+  hood: 'cc.hw.hood',
+  crown: 'cc.hw.crown',
+  bandana: 'creator.hw.bandana',
+  dragonHelm: 'creator.hw.dragonHelm',
+  lichCrown: 'creator.hw.lichCrown',
+  valkyrieHelm: 'creator.hw.valkyrieHelm',
+  archmageHat: 'creator.hw.archmageHat',
+  shadowVeil: 'creator.hw.shadowVeil',
+  goldenLaurel: 'creator.hw.goldenLaurel',
+  hornedHelm: 'creator.hw.hornedHelm',
 };
-const ARMOR_LABELS: Record<ArmorStyle, string> = {
-  plain: 'Tunika',
-  plate: 'Pełna płyta',
-  scale: 'Łuski',
-  arcane: 'Szata maga',
-  bone: 'Kości',
-  dragon: 'Smocza',
+const ARMOR_LABEL_KEY: Record<ArmorStyle, DictKey> = {
+  plain: 'creator.armor.plain',
+  plate: 'creator.armor.plate',
+  scale: 'creator.armor.scale',
+  arcane: 'creator.armor.arcane',
+  bone: 'creator.armor.bone',
+  dragon: 'creator.armor.dragon',
 };
 
 const HEADWEAR_ORDER_FREE: Exclude<HeadwearStyle, 'auto'>[] = [
@@ -235,6 +239,7 @@ export function ScreenCreator({
   gems = 0,
   onUnlock,
 }: ScreenCreatorProps) {
+  const t = useT();
   const [app, setApp] = useState<CreatorAppearance>(() => mergeAppearance(appearance, cls));
   const [unlockTarget, setUnlockTarget] = useState<{
     kind: 'headwear' | 'armor';
@@ -249,11 +254,6 @@ export function ScreenCreator({
     setApp((prev) => ({ ...prev, [key]: value }));
   }
 
-  /**
-   * Klik na lockowany premium chip. W trybie 'create' (kreator nowej postaci)
-   * premium nie są w ogóle renderowane, więc ten kod pamięta tylko o 'edit'.
-   * Otwiera modal z preview applied — gracz widzi jak będzie wyglądał.
-   */
   function tryPickPremium(
     kind: 'headwear' | 'armor',
     value: Exclude<HeadwearStyle, 'auto'> | ArmorStyle,
@@ -261,12 +261,10 @@ export function ScreenCreator({
   ) {
     const slug = cosmeticSlug(kind, value);
     if (unlockedSet.has(slug)) {
-      // Już odblokowane — equip natychmiast.
       if (kind === 'headwear') set('headwear', value as Exclude<HeadwearStyle, 'auto'>);
       else set('armor', value as ArmorStyle);
       return;
     }
-    // Niezalockowane — preview live + modal kupna.
     if (kind === 'headwear') set('headwear', value as Exclude<HeadwearStyle, 'auto'>);
     else set('armor', value as ArmorStyle);
     setUnlockTarget({ kind, value, label });
@@ -277,7 +275,6 @@ export function ScreenCreator({
     setUnlockPending(true);
     try {
       await onUnlock(cosmeticSlug(unlockTarget.kind, unlockTarget.value));
-      // Optimistic: dorzucamy do lokalnej setki — parent powinien też re-fetchować.
       setApp((prev) => ({
         ...prev,
         unlockedCosmetics: [
@@ -293,22 +290,17 @@ export function ScreenCreator({
 
   function cancelUnlock() {
     if (!unlockTarget) return;
-    // Revert preview — wracamy do pierwszego free wariantu.
     if (unlockTarget.kind === 'headwear') set('headwear', 'none');
     else set('armor', 'plain');
     setUnlockTarget(null);
   }
 
-  /**
-   * Walidacja przed save. Jeśli appearance ma niezalockowane premium, blokuje
-   * save i wymusza unlock (zostawia w preview-mode).
-   */
   function handleSave() {
     if (isHeadwearPremium(app.headwear) && !unlockedSet.has(cosmeticSlug('headwear', app.headwear))) {
       setUnlockTarget({
         kind: 'headwear',
         value: app.headwear,
-        label: HEADWEAR_LABELS[app.headwear],
+        label: t(HEADWEAR_LABEL_KEY[app.headwear]),
       });
       return;
     }
@@ -316,7 +308,7 @@ export function ScreenCreator({
       setUnlockTarget({
         kind: 'armor',
         value: app.armor,
-        label: ARMOR_LABELS[app.armor],
+        label: t(ARMOR_LABEL_KEY[app.armor]),
       });
       return;
     }
@@ -357,7 +349,7 @@ export function ScreenCreator({
         }}
       >
         <div className="h-display" style={{ fontSize: 20, textAlign: 'center', marginBottom: 8 }}>
-          KREATOR POSTACI
+          {t('creator.heading')}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <div
@@ -381,27 +373,27 @@ export function ScreenCreator({
             onClick={randomize}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
           >
-            <GameIcon name="dice" size={22} /> LOSUJ WYGLĄD
+            <GameIcon name="dice" size={22} /> {t('creator.randomize')}
           </button>
         </div>
       </div>
 
       <div className="panel" style={{ padding: 12, marginBottom: 10 }}>
-        <Row label="SKÓRA">
+        <Row label={t('creator.row.skin')}>
           {(Object.entries(SKIN_TONES) as [SkinKey, (typeof SKIN_TONES)[SkinKey]][]).map(([k, v]) => (
             <Chip key={k} active={app.skin === k} onClick={() => set('skin', k)} swatch={v.base}>
-              {SKIN_LABELS[k]}
+              {t(SKIN_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="FRYZURA">
+        <Row label={t('creator.row.hair')}>
           {(['bald', 'short', 'messy', 'long', 'mohawk', 'ponytail'] as HairStyle[]).map((k) => (
             <Chip key={k} active={app.hairStyle === k} onClick={() => set('hairStyle', k)}>
-              {HAIR_STYLE_LABELS[k]}
+              {t(HAIR_STYLE_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="KOLOR WŁOSÓW">
+        <Row label={t('creator.row.hairColor')}>
           {(Object.entries(HAIR_COLORS) as [HairColorKey, string][]).map(([k, v]) => (
             <Chip
               key={k}
@@ -409,25 +401,25 @@ export function ScreenCreator({
               onClick={() => set('hairColor', k)}
               swatch={v}
             >
-              {HAIR_COLOR_LABELS[k]}
+              {t(HAIR_COLOR_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="BRODA">
+        <Row label={t('creator.row.beard')}>
           {(['none', 'stubble', 'goatee', 'full'] as BeardStyle[]).map((k) => (
             <Chip key={k} active={app.beardStyle === k} onClick={() => set('beardStyle', k)}>
-              {BEARD_LABELS[k]}
+              {t(BEARD_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="OCZY">
+        <Row label={t('creator.row.eyes')}>
           {(['normal', 'angry', 'sleepy', 'glow'] as EyeStyle[]).map((k) => (
             <Chip key={k} active={app.eyes === k} onClick={() => set('eyes', k)}>
-              {EYE_LABELS[k]}
+              {t(EYE_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="KOLOR OCZU">
+        <Row label={t('creator.row.eyeColor')}>
           {(Object.entries(EYE_COLORS) as [EyeColorKey, string][]).map(([k, v]) => (
             <Chip
               key={k}
@@ -435,28 +427,28 @@ export function ScreenCreator({
               onClick={() => set('eyeColor', k)}
               swatch={v}
             >
-              {EYE_COLOR_LABELS[k]}
+              {t(EYE_COLOR_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="USTA">
+        <Row label={t('creator.row.mouth')}>
           {(['neutral', 'smirk', 'grin', 'grim'] as MouthStyle[]).map((k) => (
             <Chip key={k} active={app.mouth === k} onClick={() => set('mouth', k)}>
-              {MOUTH_LABELS[k]}
+              {t(MOUTH_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="DETAL">
+        <Row label={t('creator.row.detail')}>
           {(['none', 'scar', 'eyepatch', 'monocle', 'mask'] as AccessoryStyle[]).map((k) => (
             <Chip key={k} active={app.accessory === k} onClick={() => set('accessory', k)}>
-              {ACCESSORY_LABELS[k]}
+              {t(ACCESSORY_LABEL_KEY[k])}
             </Chip>
           ))}
         </Row>
-        <Row label="NAKRYCIE GŁOWY">
+        <Row label={t('creator.row.headwear')}>
           {HEADWEAR_ORDER_FREE.map((k) => (
             <Chip key={k} active={app.headwear === k} onClick={() => set('headwear', k)}>
-              {HEADWEAR_LABELS[k]}
+              {t(HEADWEAR_LABEL_KEY[k])}
             </Chip>
           ))}
           {mode === 'edit' &&
@@ -468,17 +460,17 @@ export function ScreenCreator({
                   key={k}
                   active={app.headwear === k}
                   owned={owned}
-                  onClick={() => tryPickPremium('headwear', k, HEADWEAR_LABELS[k])}
+                  onClick={() => tryPickPremium('headwear', k, t(HEADWEAR_LABEL_KEY[k]))}
                 >
-                  {HEADWEAR_LABELS[k]}
+                  {t(HEADWEAR_LABEL_KEY[k])}
                 </PremiumChip>
               );
             })}
         </Row>
-        <Row label="ZBROJA">
+        <Row label={t('creator.row.armor')}>
           {ARMOR_ORDER_FREE.map((k) => (
             <Chip key={k} active={app.armor === k} onClick={() => set('armor', k)}>
-              {ARMOR_LABELS[k]}
+              {t(ARMOR_LABEL_KEY[k])}
             </Chip>
           ))}
           {mode === 'edit' &&
@@ -490,14 +482,14 @@ export function ScreenCreator({
                   key={k}
                   active={app.armor === k}
                   owned={owned}
-                  onClick={() => tryPickPremium('armor', k, ARMOR_LABELS[k])}
+                  onClick={() => tryPickPremium('armor', k, t(ARMOR_LABEL_KEY[k]))}
                 >
-                  {ARMOR_LABELS[k]}
+                  {t(ARMOR_LABEL_KEY[k])}
                 </PremiumChip>
               );
             })}
         </Row>
-        <Row label="KOLOR AKCENTU">
+        <Row label={t('creator.row.accent')}>
           {ACCENT_CHOICES.map((hex) => (
             <Chip
               key={hex}
@@ -513,7 +505,7 @@ export function ScreenCreator({
 
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" className="cbtn ghost" style={{ flex: 1 }} onClick={onCancel}>
-          ANULUJ
+          {t('creator.cancel')}
         </button>
         <button
           type="button"
@@ -527,7 +519,7 @@ export function ScreenCreator({
           }}
           onClick={handleSave}
         >
-          <GameIcon name="check" size={22} /> ZAPISZ WYGLĄD
+          <GameIcon name="check" size={22} /> {t('creator.save')}
         </button>
       </div>
 
@@ -540,16 +532,13 @@ export function ScreenCreator({
           pending={unlockPending}
           onConfirm={handleUnlock}
           onCancel={cancelUnlock}
+          t={t}
         />
       )}
     </div>
   );
 }
 
-/**
- * Chip z badge gem-cost dla premium cosmetic'ów. Owned = wygląda jak normalny
- * Chip; not-owned = ma ikonę gemu + cenę.
- */
 function PremiumChip({
   active,
   owned,
@@ -606,11 +595,6 @@ function PremiumChip({
   );
 }
 
-/**
- * Modal odblokowania premium cosmeticu. Pokazuje preview avatara z aplikowanym
- * cosmeticiem (live update z parent state) + button kupna. Anuluj revertuje
- * pick na ostatni free wariant (parent zarządza state).
- */
 function UnlockModal({
   appearance,
   cls,
@@ -619,6 +603,7 @@ function UnlockModal({
   pending,
   onConfirm,
   onCancel,
+  t,
 }: {
   appearance: ResolvedAppearance;
   cls: CharacterClass;
@@ -627,6 +612,7 @@ function UnlockModal({
   pending: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  t: Translator;
 }) {
   const canAfford = gems >= COSMETIC_UNLOCK_COST;
   return (
@@ -657,7 +643,7 @@ function UnlockModal({
         }}
       >
         <div className="h-display" style={{ fontSize: 18, marginBottom: 4 }}>
-          ODBLOKUJ KOSMETYK
+          {t('creator.unlock.heading')}
         </div>
         <div className="flavor" style={{ fontSize: 15, color: '#5a3a2a', marginBottom: 12 }}>
           {label}
@@ -684,7 +670,7 @@ function UnlockModal({
             marginBottom: 12,
           }}
         >
-          Tak będziesz wyglądać. Odblokowanie jest jednorazowe — później zmieniasz dowolnie.
+          {t('creator.unlock.body')}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -694,7 +680,7 @@ function UnlockModal({
             onClick={onCancel}
             disabled={pending}
           >
-            ANULUJ
+            {t('creator.cancel')}
           </button>
           <button
             type="button"
@@ -711,10 +697,14 @@ function UnlockModal({
             }}
             onClick={canAfford && !pending ? onConfirm : undefined}
             disabled={!canAfford || pending}
-            title={canAfford ? 'Odblokuj' : `Brak gemów (${COSMETIC_UNLOCK_COST}).`}
+            title={
+              canAfford
+                ? t('creator.unlock.title.confirm')
+                : t('creator.unlock.title.tooPoor').replace('{n}', String(COSMETIC_UNLOCK_COST))
+            }
           >
             <IcoGem s={14} />
-            {COSMETIC_UNLOCK_COST} ODBLOKUJ
+            {COSMETIC_UNLOCK_COST} {t('creator.unlock.confirm')}
           </button>
         </div>
       </div>

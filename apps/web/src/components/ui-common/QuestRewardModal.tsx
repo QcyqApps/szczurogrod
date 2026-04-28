@@ -1,5 +1,7 @@
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoKey } from '@/components/icons';
+import { useT, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { QuestReward, Rarity } from '@grodno/shared';
 
 const RARITY_COLOR: Record<Rarity, string> = {
@@ -9,11 +11,11 @@ const RARITY_COLOR: Record<Rarity, string> = {
   legendary: '#ffc830',
 };
 
-const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'ZWYKŁY',
-  rare: 'RZADKI',
-  epic: 'EPICKI',
-  legendary: 'LEGEND.',
+const RARITY_LABEL_KEY: Record<Rarity, DictKey> = {
+  common: 'rarity.common',
+  rare: 'rarity.rare',
+  epic: 'rarity.epic',
+  legendary: 'rarity.legendary.short',
 };
 
 export interface QuestRewardModalProps {
@@ -23,6 +25,8 @@ export interface QuestRewardModalProps {
 }
 
 export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardModalProps) {
+  const t = useT();
+  const tc = useContentT();
   if (!reward) return null;
   const item = reward.item ?? null;
   return (
@@ -86,7 +90,7 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
           className="h-display"
           style={{ fontSize: 24, color: '#2e5020', marginBottom: 2, position: 'relative' }}
         >
-          QUEST UKOŃCZONY!
+          {t('modal.questReward.heading')}
         </div>
         <div
           style={{ fontSize: 12, color: '#5a3a2a', marginBottom: 14, fontStyle: 'italic' }}
@@ -95,7 +99,7 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
         </div>
 
         <div className="h-title" style={{ fontSize: 14, marginBottom: 8, color: '#5a3a2a' }}>
-          NAGRODY:
+          {t('modal.questReward.label')}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
@@ -113,7 +117,7 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
           >
             <IcoCoin s={28} />
             <div style={{ textAlign: 'left', flex: 1 }}>
-              <div style={{ fontSize: 13, color: '#5a3a2a', lineHeight: 1 }}>Złoto</div>
+              <div style={{ fontSize: 13, color: '#5a3a2a', lineHeight: 1 }}>{t('modal.questReward.gold')}</div>
               <div
                 className="h-title"
                 style={{ fontSize: 20, lineHeight: 1, color: '#8a5a1a' }}
@@ -137,7 +141,7 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
           >
             <GameIcon name="spark" size={28} />
             <div style={{ textAlign: 'left', flex: 1 }}>
-              <div style={{ fontSize: 13, color: '#5a3a2a', lineHeight: 1 }}>Doświadczenie</div>
+              <div style={{ fontSize: 13, color: '#5a3a2a', lineHeight: 1 }}>{t('modal.questReward.xp')}</div>
               <div
                 className="h-title"
                 style={{ fontSize: 20, lineHeight: 1, color: '#7a5a1a' }}
@@ -163,7 +167,7 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
               <IcoKey s={28} />
               <div style={{ textAlign: 'left', flex: 1 }}>
                 <div style={{ fontSize: 13, color: '#5a3a2a', lineHeight: 1 }}>
-                  Klucze do lochu
+                  {t('modal.questReward.keys')}
                 </div>
                 <div
                   className="h-title"
@@ -219,10 +223,10 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
                     marginBottom: 2,
                   }}
                 >
-                  {RARITY_LABEL[item.rarity]}
+                  {t(RARITY_LABEL_KEY[item.rarity])}
                 </div>
                 <div className="h-title" style={{ fontSize: 14, lineHeight: 1.1 }}>
-                  {item.name}
+                  {tc.itemName(item.name, item.name)}
                 </div>
               </div>
             </div>
@@ -238,7 +242,7 @@ export function QuestRewardModal({ reward, questTitle, onClose }: QuestRewardMod
           }}
           onClick={onClose}
         >
-          ODBIERZ!
+          {t('modal.questReward.collect')}
         </button>
       </div>
 

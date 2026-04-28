@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
+import { useT, type DictKey } from '@/i18n';
 import { GuildNoneView } from './GuildNoneView';
 import { GuildTabMembers } from './GuildTabMembers';
 import { GuildTabChat } from './GuildTabChat';
@@ -13,13 +14,13 @@ import { GuildEmblem } from './components/GuildEmblem';
 
 type Tab = 'members' | 'chat' | 'treasury' | 'buildings' | 'wars' | 'raids';
 
-const TAB_LABELS: Record<Tab, string> = {
-  members: 'CZŁONKOWIE',
-  chat: 'CZAT',
-  treasury: 'SKARBIEC',
-  buildings: 'BUDYNKI',
-  wars: 'WOJNY',
-  raids: 'RAJDY',
+const TAB_LABEL_KEY: Record<Tab, DictKey> = {
+  members: 'guild.tab.members',
+  chat: 'guild.tab.chat',
+  treasury: 'guild.tab.treasury',
+  buildings: 'guild.tab.buildings',
+  wars: 'guild.tab.wars',
+  raids: 'guild.tab.raids',
 };
 
 export function ScreenGuild() {
@@ -33,6 +34,7 @@ export function ScreenGuild() {
 }
 
 function GuildMemberView({ myCharId }: { myCharId: string }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const guildQuery = trpc.guild.get.useQuery();
@@ -46,7 +48,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się wyjść.',
+        text: err instanceof TRPCClientError ? err.message : t('guild.toast.leaveFailed'),
         accent: '#c83232',
       });
     },
@@ -59,7 +61,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się rozwiązać.',
+        text: err instanceof TRPCClientError ? err.message : t('guild.toast.disbandFailed'),
         accent: '#c83232',
       });
     },
@@ -69,7 +71,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
     return (
       <div className="screen-in" style={{ padding: 12 }}>
         <div style={{ textAlign: 'center', fontSize: 13, color: '#5a3a2a', padding: 20 }}>
-          Ładuję gildię...
+          {t('guild.loading')}
         </div>
       </div>
     );
@@ -106,7 +108,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
               </span>
             </div>
             <div style={{ fontSize: 13, opacity: 0.85 }}>
-              Poziom gildii: {data.guild.level}
+              {t('guild.level').replace('{n}', String(data.guild.level))}
             </div>
             {data.guild.motto && (
               <div className="flavor light" style={{ fontSize: 14, marginTop: 2 }}>
@@ -127,19 +129,19 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
             <div className="mono" style={{ fontSize: 16, fontWeight: 700 }}>
               {data.members.length}/{data.guild.memberCap}
             </div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>CZŁONKOWIE</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>{t('guild.stats.members')}</div>
           </div>
           <div>
             <div className="mono" style={{ fontSize: 16, fontWeight: 700 }}>
               {data.guild.glory.toLocaleString('pl-PL')}
             </div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>CHWAŁA</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>{t('guild.stats.glory')}</div>
           </div>
           <div>
             <div className="mono" style={{ fontSize: 16, fontWeight: 700 }}>
               {data.guild.treasuryGold.toLocaleString('pl-PL')}g
             </div>
-            <div style={{ fontSize: 10, opacity: 0.8 }}>SKARBIEC</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>{t('guild.stats.treasury')}</div>
           </div>
         </div>
       </div>
@@ -154,13 +156,13 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
           marginBottom: 4,
         }}
       >
-        {(Object.keys(TAB_LABELS) as Tab[]).map((t) => {
-          const active = t === tab;
+        {(Object.keys(TAB_LABEL_KEY) as Tab[]).map((key) => {
+          const active = key === tab;
           return (
             <button
-              key={t}
+              key={key}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(key)}
               style={{
                 padding: '6px 2px',
                 borderRadius: 8,
@@ -176,7 +178,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
               }}
               className="h-title"
             >
-              {TAB_LABELS[t]}
+              {t(TAB_LABEL_KEY[key])}
             </button>
           );
         })}
@@ -198,7 +200,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
           style={{ width: '100%' }}
           onClick={() => setConfirmLeave(true)}
         >
-          {isLeader ? 'ROZWIĄŻ GILDIĘ' : 'OPUŚĆ GILDIĘ'}
+          {isLeader ? t('guild.btn.disband') : t('guild.btn.leave')}
         </button>
       </div>
 
@@ -226,7 +228,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
               className="h-display"
               style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}
             >
-              {isLeader ? 'ROZWIĄZAĆ GILDIĘ?' : 'OPUŚCIĆ GILDIĘ?'}
+              {isLeader ? t('guild.confirm.disband.title') : t('guild.confirm.leave.title')}
             </div>
             <div
               className="flavor"
@@ -238,8 +240,8 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
               }}
             >
               {isLeader
-                ? 'Skarbiec przepadnie. Członkowie znów wolni. Nie ma powrotu.'
-                : 'Bez fanfar, bez pożegnania. Po prostu wyjdziesz.'}
+                ? t('guild.confirm.disband.body')
+                : t('guild.confirm.leave.body')}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -248,7 +250,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
                 style={{ flex: 1 }}
                 onClick={() => setConfirmLeave(false)}
               >
-                ANULUJ
+                {t('guild.confirm.cancel')}
               </button>
               <button
                 type="button"
@@ -260,7 +262,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
                   else leaveMut.mutate();
                 }}
               >
-                {isLeader ? 'ROZWIĄŻ' : 'WYJDŹ'}
+                {isLeader ? t('guild.confirm.disband.btn') : t('guild.confirm.leave.btn')}
               </button>
             </div>
           </div>

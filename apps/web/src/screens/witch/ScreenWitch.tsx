@@ -8,6 +8,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoCoin, IcoHeart, IcoMagic, IcoShield, IcoSword, IcoClock } from '@/components/icons';
 import { GemSinkButton, HelpIcon } from '@/components/ui-common';
+import { useT, tStatic, useContentT } from '@/i18n';
 import type { ActiveCurse, BuffKind } from '@grodno/shared';
 
 export interface ScreenWitchProps {
@@ -24,6 +25,8 @@ const KIND_ICON: Record<BuffKind, (s: number) => React.ReactNode> = {
 };
 
 export function ScreenWitch({ onBack }: ScreenWitchProps) {
+  const t = useT();
+  const tc = useContentT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const statusQuery = trpc.witch.status.useQuery();
@@ -35,11 +38,11 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
 
   const removeMut = trpc.witch.remove.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Klątwa zdjęta.', accent: '#4a7c3a' });
+      pushToast({ text: tStatic('witch.toast.curseRemoved'), accent: '#4a7c3a' });
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Baba Jaga odmówiła.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('witch.toast.refused'),
         accent: '#c83232',
       });
     },
@@ -52,13 +55,13 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
   const removeAllMut = trpc.witch.removeAll.useMutation({
     onSuccess: (data) => {
       pushToast({
-        text: `Zdjęto ${data.removedCount} klątw. Baba Jaga liczy gemy.`,
+        text: tStatic('witch.toast.allRemoved').replace('{n}', String(data.removedCount)),
         accent: '#4a7c3a',
       });
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Baba Jaga odmówiła.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('witch.toast.refused'),
         accent: '#c83232',
       });
     },
@@ -71,7 +74,10 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
   async function handleRemove(curse: ActiveCurse) {
     if (removeMut.isPending || removeAllMut.isPending) return;
     if (gold < curse.removeCostGold) {
-      pushToast({ text: `Brak gold'a (${curse.removeCostGold}).`, accent: '#c83232' });
+      pushToast({
+        text: tStatic('witch.toast.noGold').replace('{n}', String(curse.removeCostGold)),
+        accent: '#c83232',
+      });
       return;
     }
     await removeMut.mutateAsync({ slug: curse.slug });
@@ -90,16 +96,16 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#c8a0a0' }}>
-          BABA JAGA
+          {t('witch.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          „Nie pytaj kto Cię przeklął. Pytaj czy Cię stać żebym to zdjęła."
+          {t('witch.flavor')}
         </div>
       </div>
 
       {!status ? (
         <div className="panel" style={{ padding: 14, textAlign: 'center', fontSize: 13 }}>
-          Baba Jaga szuka okularów…
+          {t('witch.loading')}
         </div>
       ) : status.curses.length === 0 ? (
         <div
@@ -113,10 +119,10 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
           }}
         >
           <div className="h-title" style={{ fontSize: 15, marginBottom: 4 }}>
-            CZYSTA DUSZA
+            {t('witch.clean.title')}
           </div>
           <div style={{ fontSize: 14, color: '#3a5a3a' }}>
-            Nie masz żadnej klątwy. Baba Jaga niezadowolona — zarobku brak.
+            {t('witch.clean.desc')}
           </div>
         </div>
       ) : (
@@ -158,10 +164,10 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="h-title" style={{ fontSize: 13, color: '#5a1818' }}>
-                      {c.name}
+                      {tc.curseName(c.slug, c.name)}
                     </div>
                     <div style={{ fontSize: 12, color: '#3a1818', lineHeight: 1.3 }}>
-                      {c.desc}
+                      {tc.curseDesc(c.slug, c.desc)}
                     </div>
                   </div>
                   <button
@@ -199,15 +205,15 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
               <div
                 style={{ fontSize: 13, color: '#5a3a2a', marginBottom: 8, lineHeight: 1.3 }}
               >
-                Spieszysz się? Baba Jaga zdejmuje wszystko naraz. Jest droższa, ale szybsza.
+                {t('witch.removeAll.flavor')}
               </div>
               <GemSinkButton
-                label={`ZDEJMIJ WSZYSTKIE (${status.curses.length})`}
+                label={t('witch.removeAll.label').replace('{n}', String(status.curses.length))}
                 cost={status.removeAllCostGems}
                 playerGems={gems}
                 pending={removeAllMut.isPending}
                 onClick={() => removeAllMut.mutate()}
-                disabledReason="Zdjęcie wszystkich klątw naraz."
+                disabledReason={t('witch.removeAll.disabledReason')}
                 variant="primary"
                 size="md"
               />
@@ -217,18 +223,13 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-        <HelpIcon title="Skąd się biorą klątwy?" label="Jak to działa?">
-          <p style={{ margin: 0 }}>
-            Po przegranej walce z <b>bossem</b> (tier 3+) jest <b>25% szans</b> że
-            wróg zostawi Ci klątwę na 24h. Klątwa obniża jedną ze statystyk i
-            siedzi razem z pozytywnymi buffami w pasku u góry ekranu (czerwony).
-            Możesz ją przeczekać albo zapłacić Babie Jadze.
-          </p>
+        <HelpIcon title={t('witch.help.title')} label={t('witch.help.label')}>
+          <p style={{ margin: 0 }}>{t('witch.help.body')}</p>
         </HelpIcon>
       </div>
 
       <button type="button" className="cbtn ghost" style={{ width: '100%' }} onClick={onBack}>
-        ← WRÓĆ
+        {t('witch.back')}
       </button>
     </div>
   );

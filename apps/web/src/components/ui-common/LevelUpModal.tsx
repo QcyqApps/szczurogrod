@@ -1,4 +1,5 @@
 import { GameIcon } from '@/components/game-icons';
+import { useT } from '@/i18n';
 import type { LevelUpInfo } from '@grodno/shared';
 
 export interface LevelUpModalProps {
@@ -7,6 +8,7 @@ export interface LevelUpModalProps {
 }
 
 export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
+  const t = useT();
   if (!info) return null;
   const crossed = info.toLevel - info.fromLevel;
   return (
@@ -77,7 +79,7 @@ export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
             position: 'relative',
           }}
         >
-          LEVEL UP!
+          {t('modal.levelUp.heading')}
         </div>
         <div
           className="h-title"
@@ -90,7 +92,7 @@ export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
         >
           LVL {info.fromLevel} → <b style={{ color: '#8a1e1e' }}>LVL {info.toLevel}</b>
           {crossed > 1 && (
-            <span style={{ fontSize: 12, color: '#5a3a2a' }}> ({crossed} razy!)</span>
+            <span style={{ fontSize: 12, color: '#5a3a2a' }}> ({crossed} {t('modal.levelUp.times')})</span>
           )}
         </div>
 
@@ -111,7 +113,7 @@ export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
               className="h-title"
               style={{ fontSize: 10, color: '#ffc830', letterSpacing: 1, marginBottom: 2 }}
             >
-              ✨ NOWY ROZDZIAŁ ✨
+              {t('modal.levelUp.newChapter')}
             </div>
             <div
               className="h-display clean"
@@ -136,14 +138,14 @@ export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
             marginBottom: 12,
           }}
         >
-          <RewardLine icon="heart" color="#c83232" value={`+${info.hpGain}`} label="Maks. HP" />
-          <RewardLine icon="orb" color="#3a5a8a" value={`+${info.mpGain}`} label="Maks. MP" />
+          <RewardLine icon="heart" color="#c83232" value={`+${info.hpGain}`} label={t('modal.levelUp.maxHp')} />
+          <RewardLine icon="orb" color="#3a5a8a" value={`+${info.mpGain}`} label={t('modal.levelUp.maxMp')} />
           {info.staminaGain > 0 && (
             <RewardLine
               icon="bolt"
               color="#4a7c3a"
               value={`+${info.staminaGain}`}
-              label="Maks. wytrzymałość"
+              label={t('modal.levelUp.maxStamina')}
             />
           )}
         </div>
@@ -156,7 +158,7 @@ export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
             marginBottom: 12,
           }}
         >
-          Staty rosną tylko u Trenera. HP i MP zostało uzupełnione.
+          {t('modal.levelUp.flavor')}
         </div>
 
         <button
@@ -165,7 +167,7 @@ export function LevelUpModal({ info, onClose }: LevelUpModalProps) {
           style={{ width: '100%' }}
           onClick={onClose}
         >
-          DALEJ!
+          {t('modal.levelUp.next')}
         </button>
       </div>
 

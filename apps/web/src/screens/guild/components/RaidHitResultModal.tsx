@@ -1,6 +1,7 @@
 import type { GuildRaidHitResponse, IconName } from '@grodno/shared';
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT } from '@/i18n';
 
 export interface RaidHitResultModalProps {
   result: GuildRaidHitResponse;
@@ -13,6 +14,7 @@ export function RaidHitResultModal({
   previousBossName,
   onClose,
 }: RaidHitResultModalProps) {
+  const t = useT();
   const { killed, dmg, hpRemaining, nextBoss, rewardGold, rewardGems } = result;
   return (
     <div
@@ -51,14 +53,15 @@ export function RaidHitResultModal({
                 marginBottom: 4,
               }}
             >
-              BOSS PADŁ!
+              {t('guildRaids.result.bossDown')}
             </div>
             <div
               className="flavor"
               style={{ fontSize: 14, color: '#2a1810', marginBottom: 12 }}
             >
-              „{previousBossName}" — skończony. Zadałeś <b className="mono">{dmg}</b> dmg
-              ostatnim ciosem.
+              {t('guildRaids.result.bossDown.line')
+                .replace('{name}', previousBossName)
+                .replace('{n}', String(dmg))}
             </div>
             {(rewardGold > 0 || rewardGems > 0) && (
               <div
@@ -75,7 +78,7 @@ export function RaidHitResultModal({
                 }}
               >
                 <div className="h-title" style={{ fontSize: 13 }}>
-                  DO SKARBCA:
+                  {t('guildRaids.result.toTreasury')}
                 </div>
                 {rewardGold > 0 && (
                   <span
@@ -109,7 +112,7 @@ export function RaidHitResultModal({
                   className="mono"
                   style={{ fontSize: 10, opacity: 0.7, marginBottom: 4 }}
                 >
-                  NASTĘPNY (TIER {nextBoss.tier}):
+                  {t('guildRaids.result.next').replace('{n}', String(nextBoss.tier))}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <GameIcon name={nextBoss.icon as IconName} size={36} />
@@ -131,16 +134,16 @@ export function RaidHitResultModal({
               className="h-display"
               style={{ fontSize: 20, color: '#c83232', marginBottom: 4 }}
             >
-              UDERZENIE
+              {t('guildRaids.result.hit')}
             </div>
             <div
               className="flavor"
               style={{ fontSize: 14, color: '#2a1810', marginBottom: 10 }}
             >
-              Zadałeś <b className="mono">{dmg.toLocaleString('pl-PL')}</b> dmg.
+              {t('guildRaids.result.dealt').replace('{n}', dmg.toLocaleString('pl-PL'))}
             </div>
             <div className="mono" style={{ fontSize: 13, color: '#5a3a2a', marginBottom: 10 }}>
-              Zostało: {hpRemaining.toLocaleString('pl-PL')} HP
+              {t('guildRaids.result.left').replace('{n}', hpRemaining.toLocaleString('pl-PL'))}
             </div>
           </>
         )}
@@ -150,7 +153,7 @@ export function RaidHitResultModal({
           style={{ width: '100%' }}
           onClick={onClose}
         >
-          {killed ? 'BIJEMY DALEJ' : 'OK'}
+          {killed ? t('guildRaids.result.continue') : t('guildRaids.result.ok')}
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { IcoClock } from '@/components/icons';
+import { useT, tStatic } from '@/i18n';
 import type { GuildRank, GuildWarSummary } from '@grodno/shared';
 import { DeclareWarModal } from './components/DeclareWarModal';
 import { WarLineupEditor } from './components/WarLineupEditor';
@@ -14,6 +15,7 @@ export interface GuildTabWarsProps {
 }
 
 export function GuildTabWars({ myRank }: GuildTabWarsProps) {
+  const t = useT();
   const listQuery = trpc.guildWars.list.useQuery(undefined, { refetchInterval: 15_000 });
 
   const [declareOpen, setDeclareOpen] = useState(false);
@@ -35,13 +37,13 @@ export function GuildTabWars({ myRank }: GuildTabWarsProps) {
       ) : (
         <div className="panel" style={{ padding: 12, marginBottom: 10, textAlign: 'center' }}>
           <div className="h-title" style={{ fontSize: 14, marginBottom: 6 }}>
-            BRAK AKTYWNEJ WOJNY
+            {t('guildWars.noActive')}
           </div>
           <div
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', marginBottom: 10 }}
           >
-            Spokój? Tymczasowo.
+            {t('guildWars.noActive.flavor')}
           </div>
           {canDeclare && (
             <button
@@ -50,12 +52,12 @@ export function GuildTabWars({ myRank }: GuildTabWarsProps) {
               style={{ width: '100%' }}
               onClick={() => setDeclareOpen(true)}
             >
-              WYPOWIEDZ WOJNĘ
+              {t('guildWars.declare')}
             </button>
           )}
           {!canDeclare && myRank !== 'leader' && myRank !== 'officer' && (
             <div style={{ fontSize: 13, color: '#5a3a2a', fontStyle: 'italic' }}>
-              Tylko oficer lub lider.
+              {t('guildWars.officerOnly')}
             </div>
           )}
         </div>
@@ -64,7 +66,7 @@ export function GuildTabWars({ myRank }: GuildTabWarsProps) {
       {recent.length > 0 && (
         <>
           <div className="h-title" style={{ fontSize: 14, marginBottom: 6, marginTop: 12 }}>
-            OSTATNIE WOJNY
+            {t('guildWars.recent')}
           </div>
           <div className="panel" style={{ padding: 4 }}>
             {recent.map((w, i, arr) => (
@@ -99,6 +101,7 @@ function ActiveWarPanel({
   myRank: GuildRank;
   onReorder: () => void;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
 
@@ -108,12 +111,12 @@ function ActiveWarPanel({
 
   const commitMut = trpc.guildWars.commit.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Zgłoszony do walki.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildWars.toast.committed'), accent: '#2a4a3a' });
       void utils.guildWars.get.invalidate({ warId: war.id });
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się zgłosić.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.toast.commitFail'),
         accent: '#c83232',
       });
     },
@@ -121,12 +124,12 @@ function ActiveWarPanel({
 
   const cancelMut = trpc.guildWars.cancelCommit.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Wycofano zgłoszenie.', accent: '#d4a24c' });
+      pushToast({ text: tStatic('guildWars.toast.cancelled'), accent: '#d4a24c' });
       void utils.guildWars.get.invalidate({ warId: war.id });
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.toast.cancelFail'),
         accent: '#c83232',
       });
     },
@@ -153,7 +156,9 @@ function ActiveWarPanel({
         }}
       >
         <div className="h-title" style={{ fontSize: 14 }}>
-          WOJNA: „{war.attackerGuildName}" vs „{war.defenderGuildName}"
+          {t('guildWars.title.vs')
+            .replace('{a}', war.attackerGuildName)
+            .replace('{b}', war.defenderGuildName)}
         </div>
       </div>
       <div
@@ -168,19 +173,27 @@ function ActiveWarPanel({
       >
         <IcoClock s={14} />
         <Countdown target={war.scheduledAt} />
-        {war.status === 'resolving' && <b style={{ color: '#c83232' }}>· ROZSTRZYGANIE</b>}
+        {war.status === 'resolving' && <b style={{ color: '#c83232' }}>· {t('guildWars.resolving')}</b>}
       </div>
 
       {details && (
         <>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <SideSummary
-              title={details.mySide === 'attacker' ? 'NASI (ATAK)' : 'NASI (OBRONA)'}
+              title={
+                details.mySide === 'attacker'
+                  ? t('guildWars.side.ours.attack')
+                  : t('guildWars.side.ours.defense')
+              }
               count={myParts.length}
               accent="#2a4a3a"
             />
             <SideSummary
-              title={details.mySide === 'attacker' ? 'WRÓG (OBRONA)' : 'WRÓG (ATAK)'}
+              title={
+                details.mySide === 'attacker'
+                  ? t('guildWars.side.enemy.defense')
+                  : t('guildWars.side.enemy.attack')
+              }
               count={theirParts.length}
               accent="#8a3030"
             />
@@ -196,7 +209,7 @@ function ActiveWarPanel({
                   disabled={commitMut.isPending}
                   onClick={() => commitMut.mutate({ warId: war.id })}
                 >
-                  ZGŁOŚ SIĘ
+                  {t('guildWars.commit')}
                 </button>
               ) : (
                 <button
@@ -206,12 +219,12 @@ function ActiveWarPanel({
                   disabled={cancelMut.isPending}
                   onClick={() => cancelMut.mutate({ warId: war.id })}
                 >
-                  WYCOFAJ
+                  {t('guildWars.cancelCommit')}
                 </button>
               )}
               {canReorder && myParts.length > 0 && (
                 <button type="button" className="cbtn sm" style={{ flex: 1 }} onClick={onReorder}>
-                  SZYK ({myParts.length})
+                  {t('guildWars.lineup').replace('{n}', String(myParts.length))}
                 </button>
               )}
             </div>
@@ -221,7 +234,7 @@ function ActiveWarPanel({
             <div
               style={{ fontSize: 13, color: '#5a3a2a', textAlign: 'center', marginTop: 6 }}
             >
-              Twoja pozycja: <b className="mono">#{details.myOrderIndex + 1}</b>
+              {t('guildWars.myPosition')}<b className="mono">#{details.myOrderIndex + 1}</b>
             </div>
           )}
         </>
@@ -269,6 +282,7 @@ function RecentWarRow({
   lastInList: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
   const isResolved = war.status === 'resolved';
   const winnerText = isResolved && war.winnerGuildId
     ? war.winnerGuildId === war.attackerGuildId
@@ -297,13 +311,17 @@ function RecentWarRow({
       <GameIcon name="crossed" size={24} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="h-title" style={{ fontSize: 12, lineHeight: 1 }}>
-          „{war.attackerGuildName}" vs „{war.defenderGuildName}"
+          {t('guildWars.row.vs')
+            .replace('{a}', war.attackerGuildName)
+            .replace('{b}', war.defenderGuildName)}
         </div>
         <div className="mono" style={{ fontSize: 10, color: '#5a3a2a' }}>
           {war.status === 'resolved'
-            ? `${war.attackerScore}:${war.defenderScore} · zwycięzca: ${winnerText}`
+            ? t('guildWars.scoreWinner')
+                .replace('{score}', `${war.attackerScore}:${war.defenderScore}`)
+                .replace('{winner}', winnerText)
             : war.status === 'cancelled'
-              ? 'anulowano'
+              ? t('guildWars.cancelled')
               : war.status}
         </div>
       </div>
@@ -313,13 +331,14 @@ function RecentWarRow({
 }
 
 function Countdown({ target }: { target: number }) {
+  const t = useT();
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const handle = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(handle);
   }, []);
   const diff = target - now;
-  if (diff <= 0) return <span className="mono">startuje</span>;
+  if (diff <= 0) return <span className="mono">{t('guildWars.startsNow')}</span>;
   const h = Math.floor(diff / 3600_000);
   const m = Math.floor((diff % 3600_000) / 60_000);
   const s = Math.floor((diff % 60_000) / 1000);

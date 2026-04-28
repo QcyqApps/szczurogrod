@@ -4,6 +4,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { GameIcon } from '@/components/game-icons';
+import { useT } from '@/i18n';
 import { GuildEmblem } from './components/GuildEmblem';
 import { GuildCreateModal } from './components/GuildCreateModal';
 
@@ -11,6 +12,7 @@ const COST_GOLD = 5000;
 const MIN_LVL = 5;
 
 export function GuildNoneView() {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -25,13 +27,13 @@ export function GuildNoneView() {
 
   const applyMut = trpc.guild.applyToGuild.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Podanie złożone. Gildia zdecyduje.', accent: '#d4a24c' });
+      pushToast({ text: t('guild.none.toast.applied'), accent: '#d4a24c' });
       void utils.guild.browse.invalidate();
       void utils.guild.myInvites.invalidate();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : t('guild.none.toast.applyFailed'),
         accent: '#c83232',
       });
     },
@@ -45,7 +47,7 @@ export function GuildNoneView() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się przyjąć.',
+        text: err instanceof TRPCClientError ? err.message : t('guild.none.toast.acceptFailed'),
         accent: '#c83232',
       });
     },
@@ -78,20 +80,30 @@ export function GuildNoneView() {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830' }}>
-          BRAK GILDII
+          {t('guild.none.banner.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          Wolny strzelec. Brzmi dumnie. Smakuje jak samotność.
+          {t('guild.none.banner.flavor')}
         </div>
       </div>
 
       {/* Create CTA */}
       <div className="panel" style={{ padding: 12, marginBottom: 12 }}>
         <div className="h-title" style={{ fontSize: 14, marginBottom: 6 }}>
-          ZAŁÓŻ GILDIĘ
+          {t('guild.none.create.title')}
         </div>
         <div style={{ fontSize: 12, color: '#5a3a2a', marginBottom: 8 }}>
-          Koszt: <b className="mono">{COST_GOLD}g</b> · Wymaga LVL {MIN_LVL}
+          {(() => {
+            const raw = t('guild.none.create.cost').replace('{lvl}', String(MIN_LVL));
+            const [before, after] = raw.split('{gold}');
+            return (
+              <>
+                {before}
+                <b className="mono">{COST_GOLD}g</b>
+                {after}
+              </>
+            );
+          })()}
         </div>
         <button
           type="button"
@@ -101,10 +113,10 @@ export function GuildNoneView() {
           onClick={() => setCreateOpen(true)}
         >
           {!lvlOk
-            ? `POTRZEBNY LVL ${MIN_LVL}`
+            ? t('guild.none.create.needLvl').replace('{n}', String(MIN_LVL))
             : !goldOk
-              ? `BRAK ZŁOTA (${COST_GOLD}g)`
-              : 'UTWÓRZ GILDIĘ'}
+              ? t('guild.none.create.needGold').replace('{n}', `${COST_GOLD}g`)
+              : t('guild.none.create.btn')}
         </button>
       </div>
 
@@ -115,7 +127,7 @@ export function GuildNoneView() {
             className="h-title"
             style={{ fontSize: 14, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}
           >
-            <GameIcon name="scroll" size={14} /> ZAPROSZENIA
+            <GameIcon name="scroll" size={14} /> {t('guild.none.invites.title')}
           </div>
           {pendingInvites.map((inv) => (
             <div
@@ -142,7 +154,7 @@ export function GuildNoneView() {
                 disabled={acceptMut.isPending}
                 onClick={() => acceptMut.mutate({ guildId: inv.guildId })}
               >
-                PRZYJMIJ
+                {t('guild.none.invites.accept')}
               </button>
               <button
                 type="button"
@@ -150,7 +162,7 @@ export function GuildNoneView() {
                 disabled={declineMut.isPending}
                 onClick={() => declineMut.mutate({ guildId: inv.guildId })}
               >
-                ODRZUĆ
+                {t('guild.none.invites.decline')}
               </button>
             </div>
           ))}
@@ -161,7 +173,7 @@ export function GuildNoneView() {
       {pendingApps.length > 0 && (
         <div className="panel" style={{ padding: 12, marginBottom: 12 }}>
           <div className="h-title" style={{ fontSize: 14, marginBottom: 6 }}>
-            OCZEKUJĄCE PODANIA
+            {t('guild.none.apps.title')}
           </div>
           {pendingApps.map((app) => (
             <div
@@ -177,7 +189,7 @@ export function GuildNoneView() {
               <span className="mono" style={{ opacity: 0.7 }}>
                 [{app.guildTag}]
               </span>{' '}
-              — czeka na decyzję.
+              {t('guild.none.apps.waiting')}
             </div>
           ))}
         </div>
@@ -188,12 +200,12 @@ export function GuildNoneView() {
         className="h-title"
         style={{ fontSize: 14, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}
       >
-        <GameIcon name="banner" size={14} /> OTWARTE GILDIE
+        <GameIcon name="banner" size={14} /> {t('guild.none.browse.title')}
       </div>
       <div className="panel" style={{ padding: 4 }}>
         {browseQuery.isLoading && (
           <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a', padding: 12 }}>
-            Ładuję...
+            {t('guild.none.browse.loading')}
           </div>
         )}
         {browseQuery.data && browseQuery.data.guilds.length === 0 && (
@@ -201,7 +213,7 @@ export function GuildNoneView() {
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 12 }}
           >
-            Pusto. Może czas założyć własną.
+            {t('guild.none.browse.empty')}
           </div>
         )}
         {browseQuery.data?.guilds.map((g, i, arr) => {
@@ -229,7 +241,11 @@ export function GuildNoneView() {
                   </span>
                 </div>
                 <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                  LVL {g.level} · {g.memberCount}/{g.memberCap} · wymaga LVL {g.requiredLvl}
+                  {t('guild.none.browse.row.meta')
+                    .replace('{lvl}', String(g.level))
+                    .replace('{count}', String(g.memberCount))
+                    .replace('{cap}', String(g.memberCap))
+                    .replace('{req}', String(g.requiredLvl))}
                 </div>
               </div>
               <button
@@ -238,7 +254,13 @@ export function GuildNoneView() {
                 disabled={alreadyApplied || !levelOk || full || applyMut.isPending}
                 onClick={() => applyMut.mutate({ guildId: g.id })}
               >
-                {alreadyApplied ? 'WYSŁANE' : full ? 'PEŁNA' : !levelOk ? 'ZA MAŁO LVL' : 'APLIKUJ'}
+                {alreadyApplied
+                  ? t('guild.none.browse.btn.sent')
+                  : full
+                    ? t('guild.none.browse.btn.full')
+                    : !levelOk
+                      ? t('guild.none.browse.btn.lowLvl')
+                      : t('guild.none.browse.btn.apply')}
               </button>
             </div>
           );
@@ -255,7 +277,7 @@ export function GuildNoneView() {
             disabled={page === 0}
             onClick={() => setPage((p) => Math.max(0, p - 1))}
           >
-            POPRZEDNIA
+            {t('guild.none.page.prev')}
           </button>
           <button
             type="button"
@@ -264,7 +286,7 @@ export function GuildNoneView() {
             disabled={!browseQuery.data.hasMore}
             onClick={() => setPage((p) => p + 1)}
           >
-            NASTĘPNA
+            {t('guild.none.page.next')}
           </button>
         </div>
       )}

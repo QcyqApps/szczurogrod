@@ -4,6 +4,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, useContentT, type DictKey } from '@/i18n';
 import type { IconName, InventoryItem, Rarity } from '@grodno/shared';
 
 const RARITY_COLOR: Record<Rarity, string> = {
@@ -22,11 +23,17 @@ const SCRAP_BY_RARITY: Record<Rarity, number> = {
 
 type Tab = 'upgrade' | 'dismantle';
 
+const TAB_LABEL_KEY: Record<Tab, DictKey> = {
+  upgrade: 'blacksmith.tab.upgrade',
+  dismantle: 'blacksmith.tab.dismantle',
+};
+
 export interface ScreenBlacksmithProps {
   onBack: () => void;
 }
 
 export function ScreenBlacksmith({ onBack }: ScreenBlacksmithProps) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('upgrade');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const inventoryQuery = trpc.inventory.list.useQuery();
@@ -53,10 +60,10 @@ export function ScreenBlacksmith({ onBack }: ScreenBlacksmithProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830' }}>
-          KOWAL ZYGMUNT
+          {t('blacksmith.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          Wali, rozpruwa, ulepsza. Za przyzwoitą cenę.
+          {t('blacksmith.flavor')}
         </div>
         <div
           style={{
@@ -69,7 +76,7 @@ export function ScreenBlacksmith({ onBack }: ScreenBlacksmithProps) {
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <GameIcon name="rock" size={14} />
-            <span className="mono">{meQuery.data?.scrap ?? 0}</span> złomu
+            <span className="mono">{meQuery.data?.scrap ?? 0}</span> {t('blacksmith.scrap')}
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <IcoCoin s={14} />
@@ -91,14 +98,14 @@ export function ScreenBlacksmith({ onBack }: ScreenBlacksmithProps) {
           marginBottom: 10,
         }}
       >
-        {(['upgrade', 'dismantle'] as Tab[]).map((t) => {
-          const active = t === tab;
+        {(['upgrade', 'dismantle'] as Tab[]).map((tabKey) => {
+          const active = tabKey === tab;
           return (
             <button
-              key={t}
+              key={tabKey}
               type="button"
               onClick={() => {
-                setTab(t);
+                setTab(tabKey);
                 setSelectedItemId(null);
               }}
               className="h-title"
@@ -114,7 +121,7 @@ export function ScreenBlacksmith({ onBack }: ScreenBlacksmithProps) {
                 cursor: 'pointer',
               }}
             >
-              {t === 'upgrade' ? 'ULEPSZ' : 'ROZPRUJ'}
+              {t(TAB_LABEL_KEY[tabKey])}
             </button>
           );
         })}
@@ -141,7 +148,7 @@ export function ScreenBlacksmith({ onBack }: ScreenBlacksmithProps) {
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('blacksmith.back')}
       </button>
     </div>
   );
@@ -156,6 +163,8 @@ function UpgradeView({
   selectedItemId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const t = useT();
+  const tc = useContentT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
 
@@ -168,12 +177,12 @@ function UpgradeView({
     onSuccess: (data) => {
       if (data.success) {
         pushToast({
-          text: `Ulepszone do +${data.newLevel}!`,
+          text: t('blacksmith.toast.upgradeOk').replace('{n}', String(data.newLevel)),
           accent: '#2a4a3a',
         });
       } else {
         pushToast({
-          text: `Nieudane. Koszt pobrany, poziom został.`,
+          text: t('blacksmith.toast.upgradeFail'),
           accent: '#c83232',
           ttlMs: 4500,
         });
@@ -184,7 +193,7 @@ function UpgradeView({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : t('blacksmith.toast.error'),
         accent: '#c83232',
       });
     },
@@ -202,7 +211,7 @@ function UpgradeView({
             className="h-title"
             style={{ fontSize: 14, marginBottom: 6, color: RARITY_COLOR[selected.rarity] }}
           >
-            {selected.name} {selected.enhancementLevel > 0 && `+${selected.enhancementLevel}`}
+            {tc.itemName(selected.name, selected.name)} {selected.enhancementLevel > 0 && `+${selected.enhancementLevel}`}
           </div>
 
           {/* Stat porównanie */}
@@ -244,12 +253,12 @@ function UpgradeView({
                 }}
               >
                 <span>
-                  Koszt: <IcoCoin s={12} />{' '}
+                  {t('blacksmith.cost')} <IcoCoin s={12} />{' '}
                   <b className="mono">{previewQuery.data.cost.gold.toLocaleString('pl-PL')}</b>
                 </span>
                 <span>
                   <GameIcon name="rock" size={12} />{' '}
-                  <b className="mono">{previewQuery.data.cost.scrap}</b> złomu
+                  <b className="mono">{previewQuery.data.cost.scrap}</b> {t('blacksmith.scrap')}
                 </span>
               </div>
               {previewQuery.data.successRate < 1 && (
@@ -262,8 +271,10 @@ function UpgradeView({
                     marginBottom: 8,
                   }}
                 >
-                  Szansa sukcesu: {Math.round(previewQuery.data.successRate * 100)}%. Przy
-                  porażce koszt przepada, poziom zostaje.
+                  {t('blacksmith.successRate').replace(
+                    '{n}',
+                    String(Math.round(previewQuery.data.successRate * 100)),
+                  )}
                 </div>
               )}
               <div style={{ display: 'flex', gap: 6 }}>
@@ -276,7 +287,7 @@ function UpgradeView({
                     upgradeMut.mutate({ itemId: selected.id, useGemGuarantee: false })
                   }
                 >
-                  {upgradeMut.isPending ? '...' : 'ULEPSZ'}
+                  {upgradeMut.isPending ? '...' : t('blacksmith.btn.upgrade')}
                 </button>
                 {previewQuery.data.successRate < 1 && (
                   <button
@@ -287,9 +298,10 @@ function UpgradeView({
                     onClick={() =>
                       upgradeMut.mutate({ itemId: selected.id, useGemGuarantee: true })
                     }
-                    title="Gwarantowane powodzenie za gemy"
+                    title={t('blacksmith.btn.upgradeGuarantee.title')}
                   >
-                    ULEPSZ · <IcoGem s={11} /> {previewQuery.data.gemGuaranteeCost}
+                    {t('blacksmith.btn.upgrade')} · <IcoGem s={11} />{' '}
+                    {previewQuery.data.gemGuaranteeCost}
                   </button>
                 )}
               </div>
@@ -299,7 +311,7 @@ function UpgradeView({
               className="flavor"
               style={{ fontSize: 13, color: '#5a3a2a', textAlign: 'center', padding: 8 }}
             >
-              Maksymalny poziom. Dalej się nie da.
+              {t('blacksmith.maxLevel')}
             </div>
           )}
         </div>
@@ -317,13 +329,17 @@ function DismantleView({
   selectedItemId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const t = useT();
+  const tc = useContentT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
 
   const dismantleMut = trpc.blacksmith.dismantle.useMutation({
     onSuccess: (data) => {
       pushToast({
-        text: `+${data.scrapGained} złomu (razem: ${data.totalScrap}).`,
+        text: t('blacksmith.toast.dismantled')
+          .replace('{g}', String(data.scrapGained))
+          .replace('{t}', String(data.totalScrap)),
         accent: '#2a4a3a',
       });
       void utils.inventory.list.invalidate();
@@ -332,7 +348,7 @@ function DismantleView({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? err.message : t('blacksmith.toast.error'),
         accent: '#c83232',
       });
     },
@@ -350,10 +366,17 @@ function DismantleView({
             className="h-title"
             style={{ fontSize: 14, marginBottom: 4, color: RARITY_COLOR[selected.rarity] }}
           >
-            {selected.name} {selected.enhancementLevel > 0 && `+${selected.enhancementLevel}`}
+            {tc.itemName(selected.name, selected.name)} {selected.enhancementLevel > 0 && `+${selected.enhancementLevel}`}
           </div>
           <div style={{ fontSize: 13, color: '#5a3a2a', marginBottom: 10 }}>
-            Dostaniesz <b>{SCRAP_BY_RARITY[selected.rarity]} złomu</b>. Przedmiot zniknie.
+            {t('blacksmith.dismantle.gainPre')}
+            <b>
+              {t('blacksmith.dismantle.gainAmount').replace(
+                '{n}',
+                String(SCRAP_BY_RARITY[selected.rarity]),
+              )}
+            </b>
+            {t('blacksmith.dismantle.gainPost')}
           </div>
           {selected.equippedSlot !== null && (
             <div
@@ -364,7 +387,7 @@ function DismantleView({
                 marginBottom: 8,
               }}
             >
-              Zdejmij z postaci zanim rozpruwasz.
+              {t('blacksmith.dismantle.equipped')}
             </div>
           )}
           <button
@@ -374,7 +397,7 @@ function DismantleView({
             disabled={dismantleMut.isPending || selected.equippedSlot !== null}
             onClick={() => dismantleMut.mutate({ itemId: selected.id })}
           >
-            {dismantleMut.isPending ? '...' : 'ROZPRUJ'}
+            {dismantleMut.isPending ? '...' : t('blacksmith.btn.dismantle')}
           </button>
         </div>
       )}
@@ -391,13 +414,15 @@ function ItemGrid({
   selectedItemId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const t = useT();
+  const tc = useContentT();
   if (items.length === 0) {
     return (
       <div
         className="flavor"
         style={{ fontSize: 13, color: '#5a3a2a', textAlign: 'center', padding: 20 }}
       >
-        Nie masz czego ulepszyć ani rozpruć.
+        {t('blacksmith.empty')}
       </div>
     );
   }
@@ -429,7 +454,7 @@ function ItemGrid({
               padding: 0,
               boxShadow: active ? '2px 2px 0 #2a1810' : '1px 1px 0 #2a1810',
             }}
-            title={`${i.name}${i.enhancementLevel > 0 ? ` +${i.enhancementLevel}` : ''}`}
+            title={`${tc.itemName(i.name, i.name)}${i.enhancementLevel > 0 ? ` +${i.enhancementLevel}` : ''}`}
           >
             <GameIcon name={i.icon as IconName} size={38} />
             {i.enhancementLevel > 0 && (
@@ -462,7 +487,7 @@ function ItemGrid({
                   fontWeight: 700,
                 }}
               >
-                W EQ
+                {t('blacksmith.equippedBadge')}
               </span>
             )}
           </button>

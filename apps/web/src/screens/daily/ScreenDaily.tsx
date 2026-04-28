@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoChest, IcoCoin, IcoKey } from '@/components/icons';
+import { useT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 import type { DailyClaimResult, Rarity } from '@grodno/shared';
 
 const REWARD_RARITY_COLOR: Record<Rarity, string> = {
@@ -10,11 +12,11 @@ const REWARD_RARITY_COLOR: Record<Rarity, string> = {
   epic: '#a04ef0',
   legendary: '#ffc830',
 };
-const REWARD_RARITY_LABEL: Record<Rarity, string> = {
-  common: 'ZWYKŁY',
-  rare: 'RZADKI',
-  epic: 'EPICKI',
-  legendary: 'LEGEND.',
+const REWARD_RARITY_LABEL_KEY: Record<Rarity, DictKey> = {
+  common: 'daily.rarity.common',
+  rare: 'daily.rarity.rare',
+  epic: 'daily.rarity.epic',
+  legendary: 'daily.rarity.legendary',
 };
 
 type RewardKind = 'gold' | 'xp' | 'potion' | 'gem' | 'gift' | 'crown';
@@ -88,6 +90,7 @@ export interface ScreenDailyProps {
 }
 
 export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps) {
+  const t = useT();
   const [opening, setOpening] = useState(false);
   const [reward, setReward] = useState<DailyClaimResult | null>(null);
 
@@ -120,9 +123,11 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
         }}
       >
         <div className="h-display" style={{ fontSize: 24 }}>
-          CODZIENNA NAGRODA
+          {t('daily.title')}
         </div>
-        <div style={{ fontSize: 14, color: '#5a3a2a', marginTop: 2 }}>Dzień {day} z 28</div>
+        <div style={{ fontSize: 14, color: '#5a3a2a', marginTop: 2 }}>
+          {t('daily.dayOf').replace('{n}', String(day))}
+        </div>
 
         <div
           style={{
@@ -184,13 +189,13 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
           >
             <IcoChest s={40} open={!!reward} />
           </div>
-          {reward && <div className="burst">OH MY!</div>}
+          {reward && <div className="burst">{t('daily.burst')}</div>}
         </div>
 
         {reward ? (
           <div className="pop-in">
             <div className="h-title" style={{ fontSize: 16, marginBottom: 6 }}>
-              WYGRAŁEŚ:
+              {t('daily.youWon')}
             </div>
             <div
               style={{
@@ -230,7 +235,7 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
                     gap: 3,
                     fontWeight: 700,
                   }}
-                  title="Klucze do lochu. Każda walka kosztuje jeden."
+                  title={t('daily.keysTitle')}
                 >
                   <IcoKey s={13} /> +{reward.keys}
                 </span>
@@ -280,7 +285,7 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
                       marginBottom: 2,
                     }}
                   >
-                    {REWARD_RARITY_LABEL[reward.item.rarity]}
+                    {t(REWARD_RARITY_LABEL_KEY[reward.item.rarity])}
                   </div>
                   <div className="h-title" style={{ fontSize: 14, lineHeight: 1.1 }}>
                     {reward.item.name}
@@ -289,19 +294,19 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
               </div>
             )}
             <button type="button" className="cbtn green" style={{ marginTop: 14 }} onClick={onBack}>
-              WRACAM!
+              {t('daily.back.bang')}
             </button>
           </div>
         ) : claimed ? (
           <>
-            <div style={{ color: '#5a3a2a' }}>Już odebrałeś. Wróć jutro!</div>
+            <div style={{ color: '#5a3a2a' }}>{t('daily.alreadyClaimed')}</div>
             <button type="button" className="cbtn ghost" style={{ marginTop: 10 }} onClick={onBack}>
-              OK
+              {t('daily.ok')}
             </button>
           </>
         ) : (
           <button type="button" className="cbtn lg red" onClick={handleOpen} disabled={opening}>
-            {opening ? 'OTWIERANIE...' : 'KLIKNIJ SKRZYNIĘ!'}
+            {opening ? t('daily.opening') : t('daily.clickChest')}
           </button>
         )}
       </div>
@@ -317,7 +322,7 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
             gap: 6,
           }}
         >
-          <GameIcon name="fire" size={16} /> SERIA LOGOWAŃ
+          <GameIcon name="fire" size={16} /> {t('daily.streak')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
           {days.map((d) => {
@@ -384,7 +389,7 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
           })}
         </div>
         <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 6, fontStyle: 'italic', textAlign: 'center' }}>
-          Ramka czerwona = milestone. Dzień 28 — legendarny finisz.
+          {t('daily.legend')}
         </div>
       </div>
 
@@ -394,7 +399,7 @@ export function ScreenDaily({ onBack, day, onClaim, claimed }: ScreenDailyProps)
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('daily.back')}
       </button>
     </div>
   );

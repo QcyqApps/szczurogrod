@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '@/api/trpc';
 import { GameIcon } from '@/components/game-icons';
+import { useT, type DictKey } from '@/i18n';
 import type {
   LeaderboardCharEntry,
   LeaderboardGuildEntry,
@@ -9,24 +10,24 @@ import type {
 
 type Tab = 'level' | 'achievements' | 'arena' | 'guilds';
 
-const TAB_LABELS: Record<Tab, string> = {
-  level: 'POZIOM',
-  achievements: 'ODZNAKI',
-  arena: 'ARENA',
-  guilds: 'GILDIE',
+const TAB_LABEL_KEY: Record<Tab, DictKey> = {
+  level: 'leaderboards.tab.level',
+  achievements: 'leaderboards.tab.achievements',
+  arena: 'leaderboards.tab.arena',
+  guilds: 'leaderboards.tab.guilds',
 };
 
-const TAB_VALUE_LABELS: Record<Tab, string> = {
-  level: 'lvl',
-  achievements: 'razem',
-  arena: 'pkt',
-  guilds: 'glory',
+const TAB_VALUE_LABEL_KEY: Record<Tab, DictKey> = {
+  level: 'leaderboards.value.level',
+  achievements: 'leaderboards.value.achievements',
+  arena: 'leaderboards.value.arena',
+  guilds: 'leaderboards.value.guilds',
 };
 
-const CLS_LABEL: Record<string, string> = {
-  warrior: 'Wojownik',
-  mage: 'Mag',
-  rogue: 'Łotrzyk',
+const CLS_LABEL_KEY: Record<string, DictKey> = {
+  warrior: 'leaderboards.cls.warrior',
+  mage: 'leaderboards.cls.mage',
+  rogue: 'leaderboards.cls.rogue',
 };
 
 export interface ScreenLeaderboardsProps {
@@ -34,6 +35,7 @@ export interface ScreenLeaderboardsProps {
 }
 
 export function ScreenLeaderboards({ onBack }: ScreenLeaderboardsProps) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('level');
   const query = trpc.leaderboards.all.useQuery();
 
@@ -60,10 +62,10 @@ export function ScreenLeaderboards({ onBack }: ScreenLeaderboardsProps) {
           className="h-display"
           style={{ fontSize: 22, color: '#ffc830', position: 'relative' }}
         >
-          KRONIKI CHWAŁY
+          {t('leaderboards.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4, position: 'relative' }}>
-          Top dziesięciu. Bez nagród. Tylko dla ego.
+          {t('leaderboards.flavor')}
         </div>
       </div>
 
@@ -76,13 +78,13 @@ export function ScreenLeaderboards({ onBack }: ScreenLeaderboardsProps) {
           marginBottom: 10,
         }}
       >
-        {(['level', 'achievements', 'arena', 'guilds'] as Tab[]).map((t) => {
-          const active = t === tab;
+        {(['level', 'achievements', 'arena', 'guilds'] as Tab[]).map((tabKey) => {
+          const active = tabKey === tab;
           return (
             <button
-              key={t}
+              key={tabKey}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => setTab(tabKey)}
               className="h-title"
               style={{
                 padding: '6px 2px',
@@ -96,7 +98,7 @@ export function ScreenLeaderboards({ onBack }: ScreenLeaderboardsProps) {
                 cursor: 'pointer',
               }}
             >
-              {TAB_LABELS[t]}
+              {t(TAB_LABEL_KEY[tabKey])}
             </button>
           );
         })}
@@ -105,7 +107,7 @@ export function ScreenLeaderboards({ onBack }: ScreenLeaderboardsProps) {
       {query.isLoading && <Loading />}
       {query.error && <ErrorMsg />}
       {query.data && (
-        <ListView tab={tab} data={query.data} valueLabel={TAB_VALUE_LABELS[tab]} />
+        <ListView tab={tab} data={query.data} valueLabel={t(TAB_VALUE_LABEL_KEY[tab])} />
       )}
 
       <button
@@ -114,27 +116,29 @@ export function ScreenLeaderboards({ onBack }: ScreenLeaderboardsProps) {
         style={{ width: '100%', marginTop: 12 }}
         onClick={onBack}
       >
-        ← Wróć
+        {t('leaderboards.back')}
       </button>
     </div>
   );
 }
 
 function Loading() {
+  const t = useT();
   return (
     <div style={{ textAlign: 'center', fontSize: 13, color: '#5a3a2a', padding: 20 }}>
-      Ładuję ranking...
+      {t('leaderboards.loading')}
     </div>
   );
 }
 
 function ErrorMsg() {
+  const t = useT();
   return (
     <div
       className="flavor"
       style={{ fontSize: 14, color: '#c83232', textAlign: 'center', padding: 20 }}
     >
-      Nie udało się pobrać. Spróbuj wrócić za chwilę.
+      {t('leaderboards.error')}
     </div>
   );
 }
@@ -167,13 +171,14 @@ function CharList({
   entries: LeaderboardCharEntry[];
   valueLabel: string;
 }) {
+  const t = useT();
   if (entries.length === 0) {
     return (
       <div
         className="flavor"
         style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 20 }}
       >
-        Pusto. Ktoś musi być pierwszy.
+        {t('leaderboards.empty.chars')}
       </div>
     );
   }
@@ -205,7 +210,7 @@ function CharList({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="h-title" style={{ fontSize: 14 }}>{e.name}</div>
             <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-              {CLS_LABEL[e.cls]} · LVL {e.lvl}
+              {CLS_LABEL_KEY[e.cls] ? t(CLS_LABEL_KEY[e.cls]!) : e.cls} · LVL {e.lvl}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -224,13 +229,14 @@ function CharList({
 }
 
 function GuildList({ entries }: { entries: LeaderboardGuildEntry[] }) {
+  const t = useT();
   if (entries.length === 0) {
     return (
       <div
         className="flavor"
         style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 20 }}
       >
-        Żadna gildia jeszcze nie zgromadziła chwały.
+        {t('leaderboards.empty.guilds')}
       </div>
     );
   }
@@ -264,7 +270,10 @@ function GuildList({ entries }: { entries: LeaderboardGuildEntry[] }) {
               [{e.tag}] {e.name}
             </div>
             <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-              {e.memberCount} {e.memberCount === 1 ? 'członek' : 'członków'}
+              {e.memberCount}{' '}
+              {e.memberCount === 1
+                ? t('leaderboards.member.one')
+                : t('leaderboards.member.many')}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -274,7 +283,7 @@ function GuildList({ entries }: { entries: LeaderboardGuildEntry[] }) {
             >
               {e.glory.toLocaleString('pl')}
             </div>
-            <div style={{ fontSize: 10, opacity: 0.7 }}>glory</div>
+            <div style={{ fontSize: 10, opacity: 0.7 }}>{t('leaderboards.glory')}</div>
           </div>
         </div>
       ))}

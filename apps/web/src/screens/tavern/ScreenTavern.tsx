@@ -4,15 +4,17 @@ import { GameIcon } from '@/components/game-icons';
 import { GemSinkButton } from '@/components/ui-common';
 import { IcoClock, IcoCoin } from '@/components/icons';
 import { GEM_SINK_COSTS, type ActiveCompanion, type CompanionOffer } from '@grodno/shared';
+import { useT, tStatic, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 
-const CLASS_LABEL: Record<'warrior' | 'mage' | 'rogue', string> = {
-  warrior: 'Wojownik',
-  mage: 'Mag',
-  rogue: 'Łotrzyk',
+const CLASS_LABEL_KEY: Record<'warrior' | 'mage' | 'rogue', DictKey> = {
+  warrior: 'class.warrior.title',
+  mage: 'class.mage.title',
+  rogue: 'class.rogue.title',
 };
 
 function formatCountdown(ms: number): string {
-  if (ms <= 0) return 'gotowy';
+  if (ms <= 0) return tStatic('tavern.countdown.ready');
   const totalSec = Math.ceil(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -89,6 +91,8 @@ export function ScreenTavern({
   onOpenWitch,
   witchCurseCount,
 }: ScreenTavernProps) {
+  const t = useT();
+  const tc = useContentT();
   const hasCompanion = activeCompanion !== null;
 
   // Re-render every second so the healer countdown ticks down in real time.
@@ -127,10 +131,10 @@ export function ScreenTavern({
           <GameIcon name="tavern" size={56} />
         </div>
         <div className="h-display" style={{ fontSize: 22, position: 'relative' }}>
-          POD ZŁOTYM PIEROGIEM
+          {t('tavern.heading')}
         </div>
         <div className="flavor" style={{ fontSize: 17, marginTop: 4, position: 'relative' }}>
-          Gwarno, tłusto, tanio.
+          {t('tavern.flavor')}
         </div>
         {rumors.length > 0 && (
           <div
@@ -148,7 +152,7 @@ export function ScreenTavern({
               gap: 6,
             }}
           >
-            <GameIcon name="ear" size={14} /> Barman szepcze: „{rumors[0]}"
+            <GameIcon name="ear" size={14} /> {t('tavern.barman').replace('{r}', rumors[0]!)}
           </div>
         )}
       </div>
@@ -182,13 +186,13 @@ export function ScreenTavern({
               className="h-title"
               style={{ fontSize: 10, color: '#5a3a2a', letterSpacing: 0.6, marginBottom: 2 }}
             >
-              AKTYWNY TOWARZYSZ
+              {t('tavern.companion.active')}
             </div>
             <div className="h-title" style={{ fontSize: 15, lineHeight: 1 }}>
-              {activeCompanion.name}
+              {tc.companionName(activeCompanion.slug, activeCompanion.name)}
             </div>
             <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-              LVL {activeCompanion.lvl} · {CLASS_LABEL[activeCompanion.cls]}
+              LVL {activeCompanion.lvl} · {t(CLASS_LABEL_KEY[activeCompanion.cls])}
             </div>
             <div
               style={{
@@ -201,11 +205,11 @@ export function ScreenTavern({
                 fontWeight: 600,
               }}
             >
-              <GameIcon name="spark" size={11} /> {activeCompanion.trait}
+              <GameIcon name="spark" size={11} /> {tc.companionTrait(activeCompanion.slug, activeCompanion.trait)}
             </div>
           </div>
           <button type="button" className="cbtn red sm" onClick={() => onDismiss()}>
-            ZWOLNIJ
+            {t('tavern.companion.dismiss')}
           </button>
         </div>
       )}
@@ -238,10 +242,10 @@ export function ScreenTavern({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
-            UZDROWICIELKA W IZBIE
+            {t('tavern.healer.title')}
           </div>
           <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 2 }}>
-            Pełne HP i MP. Delikatne dłonie, twarde zasady — jeden kurant na godzinę.
+            {t('tavern.healer.body')}
           </div>
           <div className="mono" style={{ fontSize: 13, color: '#2a1810', marginTop: 4 }}>
             HP {playerHp}/{playerHpMax} · MP {playerMp}/{playerMpMax}
@@ -275,32 +279,29 @@ export function ScreenTavern({
             }}
             title={
               alreadyFull
-                ? 'Masz już pełne HP i MP.'
+                ? t('tavern.healer.full')
                 : healerOnCooldown
-                ? `Uzdrowicielka odpoczywa jeszcze ${formatCountdown(msUntilReady)}.`
+                ? t('tavern.healer.cooldown').replace('{n}', formatCountdown(msUntilReady))
                 : !canAffordHeal
-                ? 'Za mało złota.'
-                : 'Pełna regeneracja za złoto. Cooldown 1h.'
+                ? t('tavern.healer.tooPoor')
+                : t('tavern.healer.help')
             }
           >
             <IcoCoin s={12} /> {healerCost}
           </button>
           {healerOnCooldown && !alreadyFull && (
             <GemSinkButton
-              label="TERAZ"
+              label={t('tavern.healer.now')}
               cost={GEM_SINK_COSTS.healInstant}
               playerGems={playerGems}
               pending={healInstantPending}
               onClick={() => void onHealInstant()}
-              disabledReason="Heal natychmiast, bypass cooldown."
+              disabledReason={t('tavern.healer.now.help')}
             />
           )}
         </div>
       </div>
 
-      {/* Karciarz Franek — kości dzienne. Darmowy rzut co UTC dzień + gemy
-          na dodatkowe. Panel ma własne entry w tawernie bo Franek siedzi
-          pod oknem, a nie na grid'zie miasta (1 klik dziennie). */}
       <button
         type="button"
         onClick={onOpenDice}
@@ -325,12 +326,10 @@ export function ScreenTavern({
         <GameIcon name="dice" size={36} />
         <div style={{ flex: 1 }}>
           <div className="h-title" style={{ fontSize: 14, color: '#7a3818' }}>
-            KARCIARZ FRANEK
+            {t('tavern.dice.title')}
           </div>
           <div className="flavor" style={{ fontSize: 14, color: '#3a1810' }}>
-            {diceFreeAvailable
-              ? 'Darmowy rzut czeka. Kości są proste.'
-              : 'Darmowy już wzięty. Za gemy jak chcesz jeszcze.'}
+            {diceFreeAvailable ? t('tavern.dice.free') : t('tavern.dice.taken')}
           </div>
         </div>
         {diceFreeAvailable && (
@@ -357,9 +356,6 @@ export function ScreenTavern({
         <GameIcon name="arrow-right" size={18} />
       </button>
 
-      {/* Wróżka Hanusia — daily oracle pull. Siedzi pod drugim oknem w kącie
-          tawerny. 1 darmowy draw/dzień + extra za 3 gemy. Loot: gold / XP /
-          potion / common-rare item. */}
       <button
         type="button"
         onClick={onOpenOracle}
@@ -384,12 +380,10 @@ export function ScreenTavern({
         <GameIcon name="crown" size={36} />
         <div style={{ flex: 1 }}>
           <div className="h-title" style={{ fontSize: 14, color: '#4a2a7a' }}>
-            WRÓŻKA HANUSIA
+            {t('tavern.oracle.title')}
           </div>
           <div className="flavor" style={{ fontSize: 14, color: '#2a1830' }}>
-            {oracleFreeAvailable
-              ? 'Trzy karty czekają. Jedna jest twoja.'
-              : 'Dzisiaj już wróżyła. Jutro nowa talia.'}
+            {oracleFreeAvailable ? t('tavern.oracle.free') : t('tavern.oracle.taken')}
           </div>
         </div>
         {oracleFreeAvailable && (
@@ -416,9 +410,6 @@ export function ScreenTavern({
         <GameIcon name="arrow-right" size={18} />
       </button>
 
-      {/* Mnich Panteleon — blessing buffs. Siedzi pod kominem, medytuje między
-          klientami. 30-min cooldown między błogosławieństwami. Buff'y współdzielą
-          sloty z elixirami ze sklepu. */}
       <button
         type="button"
         onClick={onOpenBlessing}
@@ -443,19 +434,17 @@ export function ScreenTavern({
         <GameIcon name="spark" size={36} />
         <div style={{ flex: 1 }}>
           <div className="h-title" style={{ fontSize: 14, color: '#5a3a18' }}>
-            MNICH PANTELEON
+            {t('tavern.blessing.title')}
           </div>
           <div className="flavor" style={{ fontSize: 14, color: '#3a2810' }}>
             {blessingCooldownReadyAt && blessingCooldownReadyAt > Date.now()
-              ? 'Medytuje. Wróć później.'
-              : 'Błogosławieństwa na godzinę. Niedrogo.'}
+              ? t('tavern.blessing.busy')
+              : t('tavern.blessing.ready')}
           </div>
         </div>
         <GameIcon name="arrow-right" size={18} />
       </button>
 
-      {/* Baba Jaga — zdejmuje klątwy. Siedzi w rogu przy piecu. Pojawia się
-          z badge gdy gracz ma aktywne klątwy (inaczej ukryte w tłumie NPC'ów). */}
       <button
         type="button"
         onClick={onOpenWitch}
@@ -480,12 +469,19 @@ export function ScreenTavern({
         <GameIcon name="skull-lich" size={36} />
         <div style={{ flex: 1 }}>
           <div className="h-title" style={{ fontSize: 14, color: '#5a2818' }}>
-            BABA JAGA
+            {t('tavern.witch.title')}
           </div>
           <div className="flavor" style={{ fontSize: 14, color: '#3a1810' }}>
             {witchCurseCount > 0
-              ? `Masz ${witchCurseCount} ${witchCurseCount === 1 ? 'klątwę' : 'klątwy'}. Baba wie co z tym zrobić.`
-              : 'Zdejmuje klątwy. Jeśli masz, to wiesz.'}
+              ? t('tavern.witch.cursed')
+                  .replace('{n}', String(witchCurseCount))
+                  .replace(
+                    '{curseWord}',
+                    witchCurseCount === 1
+                      ? t('tavern.witch.curseWord.one')
+                      : t('tavern.witch.curseWord.many'),
+                  )
+              : t('tavern.witch.clean')}
           </div>
         </div>
         {witchCurseCount > 0 && (
@@ -523,14 +519,14 @@ export function ScreenTavern({
         }}
       >
         <GameIcon name="handshake" size={14} />
-        <span style={{ flex: 1 }}>NAJMIJ TOWARZYSZA</span>
+        <span style={{ flex: 1 }}>{t('tavern.companions.heading')}</span>
         <GemSinkButton
-          label="ODŚWIEŻ"
+          label={t('tavern.companions.refresh')}
           cost={GEM_SINK_COSTS.rerollCompanions}
           playerGems={playerGems}
           pending={rerollCompanionsPending}
           onClick={() => void onRerollCompanions()}
-          disabledReason="Wymusza nową listę kompanów."
+          disabledReason={t('tavern.companions.refresh.help')}
         />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -563,10 +559,10 @@ export function ScreenTavern({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
-                  {c.name}
+                  {tc.companionName(c.slug, c.name)}
                 </div>
                 <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                  LVL {c.lvl} · {CLASS_LABEL[c.cls]}
+                  LVL {c.lvl} · {t(CLASS_LABEL_KEY[c.cls])}
                 </div>
                 <div
                   style={{
@@ -578,7 +574,7 @@ export function ScreenTavern({
                     gap: 3,
                   }}
                 >
-                  <GameIcon name="spark" size={11} /> {c.trait}
+                  <GameIcon name="spark" size={11} /> {tc.companionTrait(c.slug, c.trait)}
                 </div>
               </div>
               <button
@@ -603,7 +599,7 @@ export function ScreenTavern({
         style={{ marginTop: 14, width: '100%' }}
         onClick={onBack}
       >
-        ← Miasto
+        {t('tavern.back')}
       </button>
     </div>
   );

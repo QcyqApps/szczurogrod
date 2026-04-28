@@ -2,6 +2,7 @@
 // + label. Handluje disabled gdy brak gemów albo mutation pending.
 
 import { IcoGem } from '@/components/icons';
+import { useT } from '@/i18n';
 
 export interface GemSinkButtonProps {
   label: string;
@@ -32,15 +33,18 @@ export function GemSinkButton({
   size = 'sm',
   style,
 }: GemSinkButtonProps) {
+  const t = useT();
   const affordable = playerGems >= cost;
   const isDisabled = pending || disabled || !affordable;
   const title = pending
-    ? 'Chwila...'
+    ? t('gemSink.pending')
     : disabledReason
       ? disabledReason
       : !affordable
-        ? `Brak gemów (potrzeba ${cost}, masz ${playerGems}).`
-        : `Koszt: ${cost} gemów.`;
+        ? t('gemSink.lack')
+            .replace('{cost}', String(cost))
+            .replace('{have}', String(playerGems))
+        : t('gemSink.cost').replace('{cost}', String(cost));
 
   const classNames = ['cbtn'];
   if (variant === 'ghost') classNames.push('ghost');

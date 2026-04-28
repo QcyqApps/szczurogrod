@@ -3,12 +3,14 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { PortraitByClass } from '@/components/portraits';
+import { useT, tStatic } from '@/i18n';
 import type { GuildChatMessage, GuildRank } from '@grodno/shared';
 
 const POLL_INTERVAL_MS = 8000;
 const RATE_LIMIT_MS = 3000;
 
 export function GuildTabChat() {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const meQuery = trpc.me.get.useQuery();
@@ -25,7 +27,7 @@ export function GuildTabChat() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się usunąć.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildChat.toast.deleteFailed'),
         accent: '#c83232',
       });
     },
@@ -70,7 +72,7 @@ export function GuildTabChat() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się wysłać.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildChat.toast.sendFailed'),
         accent: '#c83232',
       });
     },
@@ -118,7 +120,7 @@ export function GuildTabChat() {
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', margin: 'auto' }}
           >
-            Cisza jak u faktora po deadlinie.
+            {t('guildChat.empty')}
           </div>
         )}
         {reversed.map((m) => (
@@ -138,7 +140,7 @@ export function GuildTabChat() {
           maxLength={500}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Napisz..."
+          placeholder={t('guildChat.placeholder')}
           rows={2}
           style={{
             flex: 1,
@@ -159,10 +161,10 @@ export function GuildTabChat() {
           style={{ minWidth: 70 }}
         >
           {cooldownMs > 0
-            ? `${Math.ceil(cooldownMs / 1000)}s`
+            ? t('guildChat.cooldown').replace('{n}', String(Math.ceil(cooldownMs / 1000)))
             : sendMut.isPending
               ? '...'
-              : 'WYŚLIJ'}
+              : t('guildChat.send')}
         </button>
       </div>
     </div>
@@ -180,6 +182,7 @@ function MessageRow({
   myRank: GuildRank | null;
   onDelete: () => void;
 }) {
+  const t = useT();
   if (msg.kind === 'system') {
     return (
       <div
@@ -242,7 +245,7 @@ function MessageRow({
         <button
           type="button"
           onClick={onDelete}
-          aria-label="Usuń"
+          aria-label={t('guildChat.deleteAria')}
           style={{
             width: 22,
             height: 22,
@@ -265,8 +268,10 @@ function MessageRow({
 
 function formatTime(ms: number): string {
   const delta = Date.now() - ms;
-  if (delta < 60_000) return 'teraz';
-  if (delta < 3600_000) return `${Math.floor(delta / 60_000)}m`;
-  if (delta < 86400_000) return `${Math.floor(delta / 3600_000)}h`;
-  return `${Math.floor(delta / 86400_000)}d`;
+  if (delta < 60_000) return tStatic('guildChat.time.now');
+  if (delta < 3600_000)
+    return tStatic('guildChat.time.m').replace('{n}', String(Math.floor(delta / 60_000)));
+  if (delta < 86400_000)
+    return tStatic('guildChat.time.h').replace('{n}', String(Math.floor(delta / 3600_000)));
+  return tStatic('guildChat.time.d').replace('{n}', String(Math.floor(delta / 86400_000)));
 }

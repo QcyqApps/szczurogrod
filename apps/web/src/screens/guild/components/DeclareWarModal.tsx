@@ -2,6 +2,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
+import { useT, tStatic } from '@/i18n';
 import { GuildEmblem } from './GuildEmblem';
 
 export interface DeclareWarModalProps {
@@ -9,6 +10,7 @@ export interface DeclareWarModalProps {
 }
 
 export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -18,14 +20,14 @@ export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
   const declareMut = trpc.guildWars.declare.useMutation({
     onSuccess: (data) => {
       if (data.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
-      pushToast({ text: 'Wojna wypowiedziana. Start za 24h.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildWars.declare.toast.success'), accent: '#2a4a3a' });
       void utils.guildWars.list.invalidate();
       void utils.guild.get.invalidate();
       onClose();
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się wypowiedzieć.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.declare.toast.fail'),
         accent: '#c83232',
         ttlMs: 4500,
       });
@@ -62,7 +64,7 @@ export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 8 }}>
-          WYPOWIEDZ WOJNĘ
+          {t('guildWars.declareTitle')}
         </div>
         {browseQuery.data && (
           <div
@@ -73,24 +75,23 @@ export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
               marginBottom: 10,
             }}
           >
-            Twój średni LVL: <b className="mono">{browseQuery.data.myAvgLvl.toFixed(1)}</b> · band
-            ±10
+            {t('guildWars.declare.myAvg')}<b className="mono">{browseQuery.data.myAvgLvl.toFixed(1)}</b>{t('guildWars.declare.band')}
           </div>
         )}
         {browseQuery.isLoading && (
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a' }}>Szukam...</div>
+          <div style={{ textAlign: 'center', fontSize: 12, color: '#5a3a2a' }}>{t('guildWars.declare.searching')}</div>
         )}
         {!browseQuery.isLoading && targets.length === 0 && (
           <div
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 12 }}
           >
-            Nikogo z twojej ligi. Poczekaj aż ktoś dorośnie.
+            {t('guildWars.declare.empty')}
           </div>
         )}
-        {targets.map((t) => (
+        {targets.map((target) => (
           <div
-            key={t.id}
+            key={target.id}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -102,26 +103,28 @@ export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
               background: '#fff7e0',
             }}
           >
-            <GuildEmblem kind={t.emblemKind} color={t.emblemColor} size={36} />
+            <GuildEmblem kind={target.emblemKind} color={target.emblemColor} size={36} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="h-title" style={{ fontSize: 13, lineHeight: 1 }}>
-                {t.name}{' '}
+                {target.name}{' '}
                 <span className="mono" style={{ fontSize: 13, opacity: 0.7 }}>
-                  [{t.tag}]
+                  [{target.tag}]
                 </span>
               </div>
               <div style={{ fontSize: 13, color: '#5a3a2a' }}>
-                avg LVL <b className="mono">{t.avgLvl.toFixed(1)}</b> · {t.memberCount} członków
-                · chwała <b className="mono">{t.glory}</b>
+                {t('guildWars.declare.target.line')
+                  .replace('{avg}', target.avgLvl.toFixed(1))
+                  .replace('{n}', String(target.memberCount))
+                  .replace('{glory}', String(target.glory))}
               </div>
             </div>
             <button
               type="button"
               className="cbtn red sm"
               disabled={declareMut.isPending}
-              onClick={() => declareMut.mutate({ defenderGuildId: t.id })}
+              onClick={() => declareMut.mutate({ defenderGuildId: target.id })}
             >
-              WYPOWIEDZ
+              {t('guildWars.declare.btn')}
             </button>
           </div>
         ))}
@@ -131,7 +134,7 @@ export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
           style={{ width: '100%', marginTop: 8 }}
           onClick={onClose}
         >
-          ANULUJ
+          {t('guildWars.declare.cancel')}
         </button>
       </div>
     </div>

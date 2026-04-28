@@ -14,6 +14,7 @@ import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoClock, IcoCoin, IcoGem } from '@/components/icons';
 import { GameIcon } from '@/components/game-icons';
 import { LevelUpModal } from '@/components/ui-common';
+import { useT, tStatic, useContentT } from '@/i18n';
 import type { IconName, OraclePullResponse } from '@grodno/shared';
 
 export interface ScreenOracleProps {
@@ -30,6 +31,7 @@ const RARITY_COLOR: Record<string, string> = {
 type CardSlot = 0 | 1 | 2;
 
 export function ScreenOracle({ onBack }: ScreenOracleProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const statusQuery = trpc.oracle.status.useQuery();
@@ -56,7 +58,7 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
     onError: (err) => {
       setPickedCard(null);
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Wróżka odmówiła.',
+        text: err instanceof TRPCClientError ? err.message : t('oracle.declined'),
         accent: '#c83232',
       });
     },
@@ -77,7 +79,7 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
     if (!useFree) {
       if (gems < status.extraCostGems) {
         pushToast({
-          text: `Brak gemów (${status.extraCostGems}).`,
+          text: t('oracle.cost.noGems').replace('{n}', String(status.extraCostGems)),
           accent: '#c83232',
         });
         return;
@@ -85,7 +87,7 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
       if (!gemArmed) {
         setGemArmed(true);
         pushToast({
-          text: `Kosztuje ${status.extraCostGems}💎 — kliknij kartę ponownie żeby potwierdzić.`,
+          text: t('oracle.cost.confirm').replace('{n}', String(status.extraCostGems)),
           accent: '#5a3a8a',
         });
         return;
@@ -122,10 +124,10 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#c8a0ff' }}>
-          WRÓŻKA HANUSIA
+          {t('oracle.title')}
         </div>
         <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-          Trzy karty. Wybierasz jedną. Hanusia udaje że jej wybór zmienia wynik.
+          {t('oracle.flavor')}
         </div>
       </div>
 
@@ -196,7 +198,7 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
         </div>
 
         {!status ? (
-          <div style={{ fontSize: 13 }}>Hanusia miesza talię…</div>
+          <div style={{ fontSize: 13 }}>{t('oracle.shuffling')}</div>
         ) : result ? (
           <div>
             <div className="h-title" style={{ fontSize: 15, color: '#ffc830', marginBottom: 6 }}>
@@ -209,7 +211,7 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
               {result.flavor}
             </div>
             <button type="button" className="cbtn lg" style={{ minWidth: 140 }} onClick={reset}>
-              DALEJ
+              {t('oracle.next')}
             </button>
           </div>
         ) : (
@@ -224,20 +226,20 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
       {/* Loot table */}
       <div className="panel" style={{ padding: 12, marginBottom: 10 }}>
         <div className="h-title" style={{ fontSize: 14, marginBottom: 8 }}>
-          CO MOŻE WYPAŚĆ
+          {t('oracle.lootTable')}
         </div>
-        <LootRow pct="60%" label="Gold — skaluje się z LVL (do 1000)" />
-        <LootRow pct="20%" label="Doświadczenie — krótkie natchnienie" />
-        <LootRow pct="10%" label="Mikstura (common)" />
-        <LootRow pct="7%" label="Zwykły przedmiot" />
-        <LootRow pct="3%" label="Rzadki przedmiot" />
+        <LootRow pct="60%" label={t('oracle.loot.gold')} />
+        <LootRow pct="20%" label={t('oracle.loot.xp')} />
+        <LootRow pct="10%" label={t('oracle.loot.potion')} />
+        <LootRow pct="7%" label={t('oracle.loot.common')} />
+        <LootRow pct="3%" label={t('oracle.loot.rare')} />
         <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 6, fontStyle: 'italic' }}>
-          Coś zawsze wypadnie. Hanusia nie znosi pustych rąk.
+          {t('oracle.loot.always')}
         </div>
       </div>
 
       <button type="button" className="cbtn ghost" style={{ width: '100%' }} onClick={onBack}>
-        ← WRÓĆ
+        {t('oracle.back')}
       </button>
 
       {levelUpShown && (
@@ -281,6 +283,7 @@ function CostBanner({
   gems: number;
   gemArmed: boolean;
 }) {
+  const t = useT();
   if (status.freeAvailable) {
     return (
       <div
@@ -298,7 +301,7 @@ function CostBanner({
           letterSpacing: 0.4,
         }}
       >
-        DARMOWY · KLIKNIJ KARTĘ
+        {t('oracle.banner.free')}
       </div>
     );
   }
@@ -318,7 +321,7 @@ function CostBanner({
             marginBottom: 6,
           }}
         >
-          Brak gemów ({status.extraCostGems} potrzebne, masz {gems})
+          {t('oracle.banner.noGems').replace('{n}', String(status.extraCostGems)).replace('{have}', String(gems))}
         </div>
         <div style={{ fontSize: 13, opacity: 0.75, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           <IcoClock s={10} /> <Countdown target={status.nextFreeAt} />
@@ -344,7 +347,7 @@ function CostBanner({
           letterSpacing: 0.4,
         }}
       >
-        {gemArmed ? 'POTWIERDŹ — KLIKNIJ KARTĘ' : 'KOSZT'}
+        {gemArmed ? t('oracle.banner.confirm') : t('oracle.banner.cost')}
         <IcoGem s={14} />
         {status.extraCostGems}
       </div>
@@ -399,6 +402,7 @@ function CardBackArt() {
 }
 
 function CardRewardArt({ reward }: { reward: OraclePullResponse }) {
+  const tc = useContentT();
   if (reward.kind === 'gold') {
     return (
       <div
@@ -417,7 +421,7 @@ function CardRewardArt({ reward }: { reward: OraclePullResponse }) {
         >
           +{reward.gold}
         </div>
-        <div style={{ fontSize: 10 }}>gold</div>
+        <div style={{ fontSize: 10 }}>{tStatic('oracle.gold.label')}</div>
       </div>
     );
   }
@@ -439,7 +443,7 @@ function CardRewardArt({ reward }: { reward: OraclePullResponse }) {
         >
           +{reward.xp}
         </div>
-        <div style={{ fontSize: 10 }}>doświadczenia</div>
+        <div style={{ fontSize: 10 }}>{tStatic('oracle.xp.label')}</div>
       </div>
     );
   }
@@ -481,9 +485,9 @@ function CardRewardArt({ reward }: { reward: OraclePullResponse }) {
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
-          title={reward.item.name}
+          title={tc.itemName(reward.item.name, reward.item.name)}
         >
-          {reward.item.name}
+          {tc.itemName(reward.item.name, reward.item.name)}
         </div>
         <div
           style={{
@@ -502,11 +506,11 @@ function CardRewardArt({ reward }: { reward: OraclePullResponse }) {
 }
 
 function rewardHeadline(r: OraclePullResponse): string {
-  if (r.kind === 'gold') return `ZŁOTO +${r.gold}`;
-  if (r.kind === 'xp') return `DOŚWIADCZENIE +${r.xp}`;
-  if (r.kind === 'potion') return 'MIKSTURA';
-  if (r.kind === 'common_item') return 'PRZEDMIOT';
-  return 'RZADKI ŁUP';
+  if (r.kind === 'gold') return tStatic('oracle.headline.gold').replace('{n}', String(r.gold));
+  if (r.kind === 'xp') return tStatic('oracle.headline.xp').replace('{n}', String(r.xp));
+  if (r.kind === 'potion') return tStatic('oracle.headline.potion');
+  if (r.kind === 'common_item') return tStatic('oracle.headline.item');
+  return tStatic('oracle.headline.rare');
 }
 
 function LootRow({ pct, label }: { pct: string; label: string }) {
@@ -551,7 +555,7 @@ function Countdown({ target }: { target: number }) {
   const m = Math.floor((diff % 3_600_000) / 60_000);
   return (
     <span>
-      Darmowy za <b className="mono">{h}h:{String(m).padStart(2, '0')}m</b>
+      {tStatic('oracle.next.free')}<b className="mono">{h}h:{String(m).padStart(2, '0')}m</b>
     </span>
   );
 }

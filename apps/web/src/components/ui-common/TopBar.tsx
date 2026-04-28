@@ -1,5 +1,6 @@
 import { AvatarPortrait } from '@/components/avatar';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, useLangStore } from '@/i18n';
 import type { CharacterHeader } from '@grodno/shared';
 import { StatBar } from './StatBar';
 
@@ -11,6 +12,8 @@ export interface TopBarProps {
 }
 
 export function TopBar({ char, onProfile, onGemShop, onSettings }: TopBarProps) {
+  const t = useT();
+  const lang = useLangStore((s) => s.lang);
   return (
     <div
       style={{
@@ -85,7 +88,7 @@ export function TopBar({ char, onProfile, onGemShop, onSettings }: TopBarProps) 
           style={{ fontSize: 12, cursor: 'pointer' }}
           onClick={onGemShop}
         >
-          <IcoCoin s={13} /> {char.gold.toLocaleString('pl')}
+          <IcoCoin s={13} /> {char.gold.toLocaleString(lang === 'pl' ? 'pl-PL' : 'en-US')}
         </div>
         <div
           className="pip clickable no-select"
@@ -120,7 +123,7 @@ export function TopBar({ char, onProfile, onGemShop, onSettings }: TopBarProps) 
       {onSettings && (
         <button
           type="button"
-          aria-label="Ustawienia"
+          aria-label={t('topbar.settings')}
           onClick={onSettings}
           className="clickable no-select"
           style={{

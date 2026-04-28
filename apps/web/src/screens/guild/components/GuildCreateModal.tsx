@@ -3,6 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
+import { useT, tStatic } from '@/i18n';
 import type { GuildEmblemKind } from '@grodno/shared';
 import { GuildEmblem } from './GuildEmblem';
 
@@ -24,6 +25,7 @@ const COST_GOLD = 5000;
 const MIN_LVL = 5;
 
 export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -46,7 +48,7 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
       const msg =
         err instanceof TRPCClientError
           ? err.message
-          : 'Nie udało się założyć gildii.';
+          : tStatic('guildCreate.toast.fail');
       pushToast({ text: msg, accent: '#c83232', ttlMs: 4200 });
     },
   });
@@ -97,7 +99,7 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
           className="h-display"
           style={{ fontSize: 20, textAlign: 'center', marginBottom: 10 }}
         >
-          ZAŁÓŻ GILDIĘ
+          {t('guildCreate.title')}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
@@ -105,13 +107,13 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
         </div>
 
         <label className="h-title" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-          NAZWA (3-24)
+          {t('guildCreate.name.label')}
         </label>
         <input
           value={name}
           maxLength={24}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Rycerze Sofy"
+          placeholder={t('guildCreate.name.placeholder')}
           style={{
             width: '100%',
             padding: '8px 10px',
@@ -125,13 +127,13 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
         />
 
         <label className="h-title" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-          TAG (2-5)
+          {t('guildCreate.tag.label')}
         </label>
         <input
           value={tag}
           maxLength={5}
           onChange={(e) => setTag(e.target.value.toUpperCase().replace(/\s/g, ''))}
-          placeholder="SOFA"
+          placeholder={t('guildCreate.tag.placeholder')}
           style={{
             width: '100%',
             padding: '8px 10px',
@@ -146,7 +148,7 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
         />
 
         <label className="h-title" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-          EMBLEM
+          {t('guildCreate.emblem.label')}
         </label>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
           {KINDS.map((k) => (
@@ -169,7 +171,7 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
         </div>
 
         <label className="h-title" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-          KOLOR
+          {t('guildCreate.color.label')}
         </label>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
           {COLORS.map((c) => (
@@ -192,13 +194,13 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
         </div>
 
         <label className="h-title" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>
-          MOTTO (opcjonalne, do 80)
+          {t('guildCreate.motto.label')}
         </label>
         <input
           value={motto}
           maxLength={80}
           onChange={(e) => setMotto(e.target.value)}
-          placeholder="Walka i pierogi"
+          placeholder={t('guildCreate.motto.placeholder')}
           style={{
             width: '100%',
             padding: '8px 10px',
@@ -219,17 +221,19 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
             textAlign: 'center',
           }}
         >
-          Koszt: <b className="mono">{COST_GOLD}g</b> · Wymaga LVL {MIN_LVL}
+          {t('guildCreate.cost')
+            .replace('{gold}', String(COST_GOLD))
+            .replace('{lvl}', String(MIN_LVL))}
         </div>
 
         {!lvlOk && (
           <div className="flavor" style={{ fontSize: 14, color: '#8a3030', textAlign: 'center', marginBottom: 8 }}>
-            Za wcześnie. Kapitanowie rodzą się po LVL {MIN_LVL}.
+            {t('guildCreate.tooEarly').replace('{lvl}', String(MIN_LVL))}
           </div>
         )}
         {lvlOk && !goldOk && (
           <div className="flavor" style={{ fontSize: 14, color: '#8a3030', textAlign: 'center', marginBottom: 8 }}>
-            Kasa nie starczy. Gildia to inwestycja.
+            {t('guildCreate.notEnoughGold')}
           </div>
         )}
 
@@ -241,7 +245,7 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
             onClick={onClose}
             disabled={createMut.isPending}
           >
-            ANULUJ
+            {t('guildCreate.cancel')}
           </button>
           <button
             type="button"
@@ -250,7 +254,7 @@ export function GuildCreateModal({ onClose }: GuildCreateModalProps) {
             onClick={onSubmit}
             disabled={!canSubmit}
           >
-            {createMut.isPending ? '...' : 'ZAŁÓŻ'}
+            {createMut.isPending ? '...' : t('guildCreate.submit')}
           </button>
         </div>
       </div>

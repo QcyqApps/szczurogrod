@@ -3,6 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoCoin, IcoGem } from '@/components/icons';
+import { useT, tStatic } from '@/i18n';
 import type { GuildRank } from '@grodno/shared';
 
 export interface WithdrawModalProps {
@@ -22,6 +23,7 @@ export function WithdrawModal({
   dailyUsed,
   dailyCap,
 }: WithdrawModalProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
 
@@ -33,7 +35,7 @@ export function WithdrawModal({
 
   const withdrawMut = trpc.guildTreasury.withdraw.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Wypłata zaksięgowana.', accent: '#2a4a3a' });
+      pushToast({ text: tStatic('guildWithdraw.toast.success'), accent: '#2a4a3a' });
       void utils.guild.get.invalidate();
       void utils.guildTreasury.log.invalidate();
       void utils.me.get.invalidate();
@@ -41,7 +43,7 @@ export function WithdrawModal({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się wypłacić.',
+        text: err instanceof TRPCClientError ? err.message : tStatic('guildWithdraw.toast.fail'),
         accent: '#c83232',
         ttlMs: 4200,
       });
@@ -76,27 +78,27 @@ export function WithdrawModal({
         style={{ width: '100%', maxWidth: 340, background: '#f3ead9', padding: 16 }}
       >
         <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}>
-          WYPŁAĆ ZE SKARBCA
+          {t('guildWithdraw.title')}
         </div>
 
         {canWithdrawGold && (
           <AmountField
-            label="ZŁOTO"
+            label={t('guildWithdraw.gold')}
             icon={<IcoCoin s={16} />}
             value={gold}
             onChange={setGold}
             max={maxGold}
-            helper={`Dziś jeszcze: ${goldRemaining.toLocaleString('pl-PL')}g`}
+            helper={t('guildWithdraw.todayLeft').replace('{n}', goldRemaining.toLocaleString('pl-PL'))}
           />
         )}
         {canWithdrawGems && (
           <AmountField
-            label="GEMY (tylko Mistrz)"
+            label={t('guildWithdraw.gems')}
             icon={<IcoGem s={16} />}
             value={gems}
             onChange={setGems}
             max={maxGems}
-            helper={`W skarbcu: ${treasuryGems.toLocaleString('pl-PL')}`}
+            helper={t('guildWithdraw.inTreasury').replace('{n}', treasuryGems.toLocaleString('pl-PL'))}
           />
         )}
 
@@ -105,13 +107,13 @@ export function WithdrawModal({
             className="flavor"
             style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', padding: 8 }}
           >
-            Twoja ranga nie sięga skarbca.
+            {t('guildWithdraw.noRank')}
           </div>
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           <button type="button" className="cbtn ghost sm" style={{ flex: 1 }} onClick={onClose}>
-            ANULUJ
+            {t('guildWithdraw.cancel')}
           </button>
           <button
             type="button"
@@ -120,7 +122,7 @@ export function WithdrawModal({
             disabled={!canSubmit}
             onClick={() => withdrawMut.mutate({ gold, gems })}
           >
-            {withdrawMut.isPending ? '...' : 'WYPŁAĆ'}
+            {withdrawMut.isPending ? '...' : t('guildWithdraw.submit')}
           </button>
         </div>
       </div>
@@ -138,6 +140,7 @@ interface AmountFieldProps {
 }
 
 function AmountField({ label, icon, value, onChange, max, helper }: AmountFieldProps) {
+  const t = useT();
   return (
     <div style={{ marginBottom: 10 }}>
       <div
@@ -185,7 +188,7 @@ function AmountField({ label, icon, value, onChange, max, helper }: AmountFieldP
           disabled={max === 0}
           style={{ minWidth: 60 }}
         >
-          MAX
+          {t('guildWithdraw.max')}
         </button>
       </div>
     </div>

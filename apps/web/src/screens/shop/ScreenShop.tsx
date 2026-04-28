@@ -4,6 +4,8 @@ import { IcoCoin, IcoGem } from '@/components/icons';
 import { GemSinkButton } from '@/components/ui-common';
 import type { Character, EquippedSlot, InventoryItem, ItemSlot } from '@grodno/shared';
 import type { Rarity } from '@grodno/shared';
+import { useT, useContentT } from '@/i18n';
+import type { DictKey } from '@/i18n';
 
 export interface ShopItem {
   id: string;
@@ -31,11 +33,11 @@ const RARITY_COLOR: Record<Rarity, string> = {
   legendary: '#e07820',
 };
 
-const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'Zwykłe',
-  rare: 'Rzadkie',
-  epic: 'Epickie',
-  legendary: 'Legend.',
+const RARITY_LABEL_KEY: Record<Rarity, DictKey> = {
+  common: 'shop.rarity.common',
+  rare: 'shop.rarity.rare',
+  epic: 'shop.rarity.epic',
+  legendary: 'shop.rarity.legendary',
 };
 
 const rarityClass = (r: Rarity) =>
@@ -79,6 +81,8 @@ export function ScreenShop({
   onBuy,
   onBack,
 }: ScreenShopProps) {
+  const t = useT();
+  const tc = useContentT();
   return (
     <div className="screen-in" style={{ padding: 12 }}>
       <div
@@ -96,10 +100,10 @@ export function ScreenShop({
           </div>
           <div style={{ flex: 1 }}>
             <div className="h-display" style={{ fontSize: 20, color: '#ffc830' }}>
-              U JACKA KUPCA
+              {t('shop.heading')}
             </div>
             <div className="flavor light" style={{ fontSize: 15 }}>
-              Dobre ceny, lepsze plotki.
+              {t('shop.flavor')}
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -123,7 +127,7 @@ export function ScreenShop({
           fontStyle: 'italic',
         }}
       >
-        Oferta odświeża się codziennie o północy UTC.
+        {t('shop.refreshHint')}
       </div>
       <div
         style={{
@@ -136,12 +140,12 @@ export function ScreenShop({
         }}
       >
         <GemSinkButton
-          label="ODŚWIEŻ TERAZ"
+          label={t('shop.refresh.now')}
           cost={refreshCost}
           playerGems={char.gems}
           pending={refreshPending}
           onClick={onRefresh}
-          disabledReason="Wymień w tej chwili, bez czekania na północ."
+          disabledReason={t('shop.refresh.help')}
           size="sm"
           variant="primary"
         />
@@ -149,9 +153,9 @@ export function ScreenShop({
           <span
             className="mono"
             style={{ fontSize: 13, color: '#5a3a2a' }}
-            title="Licznik resetuje się o 00:00 UTC. Każde kolejne odświeżenie dziś jest droższe (10 → 20 → 40 → 80 → 160)."
+            title={t('shop.refresh.todayTitle')}
           >
-            dziś {refreshCountToday}×
+            {t('shop.refresh.todayCount').replace('{n}', String(refreshCountToday))}
           </span>
         )}
       </div>
@@ -189,7 +193,7 @@ export function ScreenShop({
               <GameIcon name={it.icon} size={44} />
             </div>
             <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
-              {it.name}
+              {tc.itemName(it.name, it.name)}
             </div>
             <div
               className="pip"
@@ -200,7 +204,7 @@ export function ScreenShop({
                 alignSelf: 'flex-start',
               }}
             >
-              {RARITY_LABEL[it.rarity]}
+              {t(RARITY_LABEL_KEY[it.rarity])}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
               {it.atk > 0 && (
@@ -257,22 +261,26 @@ export function ScreenShop({
                 }}
                 title={
                   cur
-                    ? `Masz założone: ${cur.name} (ATK ${cur.atk ?? 0} · DEF ${cur.def ?? 0} · MAG ${cur.mag ?? 0})`
-                    : 'Nic nie masz założone w tym slocie — sama korzyść.'
+                    ? t('shop.cmp.has')
+                        .replace('{name}', tc.itemName(cur.name, cur.name))
+                        .replace('{atk}', String(cur.atk ?? 0))
+                        .replace('{def}', String(cur.def ?? 0))
+                        .replace('{mag}', String(cur.mag ?? 0))
+                    : t('shop.cmp.empty')
                 }
               >
                 {cur ? (
                   <>
-                    vs <b>{cur.name}</b>: {totalDelta > 0 ? '+' : ''}
+                    vs <b>{tc.itemName(cur.name, cur.name)}</b>: {totalDelta > 0 ? '+' : ''}
                     {totalDelta}
                   </>
                 ) : (
-                  <>pusty slot · +{(it.atk + it.def + it.mag) || 0}</>
+                  <>{t('shop.cmp.emptyShort').replace('{n}', String((it.atk + it.def + it.mag) || 0))}</>
                 )}
               </div>
             )}
             <div className="flavor" style={{ fontSize: 14, lineHeight: 1.15, flex: 1 }}>
-              {it.desc}
+              {tc.itemDesc(it.name, it.desc)}
             </div>
             {locked && (
               <div
@@ -309,7 +317,7 @@ export function ScreenShop({
                   border: '2px solid #f3ead9',
                 }}
               >
-                KUPIONO
+                {t('shop.soldOut')}
               </div>
             )}
             <button
@@ -322,10 +330,10 @@ export function ScreenShop({
                 cursor: locked || soldOut ? 'not-allowed' : 'pointer',
               }}
               onClick={() => !locked && !soldOut && onBuy(it)}
-              title={soldOut ? 'Już kupione dzisiaj. Oferta odświeży się o północy UTC.' : undefined}
+              title={soldOut ? t('shop.soldOutTitle') : undefined}
             >
               {soldOut ? (
-                <span style={{ fontSize: 13 }}>WYPRZEDANE</span>
+                <span style={{ fontSize: 13 }}>{t('shop.soldOutBtn')}</span>
               ) : it.gems ? (
                 <>
                   <IcoGem s={13} /> {it.price}
@@ -347,7 +355,7 @@ export function ScreenShop({
         style={{ marginTop: 14, width: '100%' }}
         onClick={onBack}
       >
-        ← Miasto
+        {t('shop.back')}
       </button>
     </div>
   );

@@ -9,8 +9,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
  *   3. `pnpm --filter @grodno/web cap:open:android` → otwiera Android Studio
  *
  * UWAGA — appId jest stały po publikacji na Google Play. Zmiana = nowa
- * aplikacja, nowy listing, gracze tracą zakupy. Zmień TERAZ jeśli
- * `pl.szczurogrod.app` nie pasuje (zwykle: kup domenę, użyj jej w reverse).
+ * aplikacja, nowy listing, gracze tracą zakupy. `com.ratburg` zarezerwowane
+ * w Play Console — TYLKO ten string przejdzie upload AAB.
  *
  * `androidScheme: 'http'` — WebView ładuje aplikację z `http://localhost/`.
  * Powód: API (dev `http://LAN_IP:4000`, prod `https://api.szczurogrod.pl`)
@@ -23,7 +23,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * działa bez secure context.
  */
 const config: CapacitorConfig = {
-  appId: 'pl.szczurogrod.app',
+  appId: 'com.ratburg',
   appName: 'Szczurogród',
   webDir: 'dist',
   android: {

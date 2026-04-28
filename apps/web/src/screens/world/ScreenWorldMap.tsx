@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import { HelpIcon } from '@/components/ui-common';
+import { useT, useContentT } from '@/i18n';
 import type { RegionSummary, DungeonSummary } from '@grodno/shared';
 
 // SVG canvas — DB trzyma mapX/mapY w 0..1000. Klient skaluje do viewBox.
@@ -34,6 +35,7 @@ function pickInitialRegionIdx(regions: readonly RegionSummary[]): number {
 }
 
 export function ScreenWorldMap({ regions, charLvl, onDungeonOpen, onBack }: ScreenWorldMapProps) {
+  const t = useT();
   const [idx, setIdx] = useState<number>(() => pickInitialRegionIdx(regions));
   // Clamp — gdy tabela regions skurczy się w locie (np. server usunął region
   // podczas sesji) i idx wyleciał poza zakres, zbijamy do ostatniego.
@@ -54,9 +56,9 @@ export function ScreenWorldMap({ regions, charLvl, onDungeonOpen, onBack }: Scre
           marginBottom: 12,
         }}
       >
-        <div className="h-display" style={{ fontSize: 22 }}>MAPA ŚWIATA</div>
+        <div className="h-display" style={{ fontSize: 22 }}>{t('world.title')}</div>
         <div className="flavor light" style={{ fontSize: 17, marginTop: 4 }}>
-          Idziesz, walczysz, wracasz. Tak to się kręci.
+          {t('world.flavor')}
         </div>
       </div>
 
@@ -67,7 +69,7 @@ export function ScreenWorldMap({ regions, charLvl, onDungeonOpen, onBack }: Scre
           className="panel"
           style={{ padding: 20, textAlign: 'center', color: '#5a3a2a' }}
         >
-          Brak regionów. Wróć później.
+          {t('world.empty')}
         </div>
       )}
 
@@ -86,18 +88,16 @@ export function ScreenWorldMap({ regions, charLvl, onDungeonOpen, onBack }: Scre
           marginTop: 10,
         }}
       >
-        <HelpIcon title="Jak działa mapa?" label="Jak to działa?">
+        <HelpIcon title={t('world.help.title')} label={t('world.help.label')}>
           <p style={{ margin: '0 0 8px' }}>
-            Każdy region to osobna mapa. Strzałkami pod mapą przeskakujesz
-            między regionami. Każdy loch na mapie to jeden węzeł.
+            {t('world.help.p1')}
           </p>
           <p style={{ margin: '0 0 8px' }}>
-            <b>Zielone</b> — ukończone (bossa już pokonałeś, moby nadal farmisz).
-            <b> Żółte</b> — otwarte, idź i walcz. <b>Szare</b> — zamknięte;
-            najedź, żeby zobaczyć czego brakuje.
+            <b>{t('world.help.p2.green')}</b>{t('world.help.p2.greenBody')}
+            <b> {t('world.help.p2.yellow')}</b>{t('world.help.p2.yellowBody')}<b>{t('world.help.p2.gray')}</b>{t('world.help.p2.grayBody')}
           </p>
           <p style={{ margin: 0 }}>
-            Każdy boss raz na dobę. Potem czekasz do 00:00 UTC.
+            {t('world.help.p3')}
           </p>
         </HelpIcon>
       </div>
@@ -108,7 +108,7 @@ export function ScreenWorldMap({ regions, charLvl, onDungeonOpen, onBack }: Scre
         style={{ marginTop: 12, width: '100%' }}
         onClick={onBack}
       >
-        ← Miasto
+        {t('common.backToTown')}
       </button>
     </div>
   );
@@ -123,6 +123,8 @@ function RegionNav({
   idx: number;
   onChange: (next: number) => void;
 }) {
+  const t = useT();
+  const tc = useContentT();
   const canPrev = idx > 0;
   const canNext = idx < regions.length - 1;
   const current = regions[idx];
@@ -154,7 +156,7 @@ function RegionNav({
           opacity: canPrev ? 1 : 0.35,
           cursor: canPrev ? 'pointer' : 'not-allowed',
         }}
-        aria-label="Poprzedni region"
+        aria-label={t('world.region.prev.aria')}
       >
         ‹
       </button>
@@ -169,10 +171,14 @@ function RegionNav({
             textOverflow: 'ellipsis',
           }}
         >
-          {current.name}
+          {tc.regionName(current.slug, current.name)}
         </div>
         <div style={{ fontSize: 13, color: '#5a3a2a', marginTop: 2 }}>
-          Region {idx + 1} / {regions.length} · {cleared}/{total} ukończone
+          {t('world.region.label')
+            .replace('{n}', String(idx + 1))
+            .replace('{total}', String(regions.length))
+            .replace('{cleared}', String(cleared))
+            .replace('{dt}', String(total))}
         </div>
       </div>
       <button
@@ -185,7 +191,7 @@ function RegionNav({
           opacity: canNext ? 1 : 0.35,
           cursor: canNext ? 'pointer' : 'not-allowed',
         }}
-        aria-label="Następny region"
+        aria-label={t('world.region.next.aria')}
       >
         ›
       </button>
@@ -202,6 +208,7 @@ function RegionPanel({
   charLvl: number;
   onDungeonOpen: (slug: string) => void;
 }) {
+  const tc = useContentT();
   const theme = useMemo(() => getRegionTheme(region.slug), [region.slug]);
 
   // Ścieżka łącząca węzły w kolejności sortOrder — cubic bezier między
@@ -241,7 +248,7 @@ function RegionPanel({
           gap: 6,
         }}
       >
-        <GameIcon name="banner" size={14} /> {region.name.toUpperCase()}
+        <GameIcon name="banner" size={14} /> {tc.regionName(region.slug, region.name).toUpperCase()}
       </div>
 
       <svg
@@ -1256,7 +1263,9 @@ function DungeonNode({
   theme: RegionTheme;
   onOpen: () => void;
 }) {
+  const tc = useContentT();
   const { status, mapX, mapY, name, requiredLvl } = dungeon;
+  const displayName = tc.dungeonName(dungeon.slug, name);
   const clickable = status !== 'locked';
 
   const fill =
@@ -1337,7 +1346,7 @@ function DungeonNode({
           fontSize={36}
           fill={INK}
         >
-          {name.toUpperCase()}
+          {displayName.toUpperCase()}
         </text>
       </g>
     </g>
@@ -1456,14 +1465,16 @@ function DungeonRowCard({
   charLvl: number;
   onOpen: () => void;
 }) {
-  const { status, name, requiredLvl, boss, lockReason } = dungeon;
+  const t = useT();
+  const tc = useContentT();
+  const { slug, status, name, requiredLvl, boss, lockReason } = dungeon;
   const disabled = status === 'locked';
   const statusBadge =
     status === 'cleared'
-      ? { text: 'UKOŃCZONY', bg: '#6aaa5a', color: '#fff' }
+      ? { text: t('world.dungeon.cleared'), bg: '#6aaa5a', color: '#fff' }
       : status === 'unlocked'
-        ? { text: 'OTWARTY', bg: '#f0c860', color: INK }
-        : { text: `LVL ${requiredLvl}+`, bg: '#8a8070', color: '#fff' };
+        ? { text: t('world.dungeon.unlocked'), bg: '#f0c860', color: INK }
+        : { text: t('world.dungeon.lockBadge').replace('{lvl}', String(requiredLvl)), bg: '#8a8070', color: '#fff' };
 
   return (
     <button
@@ -1489,10 +1500,12 @@ function DungeonRowCard({
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
-          {name}
+          {tc.dungeonName(slug, name)}
         </div>
         <div style={{ fontSize: 12, color: '#5a3a2a', marginTop: 2 }}>
-          Boss: {boss.name} · LVL {boss.lvl}
+          {t('world.dungeon.boss')
+            .replace('{name}', tc.enemyName(boss.slug, boss.name))
+            .replace('{lvl}', String(boss.lvl))}
         </div>
         {disabled && lockReason && (
           <div style={{ fontSize: 13, color: '#8a3030', marginTop: 3 }}>
@@ -1501,7 +1514,7 @@ function DungeonRowCard({
         )}
         {!disabled && charLvl < requiredLvl && (
           <div style={{ fontSize: 13, color: '#8a6030', marginTop: 3 }}>
-            Twój LVL {charLvl} — niska szansa
+            {t('world.dungeon.lowChance').replace('{lvl}', String(charLvl))}
           </div>
         )}
       </div>

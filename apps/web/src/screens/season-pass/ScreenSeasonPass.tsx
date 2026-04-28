@@ -14,6 +14,7 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoCoin, IcoGem, IcoKey } from '@/components/icons';
 import { GemSinkButton, LevelUpModal } from '@/components/ui-common';
+import { useT } from '@/i18n';
 import type {
   SeasonPassClaimResponse,
   SeasonPassTierReward,
@@ -33,6 +34,7 @@ const RARITY_COLOR: Record<string, string> = {
 const MILESTONE_TIERS = new Set([5, 10, 15, 20, 25, 30]);
 
 export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const pushUnlocks = useUnlockQueue((s) => s.push);
@@ -45,13 +47,13 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
     onSuccess: (data) => {
       if (data.levelUp) setLevelUpShown(data.levelUp);
       pushToast({
-        text: 'Nagroda odebrana.',
+        text: t('seasonPass.toast.claimed'),
         accent: '#4a7c3a',
       });
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Claim nie wyszedł.',
+        text: err instanceof TRPCClientError ? err.message : t('seasonPass.toast.claimFailed'),
         accent: '#c83232',
       });
     },
@@ -64,11 +66,11 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
 
   const buyPremiumMut = trpc.seasonPass.buyPremium.useMutation({
     onSuccess: () => {
-      pushToast({ text: 'Premium aktywny. Wszystko odblokowane.', accent: '#4a7c3a' });
+      pushToast({ text: t('seasonPass.toast.premiumActive'), accent: '#4a7c3a' });
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się wykupić premium.',
+        text: err instanceof TRPCClientError ? err.message : t('seasonPass.toast.premiumFailed'),
         accent: '#c83232',
       });
     },
@@ -104,12 +106,12 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
         }}
       >
         <div className="h-display" style={{ fontSize: 22, color: '#ffc830' }}>
-          PRZEPUSTKA SEZONOWA
+          {t('seasonPass.title')}
         </div>
         {status && (
           <>
             <div className="flavor light" style={{ fontSize: 14, marginTop: 4 }}>
-              Sezon {status.seasonStart} — 30 poziomów, 60 nagród.
+              {t('seasonPass.season.line').replace('{n}', String(status.seasonStart))}
             </div>
             {/* XP bar do następnego tiera */}
             <XpBar xp={status.xp} currentTier={status.currentTier} />
@@ -131,19 +133,18 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
           }}
         >
           <div className="h-title" style={{ fontSize: 14, color: '#ffc830', marginBottom: 4 }}>
-            WYKUP PREMIUM
+            {t('seasonPass.premium.heading')}
           </div>
           <div style={{ fontSize: 13, marginBottom: 10, opacity: 0.9, lineHeight: 1.3 }}>
-            Drugie nagrody z każdego tiera. Legendarny pierścień na 30. Odbierzesz
-            także wszystkie już zdobyte premium tiery wstecz.
+            {t('seasonPass.premium.desc')}
           </div>
           <GemSinkButton
-            label="WYKUP PREMIUM"
+            label={t('seasonPass.premium.cta')}
             cost={status.premiumCostGems}
             playerGems={playerGems}
             pending={buyPremiumMut.isPending}
             onClick={() => buyPremiumMut.mutate()}
-            disabledReason="Odblokowuje premium track."
+            disabledReason={t('seasonPass.premium.disabledReason')}
             variant="primary"
             size="md"
           />
@@ -153,7 +154,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
       {/* Lista tierów */}
       {!status ? (
         <div className="panel" style={{ padding: 14, textAlign: 'center', fontSize: 13 }}>
-          Ładuję sezon…
+          {t('seasonPass.loading')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
@@ -203,7 +204,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
                     claimMut.variables?.tier === tier &&
                     claimMut.variables?.track === 'free'
                   }
-                  label="DARMOWE"
+                  label={t('seasonPass.tier.free')}
                 />
                 <TierCell
                   reward={prem}
@@ -212,9 +213,9 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
                   disabled={!unlocked || !status.isPremium}
                   disabledHint={
                     !status.isPremium
-                      ? 'Wymaga premium.'
+                      ? t('seasonPass.tier.requirePremium')
                       : !unlocked
-                        ? 'Za mało XP.'
+                        ? t('seasonPass.tier.notEnoughXp')
                         : undefined
                   }
                   onClaim={() => handleClaim(tier, 'premium')}
@@ -223,7 +224,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
                     claimMut.variables?.tier === tier &&
                     claimMut.variables?.track === 'premium'
                   }
-                  label="PREMIUM"
+                  label={t('seasonPass.tier.premium')}
                   isPremium
                 />
               </div>
@@ -235,17 +236,15 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
       {/* Progress hint */}
       <div className="panel" style={{ padding: 10, marginBottom: 10, fontSize: 13 }}>
         <div className="h-title" style={{ fontSize: 13, marginBottom: 4 }}>
-          JAK ZDOBYWAĆ XP
+          {t('seasonPass.howTo.heading')}
         </div>
         <div style={{ color: '#5a3a2a', lineHeight: 1.35 }}>
-          <b>+1 XP</b> za wygraną walkę w lochu • <b>+5 XP</b> za ukończony
-          quest. Tier N wymaga <b>10 × N</b> XP łącznie. Sezon trwa miesiąc —
-          1-go każdego miesiąca UTC zaczyna się nowy.
+          {t('seasonPass.howTo.body')}
         </div>
       </div>
 
       <button type="button" className="cbtn ghost" style={{ width: '100%' }} onClick={onBack}>
-        ← WRÓĆ
+        {t('seasonPass.back')}
       </button>
 
       {levelUpShown && (
@@ -256,6 +255,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
 }
 
 function XpBar({ xp, currentTier }: { xp: number; currentTier: number }) {
+  const t = useT();
   const nextTier = Math.min(30, currentTier + 1);
   const currentBase = currentTier * 10;
   const nextBase = nextTier * 10;
@@ -264,7 +264,7 @@ function XpBar({ xp, currentTier }: { xp: number; currentTier: number }) {
   return (
     <div style={{ marginTop: 10 }}>
       <div style={{ fontSize: 12, marginBottom: 4 }}>
-        TIER <b className="mono">{currentTier}</b> / 30 · XP{' '}
+        {t('seasonPass.bar.tierLine')} <b className="mono">{currentTier}</b> / 30 · XP{' '}
         <b className="mono">{xp}</b>
       </div>
       <div
@@ -311,6 +311,7 @@ function TierCell({
   label: string;
   isPremium?: boolean;
 }) {
+  const t = useT();
   const bg = claimed ? '#d8e0c8' : isPremium ? '#ffe4b0' : '#f3ead9';
   return (
     <div
@@ -347,7 +348,7 @@ function TierCell({
             gap: 3,
           }}
         >
-          <GameIcon name="check" size={12} /> ODEBRANE
+          <GameIcon name="check" size={12} /> {t('seasonPass.tier.claimed')}
         </span>
       ) : unlocked && !disabled ? (
         <button
@@ -365,7 +366,7 @@ function TierCell({
             boxShadow: pending ? 'none' : '1.5px 1.5px 0 #2a1810',
           }}
         >
-          ODBIERZ
+          {t('seasonPass.tier.claim')}
         </button>
       ) : (
         <span
@@ -375,7 +376,7 @@ function TierCell({
             fontStyle: 'italic',
           }}
         >
-          {disabledHint ?? 'Jeszcze nie.'}
+          {disabledHint ?? t('seasonPass.tier.notYet')}
         </span>
       )}
     </div>

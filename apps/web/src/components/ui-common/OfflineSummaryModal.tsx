@@ -7,6 +7,7 @@ import {
   IcoMagic,
   IcoPaw,
 } from '@/components/icons';
+import { useT } from '@/i18n';
 import type { OfflineSummary } from '@grodno/shared';
 
 export interface OfflineSummaryModalProps {
@@ -37,6 +38,7 @@ const ROW_STYLE: React.CSSProperties = {
 };
 
 export function OfflineSummaryModal({ summary, onClose }: OfflineSummaryModalProps) {
+  const t = useT();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'Enter') onClose();
@@ -49,43 +51,43 @@ export function OfflineSummaryModal({ summary, onClose }: OfflineSummaryModalPro
   if (summary.keysGained > 0) {
     rows.push({
       icon: <IcoKey s={18} />,
-      label: 'Kluczy do lochu',
+      label: t('modal.offline.dungeonKeys'),
       value: `+${summary.keysGained}`,
     });
   }
   if (summary.staminaGained > 0) {
     rows.push({
       icon: <GameIcon name="bolt" size={18} />,
-      label: 'Wytrzymałości',
+      label: t('modal.offline.staminaShort'),
       value: `+${summary.staminaGained}`,
     });
   }
   if (summary.hpGained > 0) {
     rows.push({
       icon: <IcoHeart s={18} />,
-      label: 'HP odzyskane',
+      label: t('modal.offline.hpRecovered'),
       value: `+${summary.hpGained}`,
     });
   }
   if (summary.mpGained > 0) {
     rows.push({
       icon: <IcoMagic s={18} />,
-      label: 'MP odzyskane',
+      label: t('modal.offline.mpRecovered'),
       value: `+${summary.mpGained}`,
     });
   }
   if (summary.tracksRolled > 0) {
     rows.push({
       icon: <IcoPaw s={18} />,
-      label: 'Nowych tropów',
+      label: t('modal.offline.tracksNew'),
       value: `+${summary.tracksRolled}`,
     });
   }
   if (summary.healerReady) {
     rows.push({
       icon: <GameIcon name="potion" size={18} />,
-      label: 'Uzdrowicielka',
-      value: 'Znów w izbie',
+      label: t('modal.offline.healer'),
+      value: t('modal.offline.healerBack'),
     });
   }
 
@@ -125,13 +127,13 @@ export function OfflineSummaryModal({ summary, onClose }: OfflineSummaryModalPro
           className="h-display"
           style={{ fontSize: 20, color: '#2a1810', marginBottom: 2 }}
         >
-          WITAJ SPOWROTEM
+          {t('modal.offline.heading')}
         </div>
         <div
           className="flavor"
           style={{ fontSize: 15, color: '#5a3a2a', marginBottom: 10 }}
         >
-          Miasto nie czekało. Miasto nigdy nie czeka.
+          {t('modal.offline.flavor')}
         </div>
         <div
           className="mono"
@@ -144,7 +146,7 @@ export function OfflineSummaryModal({ summary, onClose }: OfflineSummaryModalPro
             marginBottom: 10,
           }}
         >
-          <IcoClock s={12} /> Nieobecność: {formatDuration(summary.awayMs)}
+          <IcoClock s={12} /> {t('modal.offline.absence')}: {formatDuration(summary.awayMs)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left' }}>
           {rows.length === 0 ? (
@@ -156,7 +158,7 @@ export function OfflineSummaryModal({ summary, onClose }: OfflineSummaryModalPro
                 padding: 8,
               }}
             >
-              Nic się nie wydarzyło. Nawet szczury w piwnicy spały.
+              {t('modal.offline.empty')}
             </div>
           ) : (
             rows.map((r, i) => (
@@ -179,7 +181,7 @@ export function OfflineSummaryModal({ summary, onClose }: OfflineSummaryModalPro
           style={{ marginTop: 14, width: '100%' }}
           onClick={onClose}
         >
-          DO ROBOTY
+          {t('modal.offline.cta')}
         </button>
       </div>
     </div>
