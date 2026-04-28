@@ -1,6 +1,7 @@
 import { GameIcon } from '@/components/game-icons';
 import { trpc } from '@/api/trpc';
-import { useT } from '@/i18n';
+import { useT, useLangStore } from '@/i18n';
+import { renderChronicleEntry } from '@/i18n/chronicle-templates';
 
 export interface ScreenChronicleProps {
   onBack: () => void;
@@ -8,6 +9,7 @@ export interface ScreenChronicleProps {
 
 export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
   const t = useT();
+  const lang = useLangStore((s) => s.lang);
   const q = trpc.town.chronicle.useQuery(undefined, {
     // Chronicle feed to głównie stałe wartości na dzień — nie spamuj serwera.
     staleTime: 60_000,
@@ -85,7 +87,7 @@ export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
                   {entry.source === 'event' ? '!' : '·'}
                 </div>
                 <div style={{ fontSize: 14, lineHeight: 1.3, flex: 1, color: '#2a1810' }}>
-                  {entry.text}
+                  {renderChronicleEntry(entry, lang)}
                   {entry.createdAt !== null && (
                     <div
                       className="mono"

@@ -325,6 +325,35 @@ function hashIndex(seed: string, mod: number): number {
 }
 
 /**
+ * Rozmiary pul template'ów per-kind. **Musi pasować 1:1** do tablic w tym
+ * pliku (BOSS_TEMPLATES, LEGENDARY_TEMPLATES, ...) ORAZ do client-side
+ * `apps/web/src/i18n/chronicle-templates.ts`. Klient liczy idx z tej samej
+ * formuły co my, więc rozmiary muszą się zgadzać dla determinizmu.
+ */
+const TEMPLATE_POOL_SIZES = {
+  boss_kill: 4,
+  legendary_drop: 4,
+  level_milestone: 4,
+  arena_victory: 4,
+  arena_streak: 3,
+  guild_founded: 3,
+  guild_joined: 3,
+  guild_war_won: 3,
+  guild_raid_killed: 3,
+  achievement_unlock: 2, // per tier — wszystkie tiery mają 2 warianty
+} as const;
+
+/**
+ * Liczy deterministyczny indeks template'u dla danego eventu. Wywoływany
+ * przy `listChronicleEntries` żeby klient mógł wybrać matching template
+ * po stronie i18n.
+ */
+export function computeTemplateIdx(payload: ChroniclePayload, stableKey: string): number {
+  const size = TEMPLATE_POOL_SIZES[payload.kind];
+  return hashIndex(stableKey, size);
+}
+
+/**
  * Zwraca tekst kroniki dla eventu. `stableKey` (np. event.id) zapewnia że
  * ten sam event zawsze renderuje się tym samym szablonem — brak "mrugania".
  */
@@ -431,15 +460,21 @@ export async function listChronicleEntries(db: Db): Promise<ChronicleEntry[]> {
     text: renderChronicleEvent(row.payload, row.id),
     source: 'event' as const,
     createdAt: row.createdAt.getTime(),
+    payload: row.payload,
+    templateIdx: computeTemplateIdx(row.payload, row.id),
   }));
 
   // Flavor pool — odpowiada za kick-off batchu Claude jeśli go brak.
+  // PL-only na razie (Claude generuje po polsku). Klient w trybie EN
+  // mapuje te wpisy na statyczne SEED_CHRONICLES_EN po stronie i18n.
   const flavorTexts = await pickChronicleFlavorPool(db, MAX_FLAVOR);
   const flavorEntries: ChronicleEntry[] = flavorTexts.map((text, i) => ({
     id: `flavor:${today}:${i}`,
     text,
     source: 'flavor' as const,
     createdAt: null,
+    payload: null,
+    templateIdx: null,
   }));
 
   const combined = [...eventEntries, ...flavorEntries];
@@ -449,6 +484,8 @@ export async function listChronicleEntries(db: Db): Promise<ChronicleEntry[]> {
       text,
       source: 'flavor' as const,
       createdAt: null,
+      payload: null,
+      templateIdx: null,
     }));
   }
 

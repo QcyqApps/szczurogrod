@@ -6,6 +6,8 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { GEM_PRODUCT_IDS } from '@grodno/shared';
+import { initBilling } from './billing';
 
 export function initNative(): void {
   if (!Capacitor.isNativePlatform()) return;
@@ -35,5 +37,13 @@ export function initNative(): void {
     } else {
       void CapApp.minimizeApp();
     }
+  });
+
+  // Google Play Billing — register SKUs early so the catalog is warm by the
+  // time the user opens the gem shop. `initBilling` is idempotent and any
+  // failures here just leave the shop in unconfigured-mode (the screen
+  // shows a "try again" hint instead of the buy buttons).
+  initBilling(GEM_PRODUCT_IDS).catch((err) => {
+    console.error('[billing] init failed', err);
   });
 }

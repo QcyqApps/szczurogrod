@@ -228,6 +228,32 @@ export const dict = {
     pl: 'Rejestrując się akceptujesz Regulamin i Politykę Prywatności',
     en: 'By signing up you accept the Terms and Privacy Policy',
   },
+  'auth.register.terms.prefix': {
+    pl: 'Rejestrując się akceptujesz',
+    en: 'By signing up you accept the',
+  },
+  'auth.register.terms.and': {
+    pl: 'i',
+    en: 'and',
+  },
+
+  // ===== Legal links (footer + login screen) =====
+  'legal.terms': {
+    pl: 'Regulamin',
+    en: 'Terms',
+  },
+  'legal.privacy': {
+    pl: 'Polityka Prywatności',
+    en: 'Privacy Policy',
+  },
+  'legal.refunds': {
+    pl: 'Zwroty',
+    en: 'Refunds',
+  },
+  'legal.pricing': {
+    pl: 'Cennik',
+    en: 'Pricing',
+  },
 
   // ===== Create character =====
   'create.title': {
@@ -818,6 +844,54 @@ export const dict = {
   'toast.devGrant.gold': { pl: '+{n}g', en: '+{n}g' },
   'toast.devGrant.empty': { pl: 'Przyznano.', en: 'Granted.' },
   'toast.devGrant.failed': { pl: 'Nie udało się przyznać: {msg}', en: 'Grant failed: {msg}' },
+  'toast.gemShop.verifyFailed': {
+    pl: 'Weryfikacja zakupu nie powiodła się: {reason}',
+    en: 'Purchase verification failed: {reason}',
+  },
+  'toast.gemShop.nativeFailed': {
+    pl: 'Zakup przerwany: {code}',
+    en: 'Purchase cancelled: {code}',
+  },
+  'toast.gemShop.webNotSupported': {
+    pl: 'Klejnoty kupisz w aplikacji Android.',
+    en: 'Gems are sold in the Android app.',
+  },
+  'toast.gemShop.unknownPack': {
+    pl: 'Nieznany pakiet.',
+    en: 'Unknown pack.',
+  },
+  'toast.gemShop.emptyPack': {
+    pl: 'Ten zakup niczego nie przyznaje.',
+    en: 'This purchase grants nothing.',
+  },
+  'gemShop.web.banner.title': {
+    pl: 'KUP W APLIKACJI',
+    en: 'BUY IN THE APP',
+  },
+  'gemShop.web.banner.body': {
+    pl: 'Klejnoty można kupić tylko w aplikacji Android. W przeglądarce zobaczysz je natychmiast — to samo konto, ten sam stan.',
+    en: 'Gems are sold in the Android app only. You’ll see them in the browser instantly — same account, same state.',
+  },
+  'gemShop.modal.heading': {
+    pl: 'KUP W APLIKACJI',
+    en: 'BUY IN THE APP',
+  },
+  'gemShop.modal.title': {
+    pl: 'Płatności tylko z Google Play',
+    en: 'Payments only via Google Play',
+  },
+  'gemShop.modal.body': {
+    pl: '„{product}" — i każdy inny zakup — kupisz wyłącznie w aplikacji Szczurogród zainstalowanej z Google Play.',
+    en: '"{product}" — and every other purchase — is available only in the Ratburg app installed from Google Play.',
+  },
+  'gemShop.modal.note': {
+    pl: 'Konto pozostaje to samo. Klejnoty kupione w aplikacji pojawią się w przeglądarce natychmiast.',
+    en: 'Same account, same progress. Gems bought in the app appear in the browser instantly.',
+  },
+  'gemShop.modal.ok': {
+    pl: 'ROZUMIEM',
+    en: 'GOT IT',
+  },
 
   // ===== Active buffs bar =====
   'buff.title': {
@@ -1859,7 +1933,6 @@ support@ratburg.app (placeholder — fill in before launch)
   'gemShop.vip.price': { pl: '19,99/mies.', en: '19.99/mo' },
   'gemShop.vip.perk1': { pl: '100 gemów dziennie', en: '100 gems daily' },
   'gemShop.vip.perk2': { pl: '+50% złota z questów', en: '+50% gold from quests' },
-  'gemShop.vip.perk3': { pl: 'Brak reklam', en: 'No ads' },
   'gemShop.vip.perk4': { pl: 'Ekskluzywna korona', en: 'Exclusive crown' },
   'gemShop.disclaimer': {
     pl: 'Ceny zawierają VAT. Zakupy wspierają rozwój gry. Miłej zabawy!',

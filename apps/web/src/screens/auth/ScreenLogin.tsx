@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useT } from '@/i18n';
 import { LangPicker } from '@/i18n/LangPicker';
 import { GrodnoNightBackdrop } from './NightBackdrop';
@@ -16,6 +16,14 @@ type Mode = 'login' | 'register';
  * inputem formularza logowania.
  */
 const REMEMBER_STORAGE_KEY = 'grodno-login-remember';
+
+const legalLinkStyle: CSSProperties = {
+  color: '#5a3a2a',
+  textDecoration: 'underline',
+  textDecorationColor: '#d4a24c',
+  textUnderlineOffset: 2,
+  fontWeight: 600,
+};
 
 interface RememberedLogin {
   email: string;
@@ -423,9 +431,21 @@ export function ScreenLogin({ onLogin, onGuest }: ScreenLoginProps) {
                 marginTop: 4,
               }}
             >
-              {mode === 'register'
-                ? t('auth.register.terms')
-                : t('auth.login.guest.warning')}
+              {mode === 'register' ? (
+                <>
+                  {t('auth.register.terms.prefix')}{' '}
+                  <a href="/terms.html" target="_blank" rel="noopener" style={legalLinkStyle}>
+                    {t('legal.terms')}
+                  </a>{' '}
+                  {t('auth.register.terms.and')}{' '}
+                  <a href="/privacy.html" target="_blank" rel="noopener" style={legalLinkStyle}>
+                    {t('legal.privacy')}
+                  </a>
+                  .
+                </>
+              ) : (
+                t('auth.login.guest.warning')
+              )}
             </div>
           </div>
         </div>

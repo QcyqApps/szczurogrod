@@ -617,12 +617,21 @@ export type ChronicleKind = ChroniclePayload['kind'];
 
 export const chronicleEntrySchema = z.object({
   id: z.string(),
-  /** Renderowany tekst gotowy do wyświetlenia. */
+  /** Renderowany tekst po polsku — fallback gdy klient nie ma matching
+   *  template'u dla payload.kind, oraz dla flavor/seed którego nie ma EN
+   *  wersji. Zostaje jako contract dla starych klientów. */
   text: z.string(),
   /** 'event' = prawdziwy gracz, 'flavor' = NPC Claude-generated / seed. */
   source: z.enum(['event', 'flavor']),
   /** Unix ms dla eventów; null dla flavoru. */
   createdAt: z.number().int().nullable(),
+  /** Strukturalny payload dla event — klient renderuje przez i18n
+   *  templates w aktualnym języku. null dla flavor/seed. */
+  payload: chroniclePayloadSchema.nullable(),
+  /** Index template'u (server-computed `hashIndex(stableKey, pool.length)`)
+   *  dla deterministycznego wyboru wariantu po stronie klienta. null dla
+   *  flavor/seed. */
+  templateIdx: z.number().int().min(0).nullable(),
 });
 export type ChronicleEntry = z.infer<typeof chronicleEntrySchema>;
 
@@ -635,6 +644,43 @@ export type ChronicleListResponse = z.infer<typeof chronicleListResponseSchema>;
 export const gemPurchaseInputSchema = z.object({
   packId: z.string().min(1).max(64),
 });
+
+// Catalog entry returned by `gemShop.list`. Pricing is NOT in the response —
+// the client is expected to read the localized price string from the native
+// IAP plugin (which calls Play Billing for the user's actual currency). The
+// server only owns the contract: which productId yields how many gems.
+export const gemPackageSchema = z.object({
+  id: z.string(),
+  gems: z.number().int().min(1),
+  bonus: z.number().int().min(0),
+  googlePlayProductId: z.string(),
+});
+export type GemPackage = z.infer<typeof gemPackageSchema>;
+
+export const gemShopListResponseSchema = z.object({
+  packages: z.array(gemPackageSchema),
+  /** True iff env has package + service account; lets the client warn when
+   *  the server is in unconfigured-mode (purchase will return PLAY_NOT_CONFIGURED). */
+  playBillingReady: z.boolean(),
+});
+export type GemShopListResponse = z.infer<typeof gemShopListResponseSchema>;
+
+export const verifyPlayPurchaseInputSchema = z.object({
+  productId: z.string().min(1).max(64),
+  purchaseToken: z.string().min(1).max(2048),
+});
+export type VerifyPlayPurchaseInput = z.infer<typeof verifyPlayPurchaseInputSchema>;
+
+export const verifyPlayPurchaseResponseSchema = z.object({
+  status: z.enum(['credited', 'already_credited', 'pending', 'rejected']),
+  gemsGranted: z.number().int().min(0),
+  /** New character.gems balance after credit. Echoed for client UI without
+   *  forcing an extra `me.get` round-trip. */
+  characterGems: z.number().int().min(0),
+  /** Server's reason string when status === 'rejected' (for telemetry, not UX). */
+  reason: z.string().nullable(),
+});
+export type VerifyPlayPurchaseResponse = z.infer<typeof verifyPlayPurchaseResponseSchema>;
 
 // ========== Arena ==========
 // Rival — może być real player (id = character uuid) lub NPC synth

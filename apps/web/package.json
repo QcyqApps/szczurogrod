@@ -25,6 +25,7 @@
     "@trpc/client": "^11.0.0-rc.648",
     "@trpc/react-query": "^11.0.0-rc.648",
     "@trpc/server": "^11.0.0-rc.648",
+    "cordova-plugin-purchase": "^13.15.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "superjson": "^2.2.1",

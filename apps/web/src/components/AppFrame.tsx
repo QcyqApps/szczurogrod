@@ -69,6 +69,54 @@ export function AppFrame({ children }: AppFrameProps) {
         {isWide && <DesktopSidePanelRight />}
       </div>
       <p className="dt-footer">{t('app.frame.footer')}</p>
+      <DesktopLegalFooter />
     </Fragment>
+  );
+}
+
+// Desktop-only legal links — required for Google Play / consumer-protection
+// disclosure when the SPA is reachable from the open web (ratburg.com /
+// szczurogrod.pl). Capacitor build (mobile native) skips the entire desktop
+// branch above, so this never renders inside the Android app.
+function DesktopLegalFooter() {
+  const t = useT();
+  return (
+    <nav
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 14,
+        marginTop: -4,
+        paddingBottom: 12,
+        fontFamily: "'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif",
+        fontSize: 13,
+      }}
+    >
+      <FooterLink href="/terms.html" label={t('legal.terms')} />
+      <FooterLink href="/privacy.html" label={t('legal.privacy')} />
+      <FooterLink href="/refunds.html" label={t('legal.refunds')} />
+      <FooterLink href="/pricing.html" label={t('legal.pricing')} />
+    </nav>
+  );
+}
+
+function FooterLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener"
+      style={{
+        color: '#e8c870',
+        textDecoration: 'none',
+        opacity: 0.85,
+        textShadow: '1px 1px 0 #1a0e08',
+        borderBottom: '1px dashed rgba(232, 200, 112, 0.4)',
+        paddingBottom: 1,
+      }}
+    >
+      {label}
+    </a>
   );
 }

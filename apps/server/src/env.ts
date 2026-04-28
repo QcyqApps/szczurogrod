@@ -15,6 +15,18 @@ const envSchema = z.object({
   ADMIN_TOKEN: z.string().optional(),
   /** Anthropic API key for town flavor generation. If unset, flavor falls back to hardcoded defaults. */
   ANTHROPIC_API_KEY: z.string().optional(),
+
+  // ===== Google Play Billing =====
+  // Package name from capacitor.config.ts (`com.ratburg`). When set together
+  // with one of the service-account envs below, gemShop.verifyPlay can
+  // validate purchase tokens against the Play Developer API.
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().optional(),
+  // Service-account JSON, full content as a stringified env. Friendlier
+  // for Docker/secrets manager than mounting a file.
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  // Alternative: filesystem path to the JSON. Pick one of the two — JSON env
+  // takes precedence when both are set.
+  GOOGLE_PLAY_SERVICE_ACCOUNT_FILE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

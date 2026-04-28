@@ -9,7 +9,8 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/api/auth-store';
 import { trpc } from '@/api/trpc';
-import { useT } from '@/i18n';
+import { useT, useLangStore } from '@/i18n';
+import { renderChronicleEntry } from '@/i18n/chronicle-templates';
 import { IcoCoin, IcoPaw, IcoSword, IcoMagic } from '@/components/icons';
 
 const RAIL_WIDTH = 280;
@@ -70,6 +71,7 @@ export function DesktopSidePanelLeft() {
 
 export function DesktopSidePanelRight() {
   const t = useT();
+  const lang = useLangStore((s) => s.lang);
   useLandingAuthSync();
   const q = trpc.landing.public.useQuery(undefined, {
     refetchInterval: 60_000,
@@ -140,7 +142,7 @@ export function DesktopSidePanelRight() {
             {chronicle.map((entry) => (
               <li key={entry.id} style={chronicleItemStyle}>
                 <span style={chronicleBulletStyle} aria-hidden="true" />
-                <span style={chronicleTextStyle}>{entry.text}</span>
+                <span style={chronicleTextStyle}>{renderChronicleEntry(entry, lang)}</span>
               </li>
             ))}
           </ul>

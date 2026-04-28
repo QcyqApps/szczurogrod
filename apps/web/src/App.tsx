@@ -50,8 +50,11 @@ import { monsterBySlug } from '@/components/monsters';
 import { useAuthStore } from '@/api/auth-store';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
+import { isNative } from '@/api/use-is-native';
 import { trpc } from '@/api/trpc';
+import { BillingError, finishPurchase, purchase as nativePurchase } from '@/native/billing';
 import { tStatic } from '@/i18n';
+import { findPackageById } from '@/native/billing-catalog';
 import type {
   Character,
   EquippedSlot,
@@ -509,22 +512,93 @@ export default function App() {
     },
   });
 
+  const verifyPlayMut = trpc.gemShop.verifyPlay.useMutation({
+    onSuccess: (data) => {
+      if (data.status === 'credited' || data.status === 'already_credited') {
+        pushToast({
+          text: tStatic('toast.devGrant.gems').replace('{n}', String(data.gemsGranted)),
+          accent: '#3a6aa8',
+        });
+      } else {
+        pushToast({
+          text: tStatic('toast.gemShop.verifyFailed').replace(
+            '{reason}',
+            data.reason ?? 'unknown',
+          ),
+          accent: '#c83232',
+        });
+      }
+      void utils.me.get.invalidate();
+    },
+    onError: (err) => {
+      pushToast({
+        text: tStatic('toast.gemShop.verifyFailed').replace('{reason}', err.message),
+        accent: '#c83232',
+      });
+    },
+  });
+
+  async function buyGemPackNative(packId: string) {
+    const pkg = findPackageById(packId);
+    if (!pkg) {
+      pushToast({ text: tStatic('toast.gemShop.unknownPack'), accent: '#c83232' });
+      return;
+    }
+    try {
+      const result = await nativePurchase(pkg.googlePlayProductId);
+      const verify = await verifyPlayMut.mutateAsync({
+        productId: result.productId,
+        purchaseToken: result.purchaseToken,
+      });
+      // Only finish on the device once the server has accepted/credited the
+      // purchase — keeps the receipt re-replayable if our server was down.
+      if (verify.status === 'credited' || verify.status === 'already_credited') {
+        await finishPurchase(result);
+      }
+    } catch (err) {
+      const code = err instanceof BillingError ? err.code : 'NATIVE_BILLING_ERROR';
+      console.error('[gemShop] native buy failed', err);
+      pushToast({
+        text: tStatic('toast.gemShop.nativeFailed').replace('{code}', code),
+        accent: '#c83232',
+      });
+    }
+  }
+
   function onGemPurchase(pack: Purchase) {
-    // DEV mode only — prawdziwy IAP przyjdzie w Phase Capacitor M4.
-    // W prod mode serwer zwróci FORBIDDEN, toast pokaże błąd.
+    // Real IAP on native: gem packs (p1..p5) AND the VIP pack (`vip30` id,
+    // `vip_30days` SKU). Bundles still go through dev-grant because they
+    // grant mixed rewards (items + gold + gems) that haven't been wired
+    // through server-validated receipts yet.
+    if (isNative() && !pack.bundle && pack.real) {
+      void buyGemPackNative(pack.id);
+      return;
+    }
+
+    // Web path is normally already gated by the screen-level modal in
+    // ScreenGemShop. This is just a defensive guard for any future call
+    // site that bypasses the screen.
+    if (!isNative() && pack.real) {
+      pushToast({
+        text: tStatic('toast.gemShop.webNotSupported'),
+        accent: '#c83232',
+      });
+      return;
+    }
+
+    // Dev / non-real path — keep the old mock so testing the UI still works.
     let gems = 0;
     let gold = 0;
     if (pack.bundle) {
       for (const r of pack.bundle.rewards) {
         if (r.kind === 'gems') gems += r.value;
         else if (r.kind === 'gold') gold += r.value;
-        // r.kind === 'item' — skipujemy, mock items bez template ID w DB
       }
     } else if (pack.gems) {
       gems = pack.gems;
     }
     if (gems === 0 && gold === 0) {
-      pushToast({ text: 'Ten zakup niczego nie przyznaje.', accent: '#c83232' });
+      pushToast({ text: tStatic('toast.gemShop.emptyPack'), accent: '#c83232' });
       return;
     }
     devGrantMut.mutate({ packId: pack.id, gems, gold });

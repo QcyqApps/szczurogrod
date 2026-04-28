@@ -1248,6 +1248,41 @@ export const townFlavors = pgTable(
   }),
 );
 
+// ========== Premium currency purchases ==========
+// Idempotent ledger of every gem purchase from any payment platform.
+// Mobile (Capacitor) → Google Play; web has no payment surface today.
+//
+// `(platform, transactionId)` is the idempotency key — UNIQUE constraint
+// prevents double-credit if the verify endpoint is called twice (network
+// retry, app reopens with pending purchase, etc.). The first INSERT wins;
+// the second hits the constraint and the server treats it as a benign
+// replay.
+export const gemPurchases = pgTable(
+  'gem_purchases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    platform: varchar('platform', { length: 16 }).notNull(),
+    productId: varchar('product_id', { length: 64 }).notNull(),
+    transactionId: varchar('transaction_id', { length: 1024 }).notNull(),
+    status: varchar('status', { length: 16 }).notNull().default('pending'),
+    gemsGranted: integer('gems_granted').notNull().default(0),
+    amountMicros: bigint('amount_micros', { mode: 'number' }),
+    currency: varchar('currency', { length: 8 }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    platformTxIdx: uniqueIndex('gem_purchases_platform_tx_unique').on(
+      t.platform,
+      t.transactionId,
+    ),
+    characterIdx: index('gem_purchases_character_idx').on(t.characterId, t.createdAt),
+  }),
+);
+
 // Helper to avoid unused-import warning for state string literal type while keeping the
 // enum<->TS union aligned. Phantom cast exported for tests.
 export type StoredQuestState = QuestState;

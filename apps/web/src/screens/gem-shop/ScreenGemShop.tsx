@@ -6,6 +6,8 @@ import { useT } from '@/i18n';
 import type { DictKey } from '@/i18n';
 import type { Character } from '@grodno/shared';
 import type { Rarity } from '@grodno/shared';
+import { useIsNative } from '@/api/use-is-native';
+import { NativeOnlyPurchaseModal } from '@/components/ui-common/NativeOnlyPurchaseModal';
 import { GiantGemCluster } from './GiantGemCluster';
 
 export type BundleReward =
@@ -103,10 +105,11 @@ const VIP = {
   nameKey: 'gemShop.vip.name' as DictKey,
   subKey: 'gemShop.vip.sub' as DictKey,
   priceKey: 'gemShop.vip.price' as DictKey,
+  // perk3 (Brak reklam) usunięte — gra nie wyświetla reklam, więc benefit
+  // wprowadzałby graczy w błąd. Pozostają trzy faktyczne korzyści.
   perkKeys: [
     'gemShop.vip.perk1',
     'gemShop.vip.perk2',
-    'gemShop.vip.perk3',
     'gemShop.vip.perk4',
   ] as readonly DictKey[],
 };
@@ -138,10 +141,19 @@ export interface ScreenGemShopProps {
 
 export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) {
   const t = useT();
+  const native = useIsNative();
   const [pulse, setPulse] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ pack: Purchase; displayName: string } | null>(null);
+  const [nativeOnlyBlock, setNativeOnlyBlock] = useState<string | null>(null);
 
   function buy(pack: Purchase, displayName: string) {
+    // Web użytkownik klika BUY na produkcie real-money — bramkujemy modalem
+    // przed pokazaniem confirm dialog. Capacitor build (`native === true`)
+    // przepuszcza wszystko do `confirm` jak dotąd.
+    if (!native && pack.real) {
+      setNativeOnlyBlock(displayName);
+      return;
+    }
     setConfirm({ pack, displayName });
   }
   function confirmBuy() {
@@ -219,6 +231,47 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           </div>
         </div>
       </div>
+
+      {!native && (
+        <div
+          className="panel"
+          style={{
+            padding: '10px 12px',
+            marginBottom: 14,
+            background: '#fff7e0',
+            border: '3px solid #2a1810',
+            borderRadius: 10,
+            display: 'flex',
+            gap: 10,
+            alignItems: 'center',
+          }}
+        >
+          <span
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              border: '2.5px solid #2a1810',
+              background: '#fff7e0',
+              flexShrink: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-hidden="true"
+          >
+            <img src="/google-play.png" alt="" width={22} height={22} />
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="h-title" style={{ fontSize: 13, color: '#2a1810' }}>
+              {t('gemShop.web.banner.title')}
+            </div>
+            <div className="flavor" style={{ fontSize: 14, color: '#5a3a2a', marginTop: 2 }}>
+              {t('gemShop.web.banner.body')}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         className="panel"
@@ -691,9 +744,13 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           onClick={() =>
             buy(
               {
-                id: 'vip',
+                // 'vip30' = id w client billing-catalog.ts → SKU 'vip_30days'
+                // w Play Console. Phase 1 implementacja: one-shot consumable
+                // z premium gem-grant (3000 gemów). Faktyczna subskrypcja
+                // (auto-renew + perks) — Phase 2.
+                id: 'vip30',
                 name: t(VIP.nameKey),
-                gems: 100,
+                gems: 3000,
                 price: t(VIP.priceKey),
                 real: true,
                 vip: true,
@@ -727,6 +784,13 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
       >
         {t('gemShop.back')}
       </button>
+
+      {nativeOnlyBlock && (
+        <NativeOnlyPurchaseModal
+          productLabel={nativeOnlyBlock}
+          onClose={() => setNativeOnlyBlock(null)}
+        />
+      )}
 
       {confirm && (
         <div

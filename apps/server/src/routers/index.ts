@@ -9,6 +9,7 @@ import { combatRouter } from './combat.js';
 import { dailyRouter } from './daily.js';
 import { devRouter } from './dev.js';
 import { diceRouter } from './dice.js';
+import { gemShopRouter } from './gemShop.js';
 import { guildRouter } from './guild.js';
 import { guildBuildingsRouter } from './guildBuildings.js';
 import { guildRaidsRouter } from './guildRaids.js';
@@ -43,6 +44,7 @@ export const appRouter = router({
   daily: dailyRouter,
   dev: devRouter,
   dice: diceRouter,
+  gemShop: gemShopRouter,
   guild: guildRouter,
   guildBuildings: guildBuildingsRouter,
   guildRaids: guildRaidsRouter,
