@@ -743,6 +743,19 @@ export const dict = {
     pl: 'Pracujesz — walka, lochy, arena i gildia są zablokowane do końca zmiany.',
     en: 'Working — combat, dungeons, arena and guild fights are locked until shift ends.',
   },
+  'work.banner.title': { pl: 'JESTEŚ W PRACY', en: 'YOU ARE AT WORK' },
+  'work.banner.body': {
+    pl: '{kind} — koniec za {remaining}. Stuknij żeby wrócić albo wyjść wcześniej.',
+    en: '{kind} — done in {remaining}. Tap to return or leave early.',
+  },
+  'work.banner.bodyReady': {
+    pl: '{kind} — gotowe. Stuknij żeby odebrać zapłatę.',
+    en: '{kind} — ready. Tap to collect wages.',
+  },
+  'work.toast.blocked': {
+    pl: 'Pracujesz. Najpierw skończ albo wyjdź ze zmiany.',
+    en: 'You are working. Finish or leave early first.',
+  },
   'town.chronicle.title': { pl: 'KRONIKI SZCZUROGRODU', en: 'RATBURG CHRONICLE' },
   'town.chronicle.empty': { pl: 'Kronikarz pisze. Wróć za chwilę.', en: 'The chronicler is writing. Come back in a moment.' },
   'town.chronicle.more': { pl: 'WIĘCEJ · {count} wpisów', en: 'MORE · {count} entries' },

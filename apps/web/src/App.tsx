@@ -456,21 +456,45 @@ export default function App() {
     setAppState('tutorial');
   }
 
-  const navTo = useCallback((screen: Tab | SubScreen) => {
-    if (
-      screen === 'town' ||
-      screen === 'char' ||
-      screen === 'quest' ||
-      screen === 'arena' ||
-      screen === 'dungeons' ||
-      screen === 'guild'
-    ) {
-      setSub(null);
-      setTab(screen);
-    } else {
-      setSub(screen);
-    }
-  }, []);
+  const isWorking = char?.work != null;
+  const navTo = useCallback(
+    (screen: Tab | SubScreen) => {
+      // Praca jest ekskluzywna z walką: każda próba wejścia w lochy / arenę /
+      // wieżę / gildię (przez kafel w mieście, TabBar lub deep-link) pokazuje
+      // toast i przerzuca do tablicy pracy. Server i tak zwróci FORBIDDEN —
+      // tutaj robimy UX'owy pre-empt żeby gracz nie klikał w pustkę.
+      if (
+        isWorking &&
+        (screen === 'arena' ||
+          screen === 'dungeons' ||
+          screen === 'guild' ||
+          screen === 'tower' ||
+          screen === 'dungeon' ||
+          screen === 'world')
+      ) {
+        useToastQueue.getState().push({
+          text: tStatic('work.toast.blocked'),
+          accent: '#7a4a2a',
+        });
+        setSub('work');
+        return;
+      }
+      if (
+        screen === 'town' ||
+        screen === 'char' ||
+        screen === 'quest' ||
+        screen === 'arena' ||
+        screen === 'dungeons' ||
+        screen === 'guild'
+      ) {
+        setSub(null);
+        setTab(screen);
+      } else {
+        setSub(screen);
+      }
+    },
+    [isWorking],
+  );
 
   async function startQuest(id: string) {
     try {
@@ -1119,10 +1143,7 @@ export default function App() {
         {!inCombat && !isFullscreenSub && (
           <TabBar
             tab={sub ? null : tab}
-            setTab={(t) => {
-              setSub(null);
-              setTab(t);
-            }}
+            setTab={(t) => navTo(t)}
           />
         )}
 

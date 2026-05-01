@@ -56,6 +56,7 @@ import { getActiveMount } from '../game/mounts.js';
 import { applyHpRegen, applyMpRegen } from '../game/regen.js';
 import { applyStaminaRegen } from '../game/stamina.js';
 import { computeHealerCost, HEALER_COOLDOWN_MS } from '../game/tavern.js';
+import { getKind as getWorkKind } from '../game/work.js';
 import {
   applyTrackRegen,
   rollTrackEnemy,
@@ -171,6 +172,22 @@ function activeMountFor(
   };
 }
 
+function workSnapshotFor(
+  row: typeof characters.$inferSelect,
+  now: Date,
+): Character['work'] {
+  if (!row.workStartedAt || !row.workEndsAt || !row.workKind) return null;
+  const kind = getWorkKind(row.workKind);
+  if (!kind) return null;
+  const endsAt = row.workEndsAt.getTime();
+  return {
+    kindSlug: kind.slug,
+    kindName: kind.name,
+    endsAt,
+    ready: now.getTime() >= endsAt,
+  };
+}
+
 function rowToCharacter(
   row: typeof characters.$inferSelect,
   regen: RegenSnapshot,
@@ -215,6 +232,7 @@ function rowToCharacter(
     offlineSummary,
     newTrackSlugs,
     guild,
+    work: workSnapshotFor(row, now),
     activeBuffs: activeBuffs.map((b) => ({
       kind: b.kind,
       magnitude: b.magnitude,

@@ -85,6 +85,20 @@ export interface Character {
    * są lazy-purge'owane w `me.get` — to co tu dostajesz, faktycznie działa.
    */
   activeBuffs: ActiveBuffInfo[];
+  /**
+   * Aktywna praca (idle quest). NULL gdy postać nie pracuje. Klient używa do:
+   * (a) blokowania nawigacji do trybów walki + redirectu do tablicy pracy,
+   * (b) pokazania pill'a w topbarze. Pełna nagroda + countdown żyją w
+   * `work.status` query — tu tylko minimum potrzebne do gating'u.
+   */
+  work: {
+    kindSlug: string;
+    kindName: string;
+    /** Unix millis kiedy zmiana się kończy. */
+    endsAt: number;
+    /** True gdy `Date.now() >= endsAt` — można odebrać. */
+    ready: boolean;
+  } | null;
 }
 
 export type BuffKind =

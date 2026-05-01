@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import { LocTile } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
@@ -92,6 +92,15 @@ export function ScreenTown({
   const hour = new Date().getHours();
   const isEvening = hour >= 17 || hour < 7; // 17:00 – 06:59 lokalnie
 
+  // 1Hz tick gdy aktywna praca trwa — countdown na bannerze bez network traffic.
+  const [, tickRerender] = useState(0);
+  const isWorking = char.work !== null;
+  useEffect(() => {
+    if (!isWorking || char.work?.ready) return;
+    const handle = setInterval(() => tickRerender((x) => x + 1), 1000);
+    return () => clearInterval(handle);
+  }, [isWorking, char.work?.ready]);
+
   const [survivorModalOpen, setSurvivorModalOpen] = useState(false);
   const openSurvivor = () => {
     const url =
@@ -104,6 +113,14 @@ export function ScreenTown({
 
   return (
     <div className="screen-in" style={{ padding: '12px 12px 10px' }}>
+      {char.work && (
+        <WorkBanner
+          kindName={char.work.kindName}
+          endsAt={char.work.endsAt}
+          ready={char.work.ready}
+          onClick={() => nav('work')}
+        />
+      )}
       {char.guild === null && invitesCount > 0 && (
         <button
           type="button"
@@ -606,6 +623,66 @@ export function ScreenTown({
         />
       )}
     </div>
+  );
+}
+
+/** Banner u góry town'u gdy postać pracuje. Click → tablica pracy. Pokazuje
+ *  countdown do końca zmiany; gdy ready, zachęca do odebrania zapłaty. */
+function WorkBanner({
+  kindName,
+  endsAt,
+  ready,
+  onClick,
+}: {
+  kindName: string;
+  endsAt: number;
+  ready: boolean;
+  onClick: () => void;
+}) {
+  const t = useT();
+  const remainingMs = Math.max(0, endsAt - Date.now());
+  const hh = Math.floor(remainingMs / 3_600_000);
+  const mm = Math.floor((remainingMs % 3_600_000) / 60_000);
+  const ss = Math.floor((remainingMs % 60_000) / 1000);
+  const remaining =
+    hh > 0
+      ? `${hh}h ${String(mm).padStart(2, '0')}m`
+      : `${mm}m ${String(ss).padStart(2, '0')}s`;
+  const body = (ready ? t('work.banner.bodyReady') : t('work.banner.body'))
+    .replace('{kind}', kindName)
+    .replace('{remaining}', remaining);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        width: '100%',
+        alignItems: 'center',
+        gap: 10,
+        padding: 10,
+        marginBottom: 10,
+        border: '2.5px solid #2a1810',
+        borderRadius: 10,
+        background: ready
+          ? 'linear-gradient(90deg, #82c060, #4a7c3a)'
+          : 'linear-gradient(90deg, #d4a24c, #a07030)',
+        boxShadow: '2px 2px 0 #2a1810',
+        cursor: 'pointer',
+        fontFamily: 'inherit',
+        textAlign: 'left',
+        color: '#2a1810',
+      }}
+    >
+      <GameIcon name="scroll" size={28} />
+      <div style={{ flex: 1 }}>
+        <div className="h-title" style={{ fontSize: 13 }}>
+          {t('work.banner.title')}
+        </div>
+        <div style={{ fontSize: 12 }}>{body}</div>
+      </div>
+      <GameIcon name="arrow-right" size={18} />
+    </button>
   );
 }
 
