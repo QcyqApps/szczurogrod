@@ -132,6 +132,17 @@ export function ScreenDungeon({
     state: CombatState;
     enemy: DungeonEnemy;
   } | null>(null);
+  /**
+   * Plan walk seryjnych — gdy `total > 1`, ScreenDungeon po każdym zwycięstwie
+   * ponownie engage'uje tego samego moba aż do `total` lub porażki / braku
+   * klucza / dailyMaxed / cooldownu. UX: stepper na ekranie + badge w CombatView.
+   */
+  const [serialPlan, setSerialPlan] = useState<{
+    enemy: DungeonEnemy;
+    completed: number;
+    total: number;
+  } | null>(null);
+  const [serialCount, setSerialCount] = useState(1);
 
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
@@ -290,17 +301,48 @@ export function ScreenDungeon({
     };
   });
 
-  async function startCombat(enemy: DungeonEnemy) {
+  // Bossy nie wchodzą w serie — pojedyncze starcie z dramatem. UI zezwala na
+  // serię tylko dla normal/elite mobów.
+  const SERIAL_MAX = 10;
+  function serialEligible(enemy: DungeonEnemy): boolean {
+    return enemy.tier !== 'boss';
+  }
+
+  async function startCombat(enemy: DungeonEnemy, serialTotal = 1) {
     try {
       const state = await engageMut.mutateAsync({ enemySlug: enemy.slug });
       setActiveCombat({ state, enemy });
+      if (serialTotal > 1 && serialEligible(enemy)) {
+        setSerialPlan({ enemy, completed: 0, total: serialTotal });
+      } else {
+        setSerialPlan(null);
+      }
     } catch (e) {
       console.error('combat.engage failed', e);
     }
   }
 
+  /**
+   * Wywołane przez CombatView gdy walka osiągnie terminalny status
+   * (przed onBack). Aktualizujemy plan serii — przy victory inkrementujemy
+   * `completed`; przy defeat plan się zatrzymuje (parent reset w leaveCombat).
+   */
+  function handleCombatResult(outcome: 'victory' | 'defeat') {
+    if (!serialPlan) return;
+    if (outcome === 'victory') {
+      setSerialPlan((prev) =>
+        prev ? { ...prev, completed: prev.completed + 1 } : null,
+      );
+    } else {
+      // Defeat — zatrzymujemy cały plan.
+      setSerialPlan(null);
+    }
+  }
+
   async function leaveCombat() {
     const combatId = activeCombat?.state.combatId;
+    const finishedEnemy = activeCombat?.enemy ?? null;
+    const finishedStatus = activeCombat?.state.status; // może być stale (initial)
     setActiveCombat(null);
     if (combatId) {
       try {
@@ -315,9 +357,51 @@ export function ScreenDungeon({
     // Track slot was consumed on engage — refresh so UI shows the gap.
     void utils.tracks.list.invalidate();
     onReward();
+    // Serial chain — sprawdź czy kolejna walka jest możliwa po świeżym me.get.
+    // Używamy `finishedStatus` jako hint; rzeczywiste preconditions sprawdza
+    // engageMut po stronie serwera (klucz, daily, HP, cooldown).
+    if (
+      serialPlan &&
+      finishedEnemy &&
+      serialPlan.completed + 1 < serialPlan.total &&
+      finishedStatus !== 'defeat'
+    ) {
+      // Drobny opóźniacz na inwalidację cache + UI flash.
+      setTimeout(() => {
+        void chainNext(finishedEnemy);
+      }, 300);
+    } else {
+      setSerialPlan(null);
+    }
+  }
+
+  async function chainNext(enemy: DungeonEnemy) {
+    try {
+      const state = await engageMut.mutateAsync({ enemySlug: enemy.slug });
+      setActiveCombat({ state, enemy });
+    } catch (e) {
+      console.warn('combat.engage chain failed', e);
+      // Engage failed (cooldown / no key / dailyMaxed) — przerywamy serię,
+      // toast info. Plan czyścimy.
+      pushToast({
+        text:
+          e instanceof TRPCClientError
+            ? e.message
+            : tStatic('dungeon.serial.toast.stopped'),
+        accent: '#c83232',
+      });
+      setSerialPlan(null);
+    }
   }
 
   if (activeCombat) {
+    const serial =
+      serialPlan && serialPlan.enemy.slug === activeCombat.enemy.slug
+        ? {
+            current: serialPlan.completed + 1,
+            total: serialPlan.total,
+          }
+        : null;
     return (
       <CombatView
         char={char}
@@ -325,6 +409,9 @@ export function ScreenDungeon({
         initialState={activeCombat.state}
         onBack={leaveCombat}
         onLevelUp={onLevelUp}
+        serialMode={Boolean(serial)}
+        serialInfo={serial ?? undefined}
+        onResult={handleCombatResult}
       />
     );
   }
@@ -457,6 +544,78 @@ export function ScreenDungeon({
           />
         </div>
       )}
+
+      {/* SERIAL COUNT — stepper do auto-chain walk z normalnymi/elite mobami.
+          Bossy zawsze 1×. Wartość 1 = brak serii (default). */}
+      <div
+        className="panel"
+        style={{
+          padding: 8,
+          marginBottom: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: '#fff7e0',
+        }}
+      >
+        <div className="h-title" style={{ fontSize: 13, color: '#2a1810', flex: 1 }}>
+          {t('dungeon.serial.label')}
+        </div>
+        <button
+          type="button"
+          aria-label="−"
+          onClick={() => setSerialCount((n) => Math.max(1, n - 1))}
+          disabled={serialCount <= 1}
+          style={{
+            width: 32,
+            height: 32,
+            border: '2.5px solid #2a1810',
+            borderRadius: 8,
+            background: serialCount <= 1 ? '#d4c491' : '#e8dcb9',
+            cursor: serialCount <= 1 ? 'not-allowed' : 'pointer',
+            fontFamily: 'Luckiest Guy, sans-serif',
+            fontSize: 18,
+            lineHeight: 1,
+            color: '#2a1810',
+            boxShadow: serialCount <= 1 ? 'none' : '1.5px 1.5px 0 #2a1810',
+          }}
+        >
+          −
+        </button>
+        <div
+          className="mono"
+          style={{
+            minWidth: 44,
+            textAlign: 'center',
+            fontFamily: 'Luckiest Guy, sans-serif',
+            fontSize: 18,
+            color: '#2a1810',
+          }}
+        >
+          ×{serialCount}
+        </div>
+        <button
+          type="button"
+          aria-label="+"
+          onClick={() => setSerialCount((n) => Math.min(SERIAL_MAX, n + 1))}
+          disabled={serialCount >= SERIAL_MAX}
+          style={{
+            width: 32,
+            height: 32,
+            border: '2.5px solid #2a1810',
+            borderRadius: 8,
+            background: serialCount >= SERIAL_MAX ? '#d4c491' : '#ffc830',
+            cursor: serialCount >= SERIAL_MAX ? 'not-allowed' : 'pointer',
+            fontFamily: 'Luckiest Guy, sans-serif',
+            fontSize: 18,
+            lineHeight: 1,
+            color: '#2a1810',
+            boxShadow: serialCount >= SERIAL_MAX ? 'none' : '1.5px 1.5px 0 #2a1810',
+          }}
+        >
+          +
+        </button>
+      </div>
 
       {/* TROPY — 3 sloty aktywnych tropów. Klik 'reroll' wydaje gemy. */}
       {(() => {
@@ -720,7 +879,7 @@ export function ScreenDungeon({
             <div
               key={e.slug}
               className={locked ? 'panel' : 'panel clickable'}
-              onClick={() => !locked && startCombat(e)}
+              onClick={() => !locked && startCombat(e, serialEligible(e) ? serialCount : 1)}
               style={{
                 padding: 8,
                 display: 'flex',

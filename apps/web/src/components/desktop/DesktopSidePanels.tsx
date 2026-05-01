@@ -65,6 +65,8 @@ export function DesktopSidePanelLeft() {
       </SectionPanel>
 
       <GooglePlayCard />
+      <DiscordCard />
+      <SurvivorCard />
     </aside>
   );
 }
@@ -373,6 +375,129 @@ function GooglePlayCard() {
   );
 }
 
+function DiscordCard() {
+  const t = useT();
+  return (
+    <a
+      href="https://discord.gg/uk3cCeNKxf"
+      target="_blank"
+      rel="noopener"
+      className="panel"
+      style={discordCardStyle}
+    >
+      <div style={ctaInnerStyle}>
+        <span style={ctaIconBoxStyle} aria-hidden="true">
+          <DiscordGlyph />
+        </span>
+        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: 1.2,
+              color: '#e6ebff',
+              textTransform: 'uppercase',
+              opacity: 0.85,
+            }}
+          >
+            {t('community.discord.kicker')}
+          </span>
+          <span
+            className="h-title"
+            style={{ fontSize: 18, color: '#ffffff', letterSpacing: 0.5 }}
+          >
+            {t('community.discord.cta')}
+          </span>
+        </span>
+      </div>
+      <div className="flavor" style={discordNoteStyle}>
+        {t('community.discord.note')}
+      </div>
+    </a>
+  );
+}
+
+function SurvivorCard() {
+  const t = useT();
+  const url =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname.startsWith('192.168.'))
+      ? `${window.location.protocol}//${window.location.hostname}:5174`
+      : 'https://survivor.ratburg.com';
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener"
+      className="panel"
+      style={survivorCardStyle}
+    >
+      <div style={ctaInnerStyle}>
+        <span style={ctaIconBoxStyle} aria-hidden="true">
+          <SurvivorGlyph />
+        </span>
+        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: 1.2,
+              color: '#fff3e0',
+              textTransform: 'uppercase',
+              opacity: 0.9,
+            }}
+          >
+            {t('survivor.crosslink.kicker')}
+          </span>
+          <span
+            className="h-title"
+            style={{ fontSize: 18, color: '#ffffff', letterSpacing: 0.5 }}
+          >
+            {t('survivor.crosslink.label')}
+          </span>
+        </span>
+      </div>
+      <div className="flavor" style={survivorNoteStyle}>
+        {t('survivor.crosslink.note')}
+      </div>
+    </a>
+  );
+}
+
+function SurvivorGlyph() {
+  return (
+    <svg viewBox="0 0 32 32" width={28} height={28} aria-hidden="true">
+      <path
+        d="M4 22 L10 14 L16 20 L22 12 L28 22"
+        stroke="#c83232"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <circle cx="6" cy="24" r="2.5" fill="#2a1810" />
+      <path
+        d="M22 12 L28 22 L26 24 L22 16 Z"
+        fill="#c83232"
+        opacity="0.3"
+      />
+    </svg>
+  );
+}
+
+function DiscordGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={28}
+      height={28}
+      fill="#5865f2"
+      aria-hidden="true"
+    >
+      <path d="M19.27 5.33A17.3 17.3 0 0 0 14.96 4l-.21.42a16.05 16.05 0 0 0-5.5 0L9.04 4a17.3 17.3 0 0 0-4.31 1.33C2.06 9.27 1.34 13.1 1.7 16.88c1.83 1.35 3.6 2.17 5.34 2.7l.42-.6a11.32 11.32 0 0 1-1.84-.88l.34-.27c3.51 1.62 7.32 1.62 10.79 0l.34.27c-.58.34-1.2.64-1.85.88l.43.6c1.74-.53 3.51-1.35 5.34-2.7.42-4.39-.71-8.18-2.74-11.55ZM8.52 14.65c-1.04 0-1.9-.95-1.9-2.12s.84-2.12 1.9-2.12c1.06 0 1.92.95 1.9 2.12 0 1.17-.84 2.12-1.9 2.12Zm6.96 0c-1.04 0-1.9-.95-1.9-2.12s.84-2.12 1.9-2.12c1.06 0 1.92.95 1.9 2.12 0 1.17-.84 2.12-1.9 2.12Z" />
+    </svg>
+  );
+}
+
 // ---------- Helpers ----------
 
 function ClassGlyph({ cls }: { cls: 'warrior' | 'mage' | 'rogue' }) {
@@ -543,6 +668,42 @@ const ctaIconBoxStyle: React.CSSProperties = {
 const ctaNoteStyle: React.CSSProperties = {
   fontSize: 14,
   color: '#3a2a1a',
+  textAlign: 'center',
+  marginTop: 2,
+};
+
+const discordCardStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  padding: '12px 14px',
+  background: 'linear-gradient(180deg, #5865f2 0%, #404eed 100%)',
+  textDecoration: 'none',
+  cursor: 'pointer',
+  position: 'relative',
+};
+
+const discordNoteStyle: React.CSSProperties = {
+  fontSize: 14,
+  color: '#e6ebff',
+  textAlign: 'center',
+  marginTop: 2,
+};
+
+const survivorCardStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  padding: '12px 14px',
+  background: 'linear-gradient(180deg, #5a3a2a 0%, #2a1810 100%)',
+  textDecoration: 'none',
+  cursor: 'pointer',
+  position: 'relative',
+};
+
+const survivorNoteStyle: React.CSSProperties = {
+  fontSize: 14,
+  color: '#fff3e0',
   textAlign: 'center',
   marginTop: 2,
 };

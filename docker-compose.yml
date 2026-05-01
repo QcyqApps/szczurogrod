@@ -92,6 +92,27 @@ services:
       retries: 3
       start_period: 10s
 
+  survivor:
+    # Drugi front bundle: Szczurogród: Okruchy. Side-view survival rougelike,
+    # osobny appId na Capacitorze, osobna domena (`survivor.ratburg.com`).
+    # Backend współdzielony z `server` (jeden Fastify obsługuje oba routery).
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/survivor/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://tidle.ovh/grodno}
+    container_name: grodno-survivor
+    restart: unless-stopped
+    networks:
+      - shared-proxy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 volumes:
   postgres_data:
     # `name:` wymusza dokładną nazwę volume'u, bez auto-prefixu compose project

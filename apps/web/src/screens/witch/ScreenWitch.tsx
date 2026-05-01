@@ -112,6 +112,7 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
           className="panel"
           style={{
             padding: 14,
+            marginBottom: 12,
             textAlign: 'center',
             color: '#2a4a2a',
             background: '#e8f0d8',
@@ -222,7 +223,7 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
         </>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4, marginBottom: 14 }}>
         <HelpIcon title={t('witch.help.title')} label={t('witch.help.label')}>
           <p style={{ margin: 0 }}>{t('witch.help.body')}</p>
         </HelpIcon>

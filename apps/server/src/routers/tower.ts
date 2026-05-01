@@ -42,6 +42,7 @@ import {
   loadScrapbookBuffs,
 } from '../game/scrapbook.js';
 import { getCompanion } from '../game/tavern.js';
+import { isWorking, WORKING_BLOCKS_COMBAT_MESSAGE } from '../game/work.js';
 import {
   TOWER_FAIL_COOLDOWN_MS,
   TOWER_RESURRECT_GEM_COST,
@@ -150,6 +151,9 @@ export const towerRouter = router({
    */
   engage: protectedProcedure.mutation(async ({ ctx }): Promise<TowerEngageResponse> => {
     const char = await requireChar(ctx.db, ctx.userId);
+    if (isWorking(char)) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
+    }
     const progress = await ensureProgress(ctx.db, char.id);
     const now = new Date();
 

@@ -6,6 +6,8 @@ Guidance dla Claude Code przy pracy nad tym repo.
 
 **Szczurogród** (EN: Ratburg) — Polish mobile-first idle RPG, server-authoritative. Web-first, planowany Capacitor na Google Play. Zbudowany z HTML handoff'u Claude Design; oryginalny prototyp trzymamy read-only w `design/`.
 
+Side game **Szczurogród: Okruchy** (`apps/survivor/`, port `:5174`) — landscape survivor-shooter spinoff współdzielący auth/users z głównym apps/web. Osobna waluta (`okruchy`), osobne tabele DB, osobny tRPC router (`survivor.*`). Szczegóły: [docs/survivor.md](docs/survivor.md).
+
 ## Commands (z repo root)
 
 | Command | What |
@@ -59,6 +61,7 @@ Przy pracy nad konkretnym subsystemem czytaj odpowiedni plik:
 - **[Achievements + Chronicles](docs/achievements-chronicles.md)** — hooki bump'ów, feed eventów, Claude-generated flavor.
 - **[Regen + Offline summary](docs/regen-offline.md)** — HP/MP/stamina/keys regen (read-time w me.get), „WITAJ Z POWROTEM" modal.
 - **[Game design model](docs/game-design.md)** — uncapped leveling, content bands, class system, DB-driven content + admin.reload workflow.
+- **[Survivor (Okruchy)](docs/survivor.md)** — side-game survivor-shooter w `apps/survivor/`. Osobna ekonomia (okruchy), 3 stage'e + bossy, Pixi v8 render, drzewko 11 skilli, balance pass do production-ready feel.
 
 ## Conventions
 

@@ -79,6 +79,7 @@ import {
   KEY_REGEN_MS,
 } from '../game/dungeon-keys.js';
 import { applyHpRegen, applyMpRegen } from '../game/regen.js';
+import { isWorking, WORKING_BLOCKS_COMBAT_MESSAGE } from '../game/work.js';
 import { registerScrapbookFind } from '../game/scrapbook.js';
 import { getCompanion } from '../game/tavern.js';
 import {
@@ -625,6 +626,9 @@ export const combatRouter = router({
         .limit(1);
       if (!char) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Character not found' });
+      }
+      if (isWorking(char)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
       }
       if (char.lvl < enemy.requiredLvl) {
         throw new TRPCError({

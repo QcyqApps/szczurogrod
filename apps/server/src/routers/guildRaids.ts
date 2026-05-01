@@ -54,6 +54,7 @@ import {
 } from '../game/scrapbook.js';
 import { getCompanion } from '../game/tavern.js';
 import { assertCan, getMembershipOrNull } from '../game/guild-permissions.js';
+import { isWorking, WORKING_BLOCKS_COMBAT_MESSAGE } from '../game/work.js';
 import { protectedProcedure, router } from '../trpc/trpc.js';
 
 async function requireChar(
@@ -220,6 +221,9 @@ export const guildRaidsRouter = router({
 
   hit: protectedProcedure.mutation(async ({ ctx }): Promise<GuildRaidHitResponse> => {
     const char = await requireChar(ctx.db, ctx.userId);
+    if (isWorking(char)) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
+    }
     const { guildId } = await assertCan(ctx.db, char.id, 'raidHit');
 
     // Daily limit check — reset gdy date'a się zmieniła.

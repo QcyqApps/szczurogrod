@@ -8,6 +8,8 @@
 apps/web/android
 apps/web/ios
 apps/web/dist
+apps/survivor/android
+apps/survivor/dist
 .git
 .idea
 .vscode

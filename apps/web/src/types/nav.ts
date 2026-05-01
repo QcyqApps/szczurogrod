@@ -22,4 +22,5 @@ export type SubScreen =
   | 'tower'
   | 'trainer'
   | 'witch'
+  | 'work'
   | 'world';

@@ -1,0 +1,225 @@
+/* Szczurogród: Okruchy — global styles. Parchment palette mirrors the
+   Szczurogród idle-RPG so both games feel like one universe. */
+
+:root {
+  --parchment-bg: #f3ead9;
+  --parchment-mid: #e8d8b0;
+  --ink-dark: #2a1810;
+  --ink-mid: #5a3a2a;
+  --ink-warm: #8a6a4a;
+  --gold: #d4a24c;
+  --gold-light: #ffd76a;
+  --okruchy: #c39060;
+  --danger: #c83232;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  background: var(--parchment-bg);
+  color: var(--ink-dark);
+  font-family: 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* Surface tekstury pergaminu: warm radial gradients (foxing stains), tiling
+ * SVG noise (ink dots + paper fibers) i subtle vignette. Stosuj jako
+ * className na wrapperach pełnoekranowych (body domyślnie + PhoneFrame
+ * outer/inner). Opacity wszystkich warstw <= 12% — ink-dark/ink-mid teksty
+ * zachowują WCAG AAA contrast vs base parchment-bg. NIE łącz z `background:`
+ * inline który zastąpi background-image — używaj tylko background-color
+ * inline gdy musisz nadpisać. */
+.parchment-surface {
+  background-color: var(--parchment-bg);
+  background-image:
+    radial-gradient(ellipse at 18% 20%, rgba(195, 144, 96, 0.12), transparent 55%),
+    radial-gradient(ellipse at 82% 75%, rgba(138, 106, 74, 0.10), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, transparent 58%, rgba(42, 24, 16, 0.14) 100%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'><g fill='%23c39060' opacity='0.06'><ellipse cx='40' cy='44' rx='28' ry='10'/><ellipse cx='216' cy='80' rx='34' ry='12'/><ellipse cx='126' cy='180' rx='30' ry='11'/><ellipse cx='276' cy='240' rx='24' ry='9'/><ellipse cx='80' cy='276' rx='26' ry='9'/></g><g fill='%238a6a4a' opacity='0.05'><ellipse cx='160' cy='40' rx='22' ry='7'/><ellipse cx='44' cy='160' rx='20' ry='7'/><ellipse cx='240' cy='280' rx='18' ry='6'/></g><g fill='%235a3a2a' opacity='0.16'><circle cx='14' cy='80' r='0.6'/><circle cx='62' cy='28' r='0.5'/><circle cx='110' cy='52' r='0.5'/><circle cx='150' cy='14' r='0.6'/><circle cx='198' cy='44' r='0.5'/><circle cx='246' cy='30' r='0.5'/><circle cx='292' cy='62' r='0.6'/><circle cx='8' cy='140' r='0.5'/><circle cx='86' cy='112' r='0.6'/><circle cx='140' cy='150' r='0.5'/><circle cx='200' cy='118' r='0.5'/><circle cx='270' cy='150' r='0.6'/><circle cx='34' cy='220' r='0.5'/><circle cx='100' cy='240' r='0.6'/><circle cx='168' cy='210' r='0.5'/><circle cx='234' cy='196' r='0.5'/><circle cx='304' cy='216' r='0.6'/><circle cx='52' cy='300' r='0.5'/><circle cx='118' cy='306' r='0.6'/><circle cx='190' cy='292' r='0.5'/><circle cx='264' cy='312' r='0.5'/></g><g stroke='%238a6a4a' stroke-width='0.4' opacity='0.09' fill='none'><path d='M10 60 Q40 58 70 62'/><path d='M180 30 Q210 28 240 32'/><path d='M40 130 Q70 128 100 132'/><path d='M150 100 Q180 98 210 102'/><path d='M40 220 Q70 218 100 222'/><path d='M180 200 Q210 198 240 202'/><path d='M120 270 Q150 268 180 272'/><path d='M250 250 Q280 248 310 252'/></g></svg>");
+}
+
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.h-display {
+  font-family: 'Luckiest Guy', sans-serif;
+  letter-spacing: 1px;
+}
+
+.flavor {
+  font-family: 'Caveat', cursive;
+  font-weight: 600;
+}
+
+.cbtn {
+  background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 100%);
+  border: 3px solid var(--ink-dark);
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 var(--ink-dark);
+  padding: 10px 18px;
+  font-family: 'Luckiest Guy', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: var(--ink-dark);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.cbtn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink-dark);
+}
+
+.cbtn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.panel {
+  background: var(--parchment-mid);
+  border: 3px solid var(--ink-dark);
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 var(--ink-dark);
+}
+
+@keyframes boss-warning-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.boss-warning-pulse {
+  animation: boss-warning-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 1px); }
+  40% { transform: translate(2px, -2px); }
+  60% { transform: translate(-2px, 2px); }
+  80% { transform: translate(3px, -1px); }
+}
+
+.screen-shake {
+  animation: screen-shake 0.4s ease-out;
+}
+
+/* Damage shake — krótszy i mocniejszy jolt na contact-hit. Class-swap
+ * approach: React toggle'uje między `.damage-shake-a` i `.damage-shake-b`
+ * za każdym hit'em żeby przeglądarka zrestartowała animację OD ZERA bez
+ * remountu dziecka (PixiStage zostaje stabilny — remount kosztowałby reinit
+ * canvas'a).
+ *
+ * Gotcha: same `animation-name` w obu klasach NIE triggeruje restartu po
+ * class swap'ie — browser widzi identyczną longhand `animation-name` i
+ * ignoruje zmianę. Trzeba DWÓCH distinct keyframe names (`-1` i `-2`).
+ * Treść keyframes może być identyczna, ważne że nazwy się różnią. */
+@keyframes damage-shake-1 {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-5px, 2px); }
+  30% { transform: translate(4px, -3px); }
+  50% { transform: translate(-4px, 3px); }
+  70% { transform: translate(3px, -2px); }
+  85% { transform: translate(-2px, 1px); }
+}
+@keyframes damage-shake-2 {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-5px, 2px); }
+  30% { transform: translate(4px, -3px); }
+  50% { transform: translate(-4px, 3px); }
+  70% { transform: translate(3px, -2px); }
+  85% { transform: translate(-2px, 1px); }
+}
+.damage-shake-a { animation: damage-shake-1 0.22s ease-out; }
+.damage-shake-b { animation: damage-shake-2 0.22s ease-out; }
+
+/* Red flash overlay — szybki czerwony wash przykrywa game area gdy mob dotknie
+ * gracza. Pełny ekran (inset 0), pointer-events none żeby nie blokował crosshair'a.
+ * Vignette gradient (silniejszy na brzegach, jaśniejszy w środku) — gracz widzi
+ * "krew na ekranie" zamiast plaskiej czerwonej zasłony. */
+@keyframes damage-flash {
+  0% { opacity: 0; }
+  18% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+.damage-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at center,
+      rgba(200, 50, 50, 0.18) 0%,
+      rgba(180, 30, 30, 0.55) 70%,
+      rgba(140, 20, 20, 0.85) 100%);
+  animation: damage-flash 0.32s ease-out forwards;
+  z-index: 5;
+}
+
+/* Run-end banner — overshoot scale-in z opacity fade. Daje moment "padło" /
+ * "koniec" przed transition do End screen, żeby gracz savorował. Cubic-bezier
+ * z bounce'em (1.56 overshoot) czyta się jako triumph/punch zamiast linear
+ * wyświetlenia. */
+@keyframes run-end-banner-enter {
+  0% { transform: scale(0.65); opacity: 0; }
+  55% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.run-end-banner-enter {
+  animation: run-end-banner-enter 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Run-end backdrop — soft fade-in zaciemnienia tła walki. */
+@keyframes run-end-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.run-end-backdrop-enter {
+  animation: run-end-backdrop-enter 0.4s ease-out forwards;
+}
+
+/* "Dotknij aby kontynuować" hint — slide-up od dołu z fade-in (entrance),
+ * potem subtle pulse podtrzymujący uwagę. Composed: enter najpierw (forwards
+ * trzyma końcowy stan), potem pulse leci infinite na opacity. Brak layout
+ * shift bo element jest position:absolute. */
+@keyframes tap-hint-enter {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes tap-hint-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.tap-hint-enter {
+  animation: tap-hint-enter 0.45s ease-out forwards,
+             tap-hint-pulse 1.6s ease-in-out 0.45s infinite;
+}
+
+/* End-screen entrance — gentle fade + slide-up. */
+@keyframes end-screen-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.end-screen-enter {
+  animation: end-screen-enter 0.4s ease-out forwards;
+}
+
+/* ===== Scrollbars (match Szczurogród idle app) ===== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-mid) transparent;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: var(--ink-mid); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import { LocTile } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
@@ -29,6 +30,14 @@ export interface ScreenTownProps {
   /** Liczba odblokowanych tierów w Season Pass gotowych do odebrania.
    *  Gdy > 0, pokazujemy banner na górze town'u. */
   seasonPassClaimableCount: number;
+  /** Liczba pending XP packages z Okruchów (cross-game integration).
+   *  Gdy > 0, banner z ODBIERZ — claim aplikuje XP do character'a. */
+  survivorIdleXpPendingCount: number;
+  /** Sumaryczne XP wszystkich pending packages. Banner pokazuje "+X XP". */
+  survivorIdleXpPendingTotal: number;
+  onClaimSurvivorXp: () => void;
+  /** Mutation pending — disabluje banner żeby gracz nie spamował kliknięć. */
+  survivorClaimPending: boolean;
 }
 
 export function ScreenTown({
@@ -37,6 +46,10 @@ export function ScreenTown({
   dailyAvailable,
   questsDone,
   seasonPassClaimableCount,
+  survivorIdleXpPendingCount,
+  survivorIdleXpPendingTotal,
+  onClaimSurvivorXp,
+  survivorClaimPending,
 }: ScreenTownProps) {
   const t = useT();
   // Fresh flavor quip per mount — each entry into town re-queries.
@@ -78,6 +91,16 @@ export function ScreenTown({
   // na minutę nie jest tu potrzebna.
   const hour = new Date().getHours();
   const isEvening = hour >= 17 || hour < 7; // 17:00 – 06:59 lokalnie
+
+  const [survivorModalOpen, setSurvivorModalOpen] = useState(false);
+  const openSurvivor = () => {
+    const url =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname.startsWith('192.168.')
+        ? `${window.location.protocol}//${window.location.hostname}:5174`
+        : 'https://survivor.ratburg.com';
+    window.open(url, '_blank', 'noopener');
+  };
 
   return (
     <div className="screen-in" style={{ padding: '12px 12px 10px' }}>
@@ -155,6 +178,55 @@ export function ScreenTown({
                 ? t('town.banner.seasonPass.tier')
                 : t('town.banner.seasonPass.tiers')}
               .
+            </div>
+          </div>
+          <GameIcon name="arrow-right" size={18} />
+        </button>
+      )}
+      {/* Survivor (Okruchy) XP claim — pending packages z mini-gry. Banner
+          tylko gdy gracz ma >0 pending. Single-click claim aplikuje XP do
+          character'a (przez survivor.claimIdleXp), invalidate'uje me.get +
+          status. LevelUp triggeruje LevelUpModal w App.tsx automatycznie. */}
+      {survivorIdleXpPendingCount > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            if (!survivorClaimPending) onClaimSurvivorXp();
+          }}
+          disabled={survivorClaimPending}
+          style={{
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            gap: 10,
+            padding: 10,
+            marginBottom: 10,
+            border: '2.5px solid #2a1810',
+            borderRadius: 10,
+            background:
+              'linear-gradient(90deg, #c39060 0%, #8a6a4a 50%, #5a3a2a 100%)',
+            boxShadow: '2px 2px 0 #2a1810',
+            cursor: survivorClaimPending ? 'wait' : 'pointer',
+            opacity: survivorClaimPending ? 0.6 : 1,
+            fontFamily: 'inherit',
+            textAlign: 'left',
+            color: '#fff3e0',
+          }}
+        >
+          <GameIcon name="bolt" size={28} />
+          <div style={{ flex: 1 }}>
+            <div className="h-title" style={{ fontSize: 13, color: '#fff3e0' }}>
+              {survivorClaimPending
+                ? t('town.banner.survivor.claiming')
+                : t('town.banner.survivor.title')}
+            </div>
+            <div style={{ fontSize: 12, color: '#f0d8b8' }}>
+              <b className="mono">{survivorIdleXpPendingCount}</b>{' '}
+              {survivorIdleXpPendingCount === 1
+                ? t('town.banner.survivor.package')
+                : t('town.banner.survivor.packages')}
+              {' · '}
+              <b className="mono">+{survivorIdleXpPendingTotal} XP</b>
             </div>
           </div>
           <GameIcon name="arrow-right" size={18} />
@@ -368,7 +440,7 @@ export function ScreenTown({
           bg="#e8c870"
           badge={questsDone > 0 ? questsDone : undefined}
           onClick={() => nav('quest')}
-          icon={<GameIcon name="scroll" size={54} />}
+          icon={<GameIcon name="scroll" size={40} />}
         />
         <LocTile
           label={t('town.tile.dungeons')}
@@ -378,15 +450,15 @@ export function ScreenTown({
               : t('town.tile.dungeons.none')
           }
           bg="#c8a090"
-          onClick={() => nav('world')}
-          icon={<GameIcon name="sword" size={54} />}
+          onClick={() => nav('dungeons')}
+          icon={<GameIcon name="sword" size={40} />}
         />
         <LocTile
           label={t('town.tile.arena')}
           sub={t('town.tile.arena.sub')}
           bg="#c89090"
           onClick={() => nav('arena')}
-          icon={<GameIcon name="crossed" size={54} />}
+          icon={<GameIcon name="crossed" size={40} />}
         />
         <LocTile
           label={t('town.tile.shop')}
@@ -397,14 +469,14 @@ export function ScreenTown({
           }
           bg="#b0d8a0"
           onClick={() => nav('shop')}
-          icon={<GameIcon name="shop" size={54} />}
+          icon={<GameIcon name="shop" size={40} />}
         />
         <LocTile
           label={t('town.tile.tavern')}
           sub={t('town.tile.tavern.sub')}
           bg="#d8b880"
           onClick={() => nav('tavern')}
-          icon={<GameIcon name="tavern" size={54} />}
+          icon={<GameIcon name="tavern" size={40} />}
         />
         <LocTile
           label={t('town.tile.stables')}
@@ -418,28 +490,42 @@ export function ScreenTown({
           }
           bg="#b8906a"
           onClick={() => nav('stables')}
-          icon={<GameIcon name="horse" size={54} />}
+          icon={<GameIcon name="horse" size={40} />}
         />
         <LocTile
           label={t('town.tile.blacksmith')}
           sub={t('town.tile.blacksmith.sub')}
           bg="#9a6a4a"
           onClick={() => nav('blacksmith')}
-          icon={<GameIcon name="sword" size={54} />}
+          icon={<GameIcon name="sword" size={40} />}
         />
         <LocTile
           label={t('town.tile.tower')}
           sub={t('town.tile.tower.sub')}
           bg="#6a4a8a"
           onClick={() => nav('tower')}
-          icon={<GameIcon name="castle" size={54} />}
+          icon={<GameIcon name="castle" size={40} />}
         />
         <LocTile
           label={t('town.tile.fame')}
           sub={t('town.tile.fame.sub')}
           bg="#d8a850"
           onClick={() => nav('leaderboards')}
-          icon={<GameIcon name="crown" size={54} />}
+          icon={<GameIcon name="crown" size={40} />}
+        />
+        <LocTile
+          label={t('town.tile.work')}
+          sub={t('town.tile.work.sub')}
+          bg="#a0907a"
+          onClick={() => nav('work')}
+          icon={<GameIcon name="scroll" size={40} />}
+        />
+        <LocTile
+          label={t('town.tile.survivor')}
+          sub={t('town.tile.survivor.sub')}
+          bg="linear-gradient(135deg, #c39060 0%, #8a6a4a 100%)"
+          onClick={() => setSurvivorModalOpen(true)}
+          icon={<GameIcon name="bolt" size={40} />}
         />
       </div>
 
@@ -508,6 +594,109 @@ export function ScreenTown({
             {t('town.chronicle.more').replace('{count}', String(chronicleEntries.length))}
           </button>
         )}
+      </div>
+
+      {survivorModalOpen && (
+        <SurvivorConfirmModal
+          onCancel={() => setSurvivorModalOpen(false)}
+          onConfirm={() => {
+            setSurvivorModalOpen(false);
+            openSurvivor();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Confirm popup wyjaśniający że Okruchy to inny tryb gry. Pokazuje się raz
+ * przed otwarciem nowej karty żeby gracz nie pomyślał że klika sub-screen
+ * w idle, tylko żeby wiedział że to side-game survivor-shooter z osobną
+ * ekonomią okruchów + cross-game XP do zbierania w mieście (tu, banner
+ * "PACZKA Z OKRUCHÓW"). */
+function SurvivorConfirmModal({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const t = useT();
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+      }}
+    >
+      <div
+        className="panel pop-in"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: '#f3ead9',
+          padding: 18,
+          maxWidth: 360,
+          width: '100%',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #c39060 0%, #8a6a4a 100%)',
+              border: '3px solid #2a1810',
+              boxShadow: '2px 2px 0 #2a1810',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <GameIcon name="bolt" size={32} />
+          </div>
+        </div>
+        <div className="h-display" style={{ fontSize: 18, marginBottom: 10, letterSpacing: 0.5 }}>
+          {t('town.modal.survivor.title')}
+        </div>
+        <div style={{ fontSize: 14, color: '#3a2a1a', lineHeight: 1.4, textAlign: 'left' }}>
+          <p style={{ margin: '0 0 8px' }}>{t('town.modal.survivor.intro')}</p>
+          <p style={{ margin: '0 0 8px' }}>{t('town.modal.survivor.economy')}</p>
+          <p style={{ margin: '0 0 8px' }}>
+            <b>{t('town.modal.survivor.xp')}</b>
+          </p>
+          <p style={{ margin: 0, fontSize: 12, color: '#5a3a2a', fontStyle: 'italic' }}>
+            {t('town.modal.survivor.note')}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <button
+            type="button"
+            className="cbtn ghost"
+            style={{ flex: 1 }}
+            onClick={onCancel}
+          >
+            {t('town.modal.survivor.cancel')}
+          </button>
+          <button
+            type="button"
+            className="cbtn"
+            style={{ flex: 1.4 }}
+            onClick={onConfirm}
+          >
+            {t('town.modal.survivor.confirm')}
+          </button>
+        </div>
       </div>
     </div>
   );

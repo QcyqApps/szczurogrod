@@ -311,6 +311,62 @@ export const dailyClaimResultSchema = z.object({
 export type DailyStatus = z.infer<typeof dailyStatusSchema>;
 export type DailyClaimResult = z.infer<typeof dailyClaimResultSchema>;
 
+// ========== Praca (długie idle questy, 1..8h) ==========
+export const WORK_DURATIONS = [1, 2, 4, 8] as const;
+export type WorkDurationHours = (typeof WORK_DURATIONS)[number];
+
+export const workKindSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  flavor: z.string(),
+});
+export type WorkKind = z.infer<typeof workKindSchema>;
+
+export const workOptionSchema = z.object({
+  kindSlug: z.string(),
+  hours: z.number().int().min(1).max(8),
+  goldReward: z.number().int().min(0),
+  xpReward: z.number().int().min(0),
+});
+export type WorkOption = z.infer<typeof workOptionSchema>;
+
+export const workActiveSchema = z.object({
+  kind: workKindSchema,
+  durationHours: z.number().int().min(1).max(8),
+  startedAt: z.number().int(),
+  endsAt: z.number().int(),
+  /** Czy zakończona — gracz może odebrać. */
+  ready: z.boolean(),
+  /** Preview pełnej nagrody (gold/xp obliczone serwerowo). */
+  reward: z.object({ gold: z.number().int(), xp: z.number().int() }),
+  /** Preview częściowej nagrody przy wyjściu teraz (pro-rata po elapsed). */
+  partial: z.object({ gold: z.number().int(), xp: z.number().int() }),
+});
+export type WorkActive = z.infer<typeof workActiveSchema>;
+
+export const workStatusResponseSchema = z.object({
+  active: workActiveSchema.nullable(),
+  /** Lista dostępnych zleceń + opcji długości. */
+  kinds: z.array(workKindSchema),
+  options: z.array(workOptionSchema),
+});
+export type WorkStatusResponse = z.infer<typeof workStatusResponseSchema>;
+
+export const workStartInputSchema = z.object({
+  kindSlug: z.string(),
+  durationHours: z.number().int().min(1).max(8),
+});
+export type WorkStartInput = z.infer<typeof workStartInputSchema>;
+
+export const workClaimResponseSchema = z.object({
+  gold: z.number().int(),
+  xp: z.number().int(),
+  /** True jeśli odebrana wcześniej (pro-rata) — UI używa do innego komunikatu. */
+  partial: z.boolean(),
+  levelUp: levelUpInfoSchema.nullable(),
+});
+export type WorkClaimResponse = z.infer<typeof workClaimResponseSchema>;
+
 // ========== Trener ==========
 export const statKeySchema = z.enum(['atk', 'def', 'mag', 'spd']);
 

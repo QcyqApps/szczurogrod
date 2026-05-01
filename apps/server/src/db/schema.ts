@@ -195,6 +195,15 @@ export const characters = pgTable(
      * wszystkie 6 naraz za grosz. NULL = nigdy nie użyte.
      */
     lastBlessingAt: timestamp('last_blessing_at', { withTimezone: true }),
+    /**
+     * "Praca" — długoterminowe idle questy. Gracz wybiera czas (1..8h),
+     * postać "idzie do pracy", po upływie odbiera nagrodę (gold + xp).
+     * `workStartedAt` + `workEndsAt` oba NULL = brak aktywnej pracy.
+     * `workKind` = slug template'a (np. 'tragarz', 'piekarz') dla flavor.
+     */
+    workStartedAt: timestamp('work_started_at', { withTimezone: true }),
+    workEndsAt: timestamp('work_ends_at', { withTimezone: true }),
+    workKind: varchar('work_kind', { length: 32 }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1280,6 +1289,106 @@ export const gemPurchases = pgTable(
       t.transactionId,
     ),
     characterIdx: index('gem_purchases_character_idx').on(t.characterId, t.createdAt),
+  }),
+);
+
+// ========== Survivor (Szczurogród: Okruchy) ==========
+// Spinoff survival rougelike. Shares `users` (single account spans both
+// games) but has independent progression: own currency (`okruchy`), own
+// stage unlocks, own skill tree. No FK to `characters` — survivor app does
+// not require a Szczurogród character to play.
+
+export const survivorRunStatusEnum = pgEnum('survivor_run_status', [
+  'active',
+  'won',
+  'lost',
+  'rejected',
+]);
+
+/** Per-attempt audit row. Inserted by `survivor.startRun` (status `active`),
+ * updated to `won/lost/rejected` by `finishRun`. `seed` lets us replay a run
+ * deterministically if anti-cheat ever needs it. */
+export const survivorRuns = pgTable(
+  'survivor_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    stageId: integer('stage_id').notNull(),
+    seed: bigint('seed', { mode: 'number' }).notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    durationMs: integer('duration_ms'),
+    kills: integer('kills'),
+    bossKilled: boolean('boss_killed').notNull().default(false),
+    okruchyEarned: integer('okruchy_earned').notNull().default(0),
+    status: survivorRunStatusEnum('status').notNull().default('active'),
+  },
+  (t) => ({
+    userIdx: index('survivor_runs_user_idx').on(t.userId, t.startedAt),
+  }),
+);
+
+/** Per-user meta progression. One row per user (PK = userId). Lazily inserted
+ * on first `getHub` if missing — never deleted (cascades from users). */
+export const survivorMeta = pgTable('survivor_meta', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  okruchy: integer('okruchy').notNull().default(0),
+  maxStageUnlocked: integer('max_stage_unlocked').notNull().default(1),
+  totalRuns: integer('total_runs').notNull().default(0),
+  totalKills: integer('total_kills').notNull().default(0),
+  /** map of stageId -> bestDurationMs (boss-killed runs only). */
+  bestDurationMsByStage: jsonb('best_duration_ms_by_stage').notNull().default({}),
+  /** Cross-game XP progression bar fill — okruchy z runów dolewają tu, po
+   * przekroczeniu IDLE_XP_BAR_THRESHOLD generowany jest pending grant
+   * w `survivor_idle_xp_grants`. Reset do 0 (z carryover'em remaindera)
+   * przy każdym wygenerowanym grant'cie. Bar rośnie tylko gdy user ma
+   * character'a w idle (w przeciwnym razie progress nie ma gdzie iść). */
+  idleXpProgress: integer('idle_xp_progress').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Pending XP grants generated z runów Okruchów. Czekają na claim po stronie
+ * idle game'a — `survivor.claimIdleXp` znajduje wszystkie pending dla usera,
+ * sumuje xpAmount, aplikuje przez applyXpGain do characters w jednej
+ * transakcji, i markuje claimed_at = now(). xp_amount jest snapshot'em
+ * obliczonym w momencie generowania (`survivorXpPackageAmount(idleLvl)`),
+ * więc reward nie zmienia się jeśli gracz urośnie zanim claimnie. */
+export const survivorIdleXpGrants = pgTable(
+  'survivor_idle_xp_grants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    xpAmount: integer('xp_amount').notNull(),
+    generatedAt: timestamp('generated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+  },
+  (t) => ({
+    pendingIdx: index('survivor_idle_xp_grants_pending_idx').on(t.userId, t.generatedAt),
+  }),
+);
+
+/** Skill tree progression — composite PK (userId, nodeId). Server validates
+ * `level <= maxLevel(nodeId)` and consumes okruchy on `unlockSkill`. */
+export const survivorSkillProgression = pgTable(
+  'survivor_skill_progression',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    nodeId: varchar('node_id', { length: 64 }).notNull(),
+    level: integer('level').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.nodeId] }),
   }),
 );
 

@@ -255,6 +255,58 @@ export const dict = {
     en: 'Pricing',
   },
 
+  // ===== Community =====
+  'community.discord': {
+    pl: 'Discord',
+    en: 'Discord',
+  },
+  'community.discord.subtitle': {
+    pl: 'Społeczność Szczurogrodu',
+    en: 'Ratburg community',
+  },
+  'community.discord.cta': {
+    pl: 'DOŁĄCZ NA DISCORD',
+    en: 'JOIN DISCORD',
+  },
+  'community.discord.kicker': {
+    pl: 'SPOŁECZNOŚĆ',
+    en: 'COMMUNITY',
+  },
+  'community.discord.note': {
+    pl: 'Pogadaj z graczami. Zgłoś bug. Donieś plotkę.',
+    en: 'Chat with players. Report a bug. Bring rumors.',
+  },
+
+  // ===== Sister game cross-link =====
+  'survivor.crosslink.label': {
+    pl: 'Szczurogród: Okruchy',
+    en: 'Ratburg: Crumbs',
+  },
+  'survivor.crosslink.kicker': {
+    pl: 'NOWA GRA',
+    en: 'NEW GAME',
+  },
+  'survivor.crosslink.note': {
+    pl: 'Strzelaj okruchami. Stań na bramie.',
+    en: 'Shoot crumbs. Hold the gate.',
+  },
+  'settings.section.othergames': {
+    pl: 'INNE GRY',
+    en: 'OTHER GAMES',
+  },
+  'settings.btn.survivor': {
+    pl: 'Szczurogród: Okruchy — wersja survival',
+    en: 'Ratburg: Crumbs — survival version',
+  },
+  'settings.section.community': {
+    pl: 'SPOŁECZNOŚĆ',
+    en: 'COMMUNITY',
+  },
+  'settings.btn.discord': {
+    pl: 'Discord — pogadaj z graczami',
+    en: 'Discord — chat with players',
+  },
+
   // ===== Create character =====
   'create.title': {
     pl: 'NOWA POSTAĆ',
@@ -387,6 +439,10 @@ export const dict = {
   'tabs.arena': {
     pl: 'Arena',
     en: 'Arena',
+  },
+  'tabs.dungeons': {
+    pl: 'Lochy',
+    en: 'Dungeons',
   },
   'tabs.guild': {
     pl: 'Gildia',
@@ -590,6 +646,10 @@ export const dict = {
   'town.banner.seasonPass.tiers': { pl: 'tierów do odebrania', en: 'tiers to claim' },
   'town.banner.daily.title': { pl: 'NAGRODA DZIENNA', en: 'DAILY REWARD' },
   'town.banner.daily.body': { pl: 'Czeka na odebranie — szkoda zostawiać.', en: 'Waiting for you — would be a shame to leave it.' },
+  'town.banner.survivor.title': { pl: 'PACZKA Z OKRUCHÓW', en: 'CRUMBS PACKAGE' },
+  'town.banner.survivor.claiming': { pl: 'Odbieranie…', en: 'Claiming…' },
+  'town.banner.survivor.package': { pl: 'paczka', en: 'package' },
+  'town.banner.survivor.packages': { pl: 'paczek', en: 'packages' },
   'town.tile.quests': { pl: 'QUESTY', en: 'QUESTS' },
   'town.tile.quests.sub': { pl: '{done}/{total} gotowe', en: '{done}/{total} done' },
   'town.tile.quests.loading': { pl: 'Ładowanie…', en: 'Loading…' },
@@ -612,6 +672,77 @@ export const dict = {
   'town.tile.tower.sub': { pl: 'Nieskończona', en: 'Endless' },
   'town.tile.fame': { pl: 'SŁAWA', en: 'FAME' },
   'town.tile.fame.sub': { pl: 'Top 10', en: 'Top 10' },
+  'town.tile.work': { pl: 'PRACA', en: 'WORK' },
+  'town.tile.work.sub': { pl: 'Idź na zmianę', en: 'Take a shift' },
+  'town.tile.survivor': { pl: 'OKRUCHY', en: 'CRUMBS' },
+  'town.tile.survivor.sub': { pl: 'Inny tryb · XP', en: 'Side mode · XP' },
+  'town.modal.survivor.title': {
+    pl: 'SZCZUROGRÓD: OKRUCHY',
+    en: 'RATBURG: CRUMBS',
+  },
+  'town.modal.survivor.intro': {
+    pl: 'Zupełnie inny tryb gry. Survivor-shooter w landscape — strzelasz w fale szczurów, omijasz kontakt, walisz bossa.',
+    en: 'A completely different game mode. A landscape survivor-shooter — shoot waves of rats, dodge contact, kill the boss.',
+  },
+  'town.modal.survivor.economy': {
+    pl: 'Każdy run kończy się okruchami — wydajesz je tam na drzewku skilli (osobne od Szczurogrodu).',
+    en: 'Every run ends with crumbs — spend them in the side game’s skill tree (separate from Ratburg).',
+  },
+  'town.modal.survivor.xp': {
+    pl: 'Dodatkowo każdy run zapełnia pasek XP. Pełny pasek = paczka doświadczenia do odebrania tutaj, w mieście.',
+    en: 'Each run also fills an XP bar. A full bar = an XP package to claim back here in town.',
+  },
+  'town.modal.survivor.note': {
+    pl: 'Otwiera się w nowej karcie. Konto wspólne — nie musisz logować się ponownie.',
+    en: 'Opens in a new tab. Shared account — no need to sign in again.',
+  },
+  'town.modal.survivor.confirm': { pl: 'ZAGRAJ', en: 'PLAY' },
+  'town.modal.survivor.cancel': { pl: 'ANULUJ', en: 'CANCEL' },
+  'work.title': { pl: 'PRACA', en: 'WORK' },
+  'work.flavor': {
+    pl: 'Bez bohaterstwa. Płacą za godziny.',
+    en: 'No heroics. They pay by the hour.',
+  },
+  'work.loading': { pl: 'Ładuję zlecenia...', en: 'Loading jobs...' },
+  'work.toast.started': { pl: 'Idziesz do pracy.', en: 'Off to work.' },
+  'work.toast.failed': {
+    pl: 'Coś poszło nie tak. Spróbuj jeszcze raz.',
+    en: 'Something went wrong. Try again.',
+  },
+  'work.toast.claimed': {
+    pl: 'Zapłata: {gold} złota, {xp} XP.',
+    en: 'Wages: {gold} gold, {xp} XP.',
+  },
+  'work.toast.cancelled': {
+    pl: 'Wyszedłeś wcześniej. Częściowa zapłata: {gold} złota, {xp} XP.',
+    en: 'Left early. Partial wages: {gold} gold, {xp} XP.',
+  },
+  'work.picker.kindHeading': { pl: 'WYBIERZ ZLECENIE', en: 'PICK A JOB' },
+  'work.picker.durationHeading': { pl: 'NA ILE GODZIN', en: 'HOW MANY HOURS' },
+  'work.picker.pickFirst': {
+    pl: 'Najpierw wybierz zlecenie.',
+    en: 'Pick a job first.',
+  },
+  'work.picker.profileHint': {
+    pl: 'Każde zlecenie płaci inaczej — gold vs XP.',
+    en: 'Each job pays differently — gold vs XP.',
+  },
+  'work.active.ready': { pl: 'GOTOWE', en: 'READY' },
+  'work.active.claim': { pl: 'ODBIERZ ZAPŁATĘ', en: 'COLLECT WAGES' },
+  'work.active.waiting': { pl: 'JESZCZE PRACUJESZ', en: 'STILL WORKING' },
+  'work.active.cancel': { pl: 'WYJDŹ WCZEŚNIEJ', en: 'LEAVE EARLY' },
+  'work.active.cancelHint': {
+    pl: 'Teraz dostaniesz: {gold} złota, {xp} XP.',
+    en: 'Right now you would get: {gold} gold, {xp} XP.',
+  },
+  'work.active.confirmCancel': {
+    pl: 'Wyjść z pracy teraz? Dostaniesz {gold} złota i {xp} XP.',
+    en: 'Leave work now? You will get {gold} gold and {xp} XP.',
+  },
+  'work.active.blocksCombat': {
+    pl: 'Pracujesz — walka, lochy, arena i gildia są zablokowane do końca zmiany.',
+    en: 'Working — combat, dungeons, arena and guild fights are locked until shift ends.',
+  },
   'town.chronicle.title': { pl: 'KRONIKI SZCZUROGRODU', en: 'RATBURG CHRONICLE' },
   'town.chronicle.empty': { pl: 'Kronikarz pisze. Wróć za chwilę.', en: 'The chronicler is writing. Come back in a moment.' },
   'town.chronicle.more': { pl: 'WIĘCEJ · {count} wpisów', en: 'MORE · {count} entries' },
@@ -966,6 +1097,18 @@ export const dict = {
   'dungeon.statline': { pl: 'Lvl {lvl} · HP {hp} · ATK {atk}', en: 'Lvl {lvl} · HP {hp} · ATK {atk}' },
   'dungeon.help.title': { pl: 'Klucze, tropy, cooldowny', en: 'Keys, tracks, cooldowns' },
   'dungeon.help.label': { pl: 'Jak to działa?', en: 'How does it work?' },
+  'dungeon.serial.label': {
+    pl: 'Walki w serii (bossy 1×):',
+    en: 'Fight in series (bosses 1×):',
+  },
+  'dungeon.serial.toast.stopped': {
+    pl: 'Seria przerwana — brak klucza, limit lub odpoczynek.',
+    en: 'Series stopped — no key, daily limit or cooldown.',
+  },
+  'combat.serial.badge': {
+    pl: 'WALKA {n}/{total}',
+    en: 'FIGHT {n}/{total}',
+  },
   'dungeon.help.p1.a': { pl: 'Każda walka kosztuje ', en: 'Each fight costs ' },
   'dungeon.help.p1.b': { pl: 'jeden klucz do lochu', en: 'one dungeon key' },
   'dungeon.help.p1.c': { pl: '. Nosisz ich maks. ', en: '. You carry up to ' },
@@ -2654,6 +2797,21 @@ support@ratburg.app (placeholder — fill in before launch)
     pl: '{label}: +{val}% (odblokowane przy {th}%)',
     en: '{label}: +{val}% (unlocked at {th}%)',
   },
+  'scrapbook.modal.slot': { pl: 'Slot', en: 'Slot' },
+  'scrapbook.modal.foundAt': { pl: 'Znaleziono', en: 'Found at' },
+  'scrapbook.modal.notFound': {
+    pl: 'Jeszcze nie odkryty. Wciąż gdzieś tam czeka.',
+    en: 'Not yet discovered. Still out there.',
+  },
+  'scrapbook.slot.head': { pl: 'głowa', en: 'head' },
+  'scrapbook.slot.chest': { pl: 'tors', en: 'chest' },
+  'scrapbook.slot.legs': { pl: 'nogi', en: 'legs' },
+  'scrapbook.slot.boots': { pl: 'buty', en: 'boots' },
+  'scrapbook.slot.weapon': { pl: 'broń', en: 'weapon' },
+  'scrapbook.slot.shield': { pl: 'tarcza', en: 'shield' },
+  'scrapbook.slot.trinket': { pl: 'amulet', en: 'trinket' },
+  'scrapbook.slot.potion': { pl: 'mikstura', en: 'potion' },
+  'scrapbook.slot.any': { pl: 'inne', en: 'misc' },
   'scrapbook.buff.locked': {
     pl: '{label}: zablokowane. Wymaga {th}% kolekcji.',
     en: '{label}: locked. Requires {th}% collection.',

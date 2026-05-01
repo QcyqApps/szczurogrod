@@ -26,11 +26,13 @@ import { oracleRouter } from './oracle.js';
 import { questsRouter } from './quests.js';
 import { shopRouter } from './shop.js';
 import { stablesRouter } from './stables.js';
+import { survivorRouter } from './survivor.js';
 import { tavernRouter } from './tavern.js';
 import { townRouter } from './town.js';
 import { tracksRouter } from './tracks.js';
 import { trainerRouter } from './trainer.js';
 import { witchRouter } from './witch.js';
+import { workRouter } from './work.js';
 import { worldRouter } from './world.js';
 
 export const appRouter = router({
@@ -60,12 +62,14 @@ export const appRouter = router({
   seasonPass: seasonPassRouter,
   shop: shopRouter,
   stables: stablesRouter,
+  survivor: survivorRouter,
   tavern: tavernRouter,
   tower: towerRouter,
   town: townRouter,
   tracks: tracksRouter,
   trainer: trainerRouter,
   witch: witchRouter,
+  work: workRouter,
   world: worldRouter,
 });
 

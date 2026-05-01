@@ -97,6 +97,10 @@ function DesktopLegalFooter() {
       <FooterLink href="/privacy.html" label={t('legal.privacy')} />
       <FooterLink href="/refunds.html" label={t('legal.refunds')} />
       <FooterLink href="/pricing.html" label={t('legal.pricing')} />
+      <FooterLink
+        href="https://discord.gg/uk3cCeNKxf"
+        label={t('community.discord')}
+      />
     </nav>
   );
 }

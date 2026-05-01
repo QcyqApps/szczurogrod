@@ -48,6 +48,7 @@ import {
 } from '../game/guild-wars.js';
 import { applyGuildWarBuffs, loadGuildWarBuffs } from '../game/guilds.js';
 import { assertCan, getMembershipOrNull } from '../game/guild-permissions.js';
+import { isWorking, WORKING_BLOCKS_COMBAT_MESSAGE } from '../game/work.js';
 import { protectedProcedure, router } from '../trpc/trpc.js';
 
 async function requireChar(
@@ -239,6 +240,9 @@ export const guildWarsRouter = router({
     .input(guildWarsIdInputSchema)
     .mutation(async ({ ctx, input }) => {
       const char = await requireChar(ctx.db, ctx.userId);
+      if (isWorking(char)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
+      }
       const membership = await getMembershipOrNull(ctx.db, char.id);
       if (!membership) {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Nie jesteś w gildii.' });

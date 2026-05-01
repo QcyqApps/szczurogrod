@@ -241,6 +241,16 @@ export interface CombatViewProps {
   onBack: () => void;
   onLevelUp?: (info: import('@grodno/shared').LevelUpInfo) => void;
   mode?: CombatMode;
+  /**
+   * Tryb seryjny (auto-chain) — domyślny sim ON, po victory automatycznie
+   * woła onBack po krótkim delay. Parent (ScreenDungeon) re-engage'uje
+   * następną walkę. Boss-intro pomijany (boss-y nie są w seriach).
+   * `serialInfo` opcjonalnie wyświetla pasek "Walka 2/5".
+   */
+  serialMode?: boolean;
+  serialInfo?: { current: number; total: number };
+  /** Callback po terminalnym statusie walki — przed onBack. */
+  onResult?: (outcome: 'victory' | 'defeat') => void;
 }
 
 export function CombatView({
@@ -250,6 +260,9 @@ export function CombatView({
   onBack,
   onLevelUp,
   mode = 'dungeon',
+  serialMode = false,
+  serialInfo,
+  onResult,
 }: CombatViewProps) {
   const t = useT();
   const tc = useContentT();
@@ -296,12 +309,25 @@ export function CombatView({
   // po zwolnieniu lockowania tury zamiast czekać DECISION_MS. Manualny klik
   // wciąż działa — gracz może w każdej chwili wbić MOCNY/MAGIA/LECZ bez
   // wyłączania sima. Toggle leci przyciskiem nad akcjami.
-  const [simMode, setSimMode] = useState(false);
+  const [simMode, setSimMode] = useState(serialMode);
   // Boss intro — 1.5s overlay na początku walki z dungeon-bossem. Blokuje akcje
   // żeby gracz nie klikał na ślepo. Odpala się dla `isBoss=true` — w dungeon
   // mode dla 3 dungeon bossów + quest-bossów; w tower mode zawsze (każdy
   // floor = boss). Decyzję podejmuje caller (ScreenDungeon / ScreenTower).
-  const [introOpen, setIntroOpen] = useState(enemy.isBoss);
+  // Boss intro pomijany w trybie seryjnym (chain auto-kill nie chce 1.5s
+  // animacji per walkę), choć i tak boss-y na ogół nie są w seriach.
+  const [introOpen, setIntroOpen] = useState(enemy.isBoss && !serialMode);
+
+  // Tryb seryjny — po victory auto-przekazujemy do parenta po krótkim delay
+  // żeby gracz zobaczył drop/animację. Defeat NIE auto-przechodzi: gracz
+  // patrzy na panel porażki i klika RESPAWN (parent decyduje czy plan
+  // serii się resetuje).
+  useEffect(() => {
+    if (!serialMode) return;
+    if (state.status !== 'victory') return;
+    const handle = setTimeout(() => onBack(), 1200);
+    return () => clearTimeout(handle);
+  }, [serialMode, state.status, onBack]);
   useEffect(() => {
     if (!introOpen) return;
     const t = setTimeout(() => setIntroOpen(false), 1500);
@@ -433,7 +459,13 @@ export function CombatView({
         void utils.me.get.invalidate();
         if (mode === 'tower') {
           void utils.tower.current.invalidate();
+        } else {
+          // Boss kill może odblokować kolejny loch w regionie. Refresh world.get
+          // i listy mobów żeby UI nie pokazywał stale state'u po powrocie do mapy.
+          void utils.world.get.invalidate();
+          void utils.combat.enemies.invalidate();
         }
+        onResult?.(res.state.status);
       }
       if (res.tower) setLastTower(res.tower);
       if (res.loot) {
@@ -484,6 +516,9 @@ export function CombatView({
       if (res.tower) setLastTower(res.tower);
       if (mode === 'tower' && res.state.status === 'defeat') {
         void utils.tower.current.invalidate();
+      }
+      if (res.state.status === 'victory' || res.state.status === 'defeat') {
+        onResult?.(res.state.status);
       }
     } catch (e) {
       console.error('combat.heal failed', e);
@@ -562,6 +597,31 @@ export function CombatView({
   return (
     <div className="screen-in" style={{ padding: 12, position: 'relative' }}>
       {introOpen && enemy.isBoss && <BossIntroOverlay enemy={enemy} />}
+      {serialInfo && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#2a1810',
+            color: '#ffc830',
+            fontFamily: 'Luckiest Guy, sans-serif',
+            fontSize: 12,
+            letterSpacing: 0.5,
+            padding: '4px 12px',
+            borderRadius: 999,
+            border: '2px solid #ffc830',
+            boxShadow: '1.5px 1.5px 0 #2a1810',
+            zIndex: 30,
+            pointerEvents: 'none',
+          }}
+        >
+          {t('combat.serial.badge')
+            .replace('{n}', String(serialInfo.current))
+            .replace('{total}', String(serialInfo.total))}
+        </div>
+      )}
       <div
         style={{
           background: 'linear-gradient(180deg, #3a2a4a 0%, #1a0a1a 60%, #0a0a0a 100%)',

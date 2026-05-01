@@ -20,10 +20,15 @@ export function LocTile({ icon, label, sub, bg, onClick, lock, badge }: LocTileP
         position: 'relative',
         background: bg,
         border: '3px solid #2a1810',
-        borderRadius: 14,
-        padding: 10,
+        borderRadius: 12,
+        padding: 6,
         boxShadow: '3px 3px 0 #2a1810',
-        minHeight: 110,
+        // Mniejszy minHeight żeby siatka nie ciągnęła ekranu w dół. Wcześniej
+        // 110 + padding 10 + ikona 54 + label 16 + sub 13 dawało ~150px na
+        // kafel; przy 10+ kafelkach z banner'ami + hero + chronicle musiałeś
+        // scrollować pół wysokości. Teraz padding 6 + ikona 42 + label 14 +
+        // sub 12 = ~95px, skraca grid o ~35% bez utraty czytelności.
+        minHeight: 84,
         opacity: lock ? 0.6 : 1,
       }}
     >
@@ -34,7 +39,7 @@ export function LocTile({ icon, label, sub, bg, onClick, lock, badge }: LocTileP
           backgroundImage: 'radial-gradient(#2a1810 1px, transparent 1.5px)',
           backgroundSize: '8px 8px',
           opacity: 0.1,
-          borderRadius: 11,
+          borderRadius: 9,
           overflow: 'hidden',
         }}
       />
@@ -43,14 +48,14 @@ export function LocTile({ icon, label, sub, bg, onClick, lock, badge }: LocTileP
           position: 'relative',
           display: 'flex',
           justifyContent: 'center',
-          marginTop: 4,
+          marginTop: 2,
         }}
       >
         {icon}
       </div>
       <div
         className="h-title"
-        style={{ fontSize: 16, textAlign: 'center', marginTop: 4, position: 'relative' }}
+        style={{ fontSize: 14, textAlign: 'center', marginTop: 2, position: 'relative' }}
       >
         {label}
       </div>
@@ -58,14 +63,15 @@ export function LocTile({ icon, label, sub, bg, onClick, lock, badge }: LocTileP
         <div
           className="h-title"
           style={{
-            fontSize: 13,
+            fontSize: 11,
             textAlign: 'center',
             color: '#5a3a2a',
             position: 'relative',
-            marginTop: 2,
-            letterSpacing: 0.4,
+            marginTop: 1,
+            letterSpacing: 0.3,
             fontWeight: 'normal',
             opacity: 0.85,
+            lineHeight: 1.15,
           }}
         >
           {sub}

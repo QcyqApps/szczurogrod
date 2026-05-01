@@ -170,9 +170,9 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
                 key={tier}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '32px 1fr 1fr',
-                  gap: 6,
-                  padding: 6,
+                  gridTemplateColumns: '40px 1fr 1fr',
+                  gap: 8,
+                  padding: 8,
                   border: `2px solid ${milestone ? '#c83232' : '#2a1810'}`,
                   borderRadius: 8,
                   background: milestone ? '#f0e0b0' : '#f3ead9',
@@ -185,7 +185,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontFamily: 'Luckiest Guy, sans-serif',
-                    fontSize: 14,
+                    fontSize: 18,
                     color: milestone ? '#c83232' : '#2a1810',
                     background: unlocked ? '#ffc830' : '#c8c0a0',
                     borderRadius: 4,
@@ -329,7 +329,7 @@ function TierCell({
       <div
         style={{
           fontFamily: 'Luckiest Guy, sans-serif',
-          fontSize: 9,
+          fontSize: 12,
           letterSpacing: 0.4,
           color: isPremium ? '#8a4a1a' : '#5a3a2a',
         }}
@@ -341,14 +341,14 @@ function TierCell({
         <span
           style={{
             fontFamily: 'Luckiest Guy, sans-serif',
-            fontSize: 10,
+            fontSize: 13,
             color: '#4a7c3a',
             display: 'inline-flex',
             alignItems: 'center',
             gap: 3,
           }}
         >
-          <GameIcon name="check" size={12} /> {t('seasonPass.tier.claimed')}
+          <GameIcon name="check" size={14} /> {t('seasonPass.tier.claimed')}
         </span>
       ) : unlocked && !disabled ? (
         <button
@@ -356,13 +356,13 @@ function TierCell({
           onClick={onClaim}
           disabled={pending}
           style={{
-            padding: '3px 8px',
+            padding: '5px 10px',
             border: '2px solid #2a1810',
             borderRadius: 6,
             background: '#ffc830',
             cursor: pending ? 'wait' : 'pointer',
             fontFamily: 'Luckiest Guy, sans-serif',
-            fontSize: 10,
+            fontSize: 13,
             boxShadow: pending ? 'none' : '1.5px 1.5px 0 #2a1810',
           }}
         >
@@ -371,7 +371,7 @@ function TierCell({
       ) : (
         <span
           style={{
-            fontSize: 10,
+            fontSize: 13,
             color: '#8a6a4a',
             fontStyle: 'italic',
           }}
@@ -388,28 +388,28 @@ function RewardSummary({ reward }: { reward: SeasonPassTierReward }) {
   if (reward.gold && reward.gold > 0) {
     pills.push(
       <span key="g" style={pillStyle('#f0d080')}>
-        <IcoCoin s={10} /> {reward.gold}
+        <IcoCoin s={13} /> {reward.gold}
       </span>,
     );
   }
   if (reward.gems && reward.gems > 0) {
     pills.push(
       <span key="gm" style={pillStyle('#c8e0f0')}>
-        <IcoGem s={10} /> {reward.gems}
+        <IcoGem s={13} /> {reward.gems}
       </span>,
     );
   }
   if (reward.keys && reward.keys > 0) {
     pills.push(
       <span key="k" style={pillStyle('#e8c870')}>
-        <IcoKey s={10} /> {reward.keys}
+        <IcoKey s={13} /> {reward.keys}
       </span>,
     );
   }
   if (reward.xp && reward.xp > 0) {
     pills.push(
       <span key="x" style={pillStyle('#e8c870')}>
-        <GameIcon name="spark" size={10} /> {reward.xp}
+        <GameIcon name="spark" size={13} /> {reward.xp}
       </span>,
     );
   }
@@ -423,23 +423,23 @@ function RewardSummary({ reward }: { reward: SeasonPassTierReward }) {
           border: `1.5px solid ${RARITY_COLOR[reward.itemRarity]}`,
         }}
       >
-        <GameIcon name={reward.itemIcon as IconName} size={10} />{' '}
-        {reward.itemName.length > 12 ? reward.itemName.slice(0, 11) + '…' : reward.itemName}
+        <GameIcon name={reward.itemIcon as IconName} size={13} />{' '}
+        {reward.itemName.length > 14 ? reward.itemName.slice(0, 13) + '…' : reward.itemName}
       </span>,
     );
   }
-  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>{pills}</div>;
+  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{pills}</div>;
 }
 
 function pillStyle(bg: string): React.CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 2,
-    padding: '1px 5px',
+    gap: 3,
+    padding: '2px 7px',
     borderRadius: 999,
     background: bg,
-    fontSize: 9,
+    fontSize: 12,
     fontFamily: 'Luckiest Guy, sans-serif',
     letterSpacing: 0.3,
     whiteSpace: 'nowrap',

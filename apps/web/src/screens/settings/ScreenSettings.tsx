@@ -194,6 +194,30 @@ export function ScreenSettings({
         <Button onClick={onReplayTutorial} iconName="scroll" label={t('settings.btn.replayTutorial')} />
       </Section>
 
+      <Section title={t('settings.section.community')} icon="megaphone">
+        <Button
+          onClick={() => {
+            window.open('https://discord.gg/uk3cCeNKxf', '_blank', 'noopener');
+          }}
+          iconName="megaphone"
+          label={t('settings.btn.discord')}
+        />
+      </Section>
+
+      <Section title={t('settings.section.othergames')} icon="bolt">
+        <Button
+          onClick={() => {
+            const url =
+              window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
+                ? `${window.location.protocol}//${window.location.hostname}:5174`
+                : 'https://survivor.ratburg.com';
+            window.open(url, '_blank', 'noopener');
+          }}
+          iconName="bolt"
+          label={t('settings.btn.survivor')}
+        />
+      </Section>
+
       <Section title={t('settings.section.legal')} icon="scroll">
         <Button
           onClick={() => setLegalOpen('privacy')}

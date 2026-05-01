@@ -3,7 +3,7 @@ import type { IconName } from '@/components/game-icons';
 import { useT } from '@/i18n';
 import type { DictKey } from '@/i18n';
 
-export type Tab = 'town' | 'char' | 'quest' | 'arena' | 'guild';
+export type Tab = 'town' | 'char' | 'quest' | 'arena' | 'dungeons' | 'guild';
 
 interface TabDef {
   id: Tab;
@@ -11,11 +11,14 @@ interface TabDef {
   icon: IconName;
 }
 
+// Bottom nav: 5 widocznych. 'arena' zostaje w Tab union (osiągalna z kafla
+// w mieście) — w bottom bar zastąpiona przez 'dungeons' (Lochy), bo to
+// główny grind loop na co dzień.
 const TABS: readonly TabDef[] = [
   { id: 'town', labelKey: 'tabs.town', icon: 'castle' },
   { id: 'char', labelKey: 'tabs.char', icon: 'helmet' },
   { id: 'quest', labelKey: 'tabs.quest', icon: 'scroll' },
-  { id: 'arena', labelKey: 'tabs.arena', icon: 'crossed' },
+  { id: 'dungeons', labelKey: 'tabs.dungeons', icon: 'sword' },
   { id: 'guild', labelKey: 'tabs.guild', icon: 'banner' },
 ];
 

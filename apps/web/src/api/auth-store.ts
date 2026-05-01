@@ -1,8 +1,10 @@
-// Client-side auth token storage. Persisted in localStorage so the session survives
-// reloads. Server remains authoritative for everything else.
+// Client-side auth token storage. Persisted via cookieStorage adapter
+// (cross-port shareable on `localhost`) so single login działa w idle
+// i w Okruchach. Server remains authoritative for everything else.
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { cookieStorage } from './cookie-storage';
 
 export interface AuthTokens {
   accessToken: string;
@@ -41,6 +43,10 @@ export const useAuthStore = create<AuthState>()(
           isGuest: false,
         }),
     }),
-    { name: 'grodno-auth', version: 2 },
+    {
+      name: 'grodno-auth',
+      version: 2,
+      storage: createJSONStorage(() => cookieStorage),
+    },
   ),
 );

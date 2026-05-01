@@ -59,6 +59,7 @@ import {
   loadScrapbookBuffs,
 } from '../game/scrapbook.js';
 import { getCompanion } from '../game/tavern.js';
+import { isWorking, WORKING_BLOCKS_COMBAT_MESSAGE } from '../game/work.js';
 import { protectedProcedure, router } from '../trpc/trpc.js';
 
 async function loadSelfFighter(
@@ -212,6 +213,9 @@ export const arenaRouter = router({
     .input(arenaFightInputSchema)
     .mutation(async ({ ctx, input }): Promise<ArenaFightResult> => {
       const { char, fighter: youFighter } = await loadSelfFighter(ctx.db, ctx.userId);
+      if (isWorking(char)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
+      }
       const today = isoDateUTC();
       const fightsToday = resolveFightsToday(char);
       if (fightsToday >= ARENA_FIGHTS_PER_DAY) {

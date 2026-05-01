@@ -30,6 +30,7 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
   const t = useT();
   const listQuery = trpc.scrapbook.list.useQuery();
   const [filter, setFilter] = useState<RarityFilter>('all');
+  const [selected, setSelected] = useState<ScrapbookEntry | null>(null);
 
   if (listQuery.isLoading) {
     return (
@@ -193,7 +194,11 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
         }}
       >
         {filtered.map((e) => (
-          <ItemCell key={e.itemTemplateId} entry={e} />
+          <ItemCell
+            key={e.itemTemplateId}
+            entry={e}
+            onClick={() => setSelected(e)}
+          />
         ))}
       </div>
 
@@ -205,16 +210,147 @@ export function ScreenScrapbook({ onBack }: ScreenScrapbookProps) {
       >
         {t('btn.back')}
       </button>
+
+      {selected && (
+        <ItemInfoModal entry={selected} onClose={() => setSelected(null)} />
+      )}
     </div>
   );
 }
 
-function ItemCell({ entry }: { entry: ScrapbookEntry }) {
+function ItemInfoModal({
+  entry,
+  onClose,
+}: {
+  entry: ScrapbookEntry;
+  onClose: () => void;
+}) {
+  const t = useT();
+  const tc = useContentT();
+  const found = entry.foundAt !== null;
+  const rarityLabel = t(RARITY_LABEL_KEY[entry.rarity]);
+  const slotLabel = t(`scrapbook.slot.${entry.slot}` as DictKey);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(20, 10, 10, 0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        zIndex: 300,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="panel pop-in"
+        style={{
+          width: '100%',
+          maxWidth: 320,
+          background: '#fff7e0',
+          padding: 16,
+          position: 'relative',
+          textAlign: 'center',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('btn.close')}
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 8,
+            background: 'transparent',
+            border: 'none',
+            fontSize: 20,
+            cursor: 'pointer',
+            color: '#5a3a2a',
+            padding: '2px 8px',
+            lineHeight: 1,
+          }}
+        >
+          ✕
+        </button>
+        <div
+          style={{
+            width: 78,
+            height: 78,
+            margin: '4px auto 10px',
+            borderRadius: 10,
+            border: `3px solid ${RARITY_COLOR[entry.rarity]}`,
+            background: found ? '#fff7e0' : '#6a5a48',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '2px 2px 0 #2a1810',
+          }}
+        >
+          <div
+            style={{
+              filter: found ? 'none' : 'grayscale(100%) brightness(0.35)',
+              opacity: found ? 1 : 0.6,
+            }}
+          >
+            <GameIcon name={entry.icon as IconName} size={56} />
+          </div>
+        </div>
+        <div className="h-title" style={{ fontSize: 18, color: '#2a1810' }}>
+          {found ? tc.itemName(entry.name, entry.name) : t('scrapbook.cell.unknown')}
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            marginTop: 6,
+            color: RARITY_COLOR[entry.rarity],
+            fontFamily: 'Luckiest Guy, sans-serif',
+            letterSpacing: 0.5,
+          }}
+        >
+          {rarityLabel.toUpperCase()}
+        </div>
+        <div style={{ fontSize: 13, marginTop: 4, color: '#5a3a2a' }}>
+          {t('scrapbook.modal.slot')}: <b>{slotLabel}</b>
+        </div>
+        {found && entry.foundAt !== null && (
+          <div style={{ fontSize: 13, marginTop: 4, color: '#5a3a2a' }}>
+            {t('scrapbook.modal.foundAt')}:{' '}
+            <b className="mono">{new Date(entry.foundAt).toLocaleDateString()}</b>
+          </div>
+        )}
+        {!found && (
+          <div
+            className="flavor"
+            style={{ fontSize: 14, marginTop: 10, color: '#5a3a2a' }}
+          >
+            {t('scrapbook.modal.notFound')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ItemCell({
+  entry,
+  onClick,
+}: {
+  entry: ScrapbookEntry;
+  onClick: () => void;
+}) {
   const t = useT();
   const tc = useContentT();
   const found = entry.foundAt !== null;
   return (
-    <div
+    <button
+      type="button"
+      onClick={onClick}
+      className="clickable no-select"
       title={
         found
           ? `${tc.itemName(entry.name, entry.name)} (${entry.rarity})`
@@ -230,7 +366,9 @@ function ItemCell({ entry }: { entry: ScrapbookEntry }) {
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        cursor: 'default',
+        cursor: 'pointer',
+        padding: 0,
+        fontFamily: 'inherit',
         boxShadow: found ? '1px 1px 0 #2a1810' : 'none',
       }}
     >
@@ -256,7 +394,7 @@ function ItemCell({ entry }: { entry: ScrapbookEntry }) {
           ?
         </div>
       )}
-    </div>
+    </button>
   );
 }
 

@@ -32,6 +32,7 @@ import { ScreenDice } from '@/screens/dice';
 import { ScreenOracle } from '@/screens/oracle';
 import { ScreenBlessing } from '@/screens/blessing';
 import { ScreenWitch } from '@/screens/witch';
+import { ScreenWork } from '@/screens/work';
 import { ScreenSeasonPass } from '@/screens/season-pass';
 import { ScreenSettings } from '@/screens/settings';
 import { ScreenStables } from '@/screens/stables';
@@ -253,6 +254,34 @@ export default function App() {
     }
     return count;
   })();
+
+  // Cross-game XP integration — pending XP packages z Okruchów. Slim status
+  // endpoint, polled razem z innymi daily statuses. Banner w Town gdy > 0.
+  const survivorIdleXpQuery = trpc.survivor.idleXpStatus.useQuery(undefined, {
+    enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
+  });
+  const survivorIdleXpStatus = survivorIdleXpQuery.data;
+  const survivorIdleXpPendingCount =
+    survivorIdleXpStatus?.available ? survivorIdleXpStatus.pendingCount : 0;
+  const survivorIdleXpPendingTotal =
+    survivorIdleXpStatus?.available ? survivorIdleXpStatus.pendingXpTotal : 0;
+  const survivorClaimMut = trpc.survivor.claimIdleXp.useMutation({
+    onSuccess: (data) => {
+      void utils.me.get.invalidate();
+      void utils.survivor.idleXpStatus.invalidate();
+      void utils.survivor.getHub.invalidate();
+      useToastQueue.getState().push({
+        tag: 'OKRUCHY',
+        accent: '#d4a24c',
+        text: `Odebrano ${data.grantsClaimed} paczek — łącznie +${data.totalXpGained} XP`,
+      });
+      if (data.levelUp) setLevelUp(data.levelUp);
+    },
+    onError: (err) => {
+      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+    },
+  });
+
   const dailyClaimMut = trpc.daily.claim.useMutation({
     onSuccess: (data) => {
       void utils.daily.getStatus.invalidate();
@@ -355,7 +384,7 @@ export default function App() {
       Boolean(accessToken) &&
       Boolean(char) &&
       appState === 'game' &&
-      (sub === 'world' || sub === 'dungeon'),
+      (sub === 'world' || sub === 'dungeon' || (tab === 'dungeons' && sub === null)),
   });
   const rentMountMut = trpc.stables.rent.useMutation({
     onSuccess: (data) => {
@@ -433,6 +462,7 @@ export default function App() {
       screen === 'char' ||
       screen === 'quest' ||
       screen === 'arena' ||
+      screen === 'dungeons' ||
       screen === 'guild'
     ) {
       setSub(null);
@@ -712,6 +742,10 @@ export default function App() {
     );
   }
 
+  // Sub-screens that should render bez TopBar/TabBar (jak walka). Wieża
+  // ma własny header + back button i czyta się jako zamknięty encounter.
+  const isFullscreenSub = sub === 'tower';
+
   let content: React.ReactNode = null;
   if (sub === 'dungeon') {
     // Gdy selectedDungeonSlug jest ustawiony — wchodzimy "w loch". Nazwa i
@@ -728,8 +762,10 @@ export default function App() {
         onBack={() => {
           if (selectedDungeonSlug) {
             // Loch otwarty z mapy → wracamy na mapę, nie do miasta.
+            // Jeśli weszli z bottom-tab 'dungeons', sub był null (mapa renderowana
+            // przez tab) → wracamy też do null. Inaczej zostawiamy sub='world'.
             setSelectedDungeonSlug(null);
-            setSub('world');
+            setSub(tab === 'dungeons' ? null : 'world');
           } else {
             setSub(null);
           }
@@ -752,6 +788,20 @@ export default function App() {
           setSub('dungeon');
         }}
         onBack={() => setSub(null)}
+      />
+    );
+  } else if (tab === 'dungeons' && !sub) {
+    // Bottom-tab Lochy → mapa świata jako entry-point. Klik dungeona ustawia
+    // sub='dungeon' (zachowujemy tab='dungeons' dla highlight), back wraca tu.
+    content = (
+      <ScreenWorldMap
+        regions={worldQuery.data?.regions ?? []}
+        charLvl={char.lvl}
+        onDungeonOpen={(slug) => {
+          setSelectedDungeonSlug(slug);
+          setSub('dungeon');
+        }}
+        onBack={() => navTo('town')}
       />
     );
   } else if (sub === 'shop') {
@@ -912,6 +962,8 @@ export default function App() {
     content = <ScreenBlessing onBack={() => setSub(null)} />;
   } else if (sub === 'witch') {
     content = <ScreenWitch onBack={() => setSub(null)} />;
+  } else if (sub === 'work') {
+    content = <ScreenWork onBack={() => setSub(null)} />;
   } else if (sub === 'seasonPass') {
     content = <ScreenSeasonPass onBack={() => setSub(null)} />;
   } else if (sub === 'settings') {
@@ -951,6 +1003,10 @@ export default function App() {
         dailyAvailable={dailyStatusQuery.data ? !dailyStatusQuery.data.claimedToday : false}
         questsDone={questsReady}
         seasonPassClaimableCount={seasonPassClaimableCount}
+        survivorIdleXpPendingCount={survivorIdleXpPendingCount}
+        survivorIdleXpPendingTotal={survivorIdleXpPendingTotal}
+        onClaimSurvivorXp={() => survivorClaimMut.mutate()}
+        survivorClaimPending={survivorClaimMut.isPending}
       />
     );
   } else if (tab === 'char') {
@@ -1016,7 +1072,7 @@ export default function App() {
           position: 'relative',
         }}
       >
-        {!inCombat && (
+        {!inCombat && !isFullscreenSub && (
           <div style={{ paddingTop: 'var(--frame-top)' }}>
             <TopBar
               char={char}
@@ -1041,13 +1097,13 @@ export default function App() {
             minHeight: 0,
             overflowY: 'auto',
             overflowX: 'hidden',
-            // Walka: górny margin = frame-top (status bar iOS mockupu).
+            // Walka / fullscreen sub (Wieża): górny margin = frame-top (status bar iOS mockupu).
             // Bez walki TopBar już daje spacing — scroll bez paddingu góry.
-            paddingTop: inCombat ? 'var(--frame-top)' : 0,
-            // Walka zajmuje pełną wysokość bez TabBar'a → dół frame-bottom
+            paddingTop: inCombat || isFullscreenSub ? 'var(--frame-top)' : 0,
+            // Walka / fullscreen sub zajmuje pełną wysokość bez TabBar'a → dół frame-bottom
             // dla home indicator. Bez walki TabBar jest flex child — sam
             // bierze swój space, scroll nie rezerwuje.
-            paddingBottom: inCombat ? 'var(--frame-bottom)' : 0,
+            paddingBottom: inCombat || isFullscreenSub ? 'var(--frame-bottom)' : 0,
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
             // Rezerwuj miejsce pod scrollbar zawsze — kiedy content rośnie
@@ -1060,7 +1116,7 @@ export default function App() {
           {content}
         </div>
 
-        {!inCombat && (
+        {!inCombat && !isFullscreenSub && (
           <TabBar
             tab={sub ? null : tab}
             setTab={(t) => {
