@@ -46,6 +46,14 @@ export const loginInputSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+/** Guest → registered account upgrade. Wymaga aktywnej guest sesji
+ *  (protectedProcedure). Zachowuje wszystkie character/progress data,
+ *  tylko dopina email + hasło i zdejmuje flagę guest. */
+export const linkAccountInputSchema = z.object({
+  email: z.string().email().max(254),
+  password: z.string().min(5).max(200),
+});
+
 export const guestInputSchema = z.object({});
 
 export const deleteAccountInputSchema = z.object({
@@ -1855,6 +1863,7 @@ export type LandingPublicResponse = z.infer<typeof landingPublicResponseSchema>;
 // Type re-exports for convenience
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;
+export type LinkAccountInput = z.infer<typeof linkAccountInputSchema>;
 export type AuthResponse = z.infer<typeof authResponseSchema>;
 export type CreateCharacterInput = z.infer<typeof createCharacterInputSchema>;
 export type StarterBonus = z.infer<typeof starterBonusSchema>;

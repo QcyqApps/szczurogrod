@@ -3,8 +3,10 @@ import { TRPCClientError } from '@trpc/client';
 import { GameIcon } from '@/components/game-icons';
 import { IcoGem, IcoRefresh } from '@/components/icons';
 import { useAdminStore } from '@/api/admin-store';
+import { useAuthStore } from '@/api/auth-store';
+import { useToastQueue } from '@/api/toast-queue-store';
 import { trpc } from '@/api/trpc';
-import { useT } from '@/i18n';
+import { useT, tStatic } from '@/i18n';
 import { LangPicker } from '@/i18n/LangPicker';
 import { GEM_SINK_COSTS } from '@grodno/shared';
 
@@ -39,10 +41,38 @@ export function ScreenSettings({
   renamePending,
 }: ScreenSettingsProps) {
   const t = useT();
+  const utils = trpc.useUtils();
+  const setTokens = useAuthStore((s) => s.setTokens);
+  const pushToast = useToastQueue((s) => s.push);
   const [renameOpen, setRenameOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [legalOpen, setLegalOpen] = useState<null | 'privacy' | 'terms'>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkEmail, setLinkEmail] = useState('');
+  const [linkPassword, setLinkPassword] = useState('');
+  const linkMut = trpc.auth.linkAccount.useMutation({
+    onSuccess: (data) => {
+      setTokens({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        userId: data.userId,
+        email: data.email,
+        isGuest: data.isGuest,
+      });
+      pushToast({ text: tStatic('settings.guest.linkToast.success'), accent: '#2a4a3a' });
+      setLinkOpen(false);
+      setLinkEmail('');
+      setLinkPassword('');
+      void utils.me.get.invalidate();
+    },
+    onError: (err) => {
+      pushToast({
+        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        accent: '#c83232',
+      });
+    },
+  });
   return (
     <div className="screen-in" style={{ padding: 12 }}>
       <div
@@ -164,19 +194,139 @@ export function ScreenSettings({
           </div>
         )}
         {isGuest && (
+          <>
+            <div
+              style={{
+                fontSize: 12,
+                color: '#8a3030',
+                background: '#fce0e0',
+                border: '2px solid #c83232',
+                borderRadius: 8,
+                padding: '6px 10px',
+                margin: '8px 0 6px',
+                lineHeight: 1.3,
+              }}
+            >
+              <b>{t('settings.guest.warningPrefix')}</b> {t('settings.guest.warning')}
+            </div>
+            <button
+              type="button"
+              className="cbtn green"
+              style={{ width: '100%', marginBottom: 4 }}
+              onClick={() => setLinkOpen(true)}
+            >
+              {t('settings.guest.linkBtn')}
+            </button>
+          </>
+        )}
+        {linkOpen && (
           <div
+            onClick={() => !linkMut.isPending && setLinkOpen(false)}
             style={{
-              fontSize: 12,
-              color: '#8a3030',
-              background: '#fce0e0',
-              border: '2px solid #c83232',
-              borderRadius: 8,
-              padding: '6px 10px',
-              margin: '8px 0 4px',
-              lineHeight: 1.3,
+              position: 'absolute',
+              inset: 0,
+              zIndex: 230,
+              background: 'rgba(42,24,16,0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+              animation: 'modal-fade-in 0.25s ease-out',
             }}
           >
-            <b>{t('settings.guest.warningPrefix')}</b> {t('settings.guest.warning')}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="panel"
+              style={{ width: '100%', maxWidth: 340, background: '#f3ead9', padding: 16 }}
+            >
+              <div className="h-display" style={{ fontSize: 18, textAlign: 'center', marginBottom: 6 }}>
+                {t('settings.guest.linkModal.title')}
+              </div>
+              <div
+                className="flavor"
+                style={{
+                  fontSize: 14,
+                  color: '#5a3a2a',
+                  textAlign: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                {t('settings.guest.linkModal.body')}
+              </div>
+              <label
+                className="h-title"
+                style={{ fontSize: 12, color: '#2a1810', display: 'block', marginBottom: 4 }}
+              >
+                {t('settings.guest.linkModal.email')}
+              </label>
+              <input
+                type="email"
+                autoComplete="email"
+                value={linkEmail}
+                maxLength={254}
+                onChange={(e) => setLinkEmail(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: '2.5px solid #2a1810',
+                  borderRadius: 8,
+                  background: '#fff7e0',
+                  fontFamily: 'inherit',
+                  marginBottom: 10,
+                }}
+              />
+              <label
+                className="h-title"
+                style={{ fontSize: 12, color: '#2a1810', display: 'block', marginBottom: 4 }}
+              >
+                {t('settings.guest.linkModal.password')}
+              </label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={linkPassword}
+                maxLength={200}
+                onChange={(e) => setLinkPassword(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: '2.5px solid #2a1810',
+                  borderRadius: 8,
+                  background: '#fff7e0',
+                  fontFamily: 'inherit',
+                  marginBottom: 12,
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="cbtn ghost sm"
+                  style={{ flex: 1 }}
+                  disabled={linkMut.isPending}
+                  onClick={() => setLinkOpen(false)}
+                >
+                  {t('settings.btn.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="cbtn green sm"
+                  style={{ flex: 1.4 }}
+                  disabled={
+                    linkMut.isPending ||
+                    !linkEmail.includes('@') ||
+                    linkPassword.length < 5
+                  }
+                  onClick={() =>
+                    linkMut.mutate({
+                      email: linkEmail.trim(),
+                      password: linkPassword,
+                    })
+                  }
+                >
+                  {t('settings.guest.linkModal.submit')}
+                </button>
+              </div>
+            </div>
           </div>
         )}
         <button

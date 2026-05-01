@@ -1294,6 +1294,22 @@ export const dict = {
     en: 'account without email disappears with browser storage. Sign up to keep progress.',
   },
   'settings.guest.warningPrefix': { pl: 'Uwaga gościu:', en: 'Heads up, guest:' },
+  'settings.guest.linkBtn': { pl: 'ZAŁÓŻ KONTO', en: 'CREATE ACCOUNT' },
+  'settings.guest.linkModal.title': {
+    pl: 'PRZENIEŚ POSTĘP NA KONTO',
+    en: 'KEEP YOUR PROGRESS',
+  },
+  'settings.guest.linkModal.body': {
+    pl: 'Postać, gemy, gildia — wszystko zostaje. Dopinamy tylko email i hasło.',
+    en: 'Character, gems, guild — all stays. We just attach an email and password.',
+  },
+  'settings.guest.linkModal.email': { pl: 'EMAIL', en: 'EMAIL' },
+  'settings.guest.linkModal.password': { pl: 'HASŁO (min. 5 znaków)', en: 'PASSWORD (min 5 chars)' },
+  'settings.guest.linkModal.submit': { pl: 'ZAŁÓŻ I ZACHOWAJ POSTĘP', en: 'CREATE & KEEP PROGRESS' },
+  'settings.guest.linkToast.success': {
+    pl: 'Konto założone. Postęp uratowany.',
+    en: 'Account created. Progress saved.',
+  },
   'settings.logout': { pl: 'WYLOGUJ', en: 'LOG OUT' },
   'settings.btn.editAppearance': { pl: 'ZMIEŃ WYGLĄD', en: 'CHANGE LOOK' },
   'settings.btn.replayTutorial': { pl: 'POWTÓRZ TUTORIAL', en: 'REPLAY TUTORIAL' },

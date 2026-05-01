@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import {
   type AuthResponse,
+  linkAccountInputSchema,
   loginInputSchema,
   registerInputSchema,
 } from '@grodno/shared';
@@ -15,7 +16,7 @@ import {
   ttlToMs,
 } from '../auth/tokens.js';
 import { characters, refreshTokens, users } from '../db/schema.js';
-import { publicProcedure, router } from '../trpc/trpc.js';
+import { protectedProcedure, publicProcedure, router } from '../trpc/trpc.js';
 
 async function issueTokens(
   db: typeof import('../db/client.js').db,
@@ -86,6 +87,52 @@ export const authRouter = router({
       .returning({ id: users.id });
     return issueTokens(ctx.db, inserted.id);
   }),
+
+  /**
+   * Guest → registered upgrade. Wymaga aktywnej guest sesji. Zachowuje
+   * wszystko (character, progress, item history) — tylko dopina email +
+   * hasło na istniejącym user row i zdejmuje flagę guest. Wystawia
+   * świeże tokeny (stare zostają ważne aż do TTL, ale klient ma już nowe).
+   *
+   * Błędy:
+   * - FORBIDDEN gdy user już ma email (nie jest guest'em).
+   * - CONFLICT gdy email zajęty przez inne konto.
+   */
+  linkAccount: protectedProcedure
+    .input(linkAccountInputSchema)
+    .mutation(async ({ ctx, input }): Promise<AuthResponse> => {
+      const [me] = await ctx.db
+        .select({ id: users.id, email: users.email, isGuest: users.isGuest })
+        .from(users)
+        .where(eq(users.id, ctx.userId))
+        .limit(1);
+      if (!me) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Konto nie istnieje.' });
+      }
+      if (!me.isGuest || me.email !== null) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'To konto już ma email. Nie ma czego upgradować.',
+        });
+      }
+      const taken = await ctx.db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1);
+      if (taken.length > 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Ten email jest już zajęty. Wybierz inny.',
+        });
+      }
+      const passwordHash = await hashPassword(input.password);
+      await ctx.db
+        .update(users)
+        .set({ email: input.email, passwordHash, isGuest: false })
+        .where(eq(users.id, me.id));
+      return issueTokens(ctx.db, me.id);
+    }),
 
   refresh: publicProcedure
     .input(z.object({ refreshToken: z.string().min(1) }))
