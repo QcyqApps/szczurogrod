@@ -3,24 +3,25 @@ import type { CapacitorConfig } from '@capacitor/cli';
 /**
  * Capacitor config dla mobilnego buildu Szczurogrodu.
  *
- * `webDir` wskazuje na output `vite build`. Workflow:
- *   1. `VITE_API_URL=https://api.example.com pnpm --filter @grodno/web build`
- *   2. `pnpm --filter @grodno/web cap:sync`
- *   3. `pnpm --filter @grodno/web cap:open:android` → otwiera Android Studio
+ * **Tryb live** (domyślny od 0.10.0): `server.url` wskazuje na produkcyjny
+ * web — natywny shell ładuje stronę z sieci, nie z bundle'a `assets/public`.
+ * Każdy `pnpm deploy` na webie = instant update w apce, bez nowego AAB do
+ * Play Console. Game jest server-authoritative więc i tak wymaga sieci, więc
+ * tracimy zero (offline'u nie było).
+ *
+ * Trade-off: cold start na słabej sieci pokazywałby biały ekran zanim
+ * dociągnie HTML/JS. Zabezpieczenie: SplashScreen z `launchAutoHide:true`
+ * + 10s failsafe. JS po pierwszym render'cie woła `SplashScreen.hide()`
+ * (z fadeOut). Worst case (sieć padła) — splash schodzi sam po 10s i gracz
+ * widzi natywny error WebView.
  *
  * UWAGA — appId jest stały po publikacji na Google Play. Zmiana = nowa
  * aplikacja, nowy listing, gracze tracą zakupy. `com.ratburg` zarezerwowane
  * w Play Console — TYLKO ten string przejdzie upload AAB.
  *
- * `androidScheme: 'http'` — WebView ładuje aplikację z `http://localhost/`.
- * Powód: API (dev `http://LAN_IP:4000`, prod `https://api.szczurogrod.pl`)
- * — gdyby strona była po HTTPS to dev path łapie Mixed Content blocking.
- * HTTP→HTTPS upgrade działa, więc prod też OK.
- *
- * Trade-off: tracimy „secure context" status w WebView (crypto.subtle,
- * service workers, geolocation). Gra nie używa żadnego z tych — wszystkie
- * RNG/auth/economy są server-side, persistence przez localStorage który
- * działa bez secure context.
+ * `androidScheme: 'http'` — historyczne, gdy bundle był ładowany lokalnie
+ * (`http://localhost/`). Z `server.url` ignored, ale zostawiamy gdyby ktoś
+ * chciał przełączyć na bundle mode (zakomentowanie `server.url`).
  */
 const config: CapacitorConfig = {
   appId: 'com.ratburg',
@@ -31,15 +32,25 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: 'http',
+    url: 'https://tidle.ovh/grodno/',
+    cleartext: false,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 800,
+      // 10s failsafe — JS powinien zawołać `SplashScreen.hide()` znacznie
+      // wcześniej (zwykle <2s na WiFi). Jeśli sieć padła i JS nie startuje,
+      // splash schodzi sam i player widzi natywny error WebView zamiast
+      // zawieszonej pustki.
+      launchShowDuration: 10_000,
       launchAutoHide: true,
       backgroundColor: '#2a1a3a',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
-      showSpinner: false,
+      // Spinner mówi „ładuję" zamiast statycznej grafiki — robi się jasne
+      // że to nie freeze. Material progress, kolor brand'owy.
+      showSpinner: true,
+      androidSpinnerStyle: 'large',
+      spinnerColor: '#ffc830',
     },
   },
 };

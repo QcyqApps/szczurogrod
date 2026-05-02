@@ -24,9 +24,10 @@ export function initNative(): void {
   void StatusBar.setStyle({ style: Style.Dark });
   void StatusBar.setBackgroundColor({ color: '#f3ead9' });
 
-  // Hide splash po pierwszym render'cie (Capacitor pokazuje splash do
-  // momentu aż JS odpali). Daje płynne przejście bez „white flash".
-  void SplashScreen.hide();
+  // UWAGA: NIE wołamy `SplashScreen.hide()` tutaj. W trybie `server.url`
+  // initNative() odpala się ZARAZ po pobraniu JS, ale React jeszcze nie
+  // wyrenderował UI — schowanie splasha tu = biała klatka między splashem
+  // a pierwszym frame'm. Hide ląduje w `App.tsx` w useEffect po mount'cie.
 
   // Back button — Android hardware back. Bez handler'a domyślnie minimalizuje
   // app. Sensowniej: jeśli historia routera ma cofnij, cofamy; jeśli nie,
@@ -45,5 +46,18 @@ export function initNative(): void {
   // shows a "try again" hint instead of the buy buttons).
   initBilling(GEM_PRODUCT_IDS).catch((err) => {
     console.error('[billing] init failed', err);
+  });
+}
+
+/**
+ * Schowanie splash screen z fadeOut'em po wyrenderowaniu UI. Wołane raz,
+ * z useEffect na top-level componentu (App.tsx). Na webie no-op.
+ */
+export function hideSplashAfterMount(): void {
+  if (!Capacitor.isNativePlatform()) return;
+  // 250ms fade — zlewa się z `modal-fade-in` (0.25s ease-out) używanym
+  // przez wewnętrzne overlaye, więc transition czuje się spójnie.
+  SplashScreen.hide({ fadeOutDuration: 250 }).catch((err) => {
+    console.error('[splash] hide failed', err);
   });
 }

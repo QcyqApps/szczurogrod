@@ -57,6 +57,7 @@ import { usePatchTrackerStore } from '@/api/patch-tracker-store';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { isNative } from '@/api/use-is-native';
+import { hideSplashAfterMount } from '@/native/capacitor-init';
 import { trpc } from '@/api/trpc';
 import { BillingError, finishPurchase, purchase as nativePurchase } from '@/native/billing';
 import { tStatic } from '@/i18n';
@@ -90,6 +91,13 @@ export default function App() {
   const [appState, setAppState] = useState<AppState>(() =>
     accessToken ? 'game' : 'splash',
   );
+
+  // Native splash fade-out — w trybie `server.url` Capacitor pokazuje natywny
+  // splash dopóki React nie zrenderuje pierwszego frame'u. Wołamy hide tutaj,
+  // raz, po pierwszym mount'cie. Na webie no-op.
+  useEffect(() => {
+    hideSplashAfterMount();
+  }, []);
 
   // ===== Server state =====
   // Character fetched whenever we're authenticated and past login; tutorial needs it too.
