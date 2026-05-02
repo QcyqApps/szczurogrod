@@ -46,8 +46,13 @@ ENV VITE_API_URL=${VITE_API_URL}
 # Brak → App.tsx fallback'uje na `clientId: 'test'`, guziki PayPala
 # renderują się jako sandbox/test i nie obsłużą prawdziwego zakupu.
 # Wartość bezpieczna do publikacji (publiczny identyfikator merchanta).
+# Walidacja TUTAJ (nie w docker-compose `:?`) — na serwerze `up --no-build`
+# parsuje compose'a nawet gdy nie buduje, więc `:?` blokowałby load
+# pre-built'owanego image'a. Tu sprawdzamy DOPIERO przed `vite build`.
 ARG VITE_PAYPAL_CLIENT_ID
 ENV VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
+RUN test -n "$VITE_PAYPAL_CLIENT_ID" || \
+    (echo "ERROR: VITE_PAYPAL_CLIENT_ID build-arg is required for vite build." && exit 1)
 
 RUN pnpm --filter @grodno/web build
 

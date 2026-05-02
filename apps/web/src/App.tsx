@@ -640,7 +640,7 @@ export default function App() {
 
   function onGemPurchase(pack: Purchase) {
     // Real IAP on native: gem packs (p1..p5) AND the VIP pack (`vip30` id,
-    // `vip_30days` SKU). Bundles still go through dev-grant because they
+    // `vip-30days` SKU). Bundles still go through dev-grant because they
     // grant mixed rewards (items + gold + gems) that haven't been wired
     // through server-validated receipts yet.
     if (isNative() && !pack.bundle && pack.real) {

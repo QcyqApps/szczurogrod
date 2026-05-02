@@ -87,7 +87,18 @@ services:
     # Statyczny SPA build (Vite → nginx alpine) serwowany pod ratburg.com /
     # szczurogrod.pl przez front nginx'a w shared-proxy. Backend zostaje na
     # tidle.ovh — VITE_API_URL bake'owany w bundle pod build.
+    #
+    # DEPLOY: dwa tryby.
+    # 1) Pełny build na serwerze: `docker compose --profile app up -d --build web`.
+    #    Wymaga VITE_PAYPAL_CLIENT_ID w env. Wolne na słabym CPU (~8 min).
+    # 2) Build lokalnie + transfer: `scripts/deploy-web.sh` builduje image lokalnie,
+    #    `docker save | ssh | docker load`, na serwerze `up -d --no-build web`
+    #    podpina załadowany image. Zero buildu na serwerze.
     profiles: ["app"]
+    # Explicit image name — żeby `docker save szczurogrod-web:latest` lokalnie
+    # miało stabilną nazwę niezależnie od docker-compose project name (czyli
+    # nazwy katalogu repo na danej maszynie).
+    image: szczurogrod-web:latest
     build:
       context: .
       dockerfile: apps/web/Dockerfile
@@ -99,7 +110,11 @@ services:
         # import.meta.env.* w bundlu). Bez niego SDK ładuje się z fallback'iem
         # `clientId: 'test'` i guziki PayPala są martwe nawet gdy backend
         # zwraca paypalReady:true.
-        VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:?VITE_PAYPAL_CLIENT_ID wymagane}
+        # `:-` (nie `:?`) bo na serwerze `up --no-build` parsuje compose'a NIM
+        # zdecyduje czy buildować — bez `:-` brak var'a wywala compose nawet
+        # gdy nie buduje. Wymóg „nie buduj bez paypal id" egzekwuje Dockerfile
+        # przez `RUN test -n "$VITE_PAYPAL_CLIENT_ID"`.
+        VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:-}
     container_name: grodno-web
     restart: unless-stopped
     networks:

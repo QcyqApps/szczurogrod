@@ -39,18 +39,18 @@ export interface GemPackage {
 }
 
 export const GEM_PACKAGES: readonly GemPackage[] = [
-  { id: 'p1', gems: 80,   bonus: 0,  googlePlayProductId: 'gems_p1', priceGrosze:    499, currency: 'PLN' },
-  { id: 'p2', gems: 450,  bonus: 12, googlePlayProductId: 'gems_p2', priceGrosze:   1999, currency: 'PLN' },
-  { id: 'p3', gems: 1200, bonus: 25, googlePlayProductId: 'gems_p3', priceGrosze:   4999, currency: 'PLN' },
-  { id: 'p4', gems: 2800, bonus: 40, googlePlayProductId: 'gems_p4', priceGrosze:   9999, currency: 'PLN' },
-  { id: 'p5', gems: 6500, bonus: 55, googlePlayProductId: 'gems_p5', priceGrosze:  19999, currency: 'PLN' },
+  { id: 'p1', gems: 80,   bonus: 0,  googlePlayProductId: 'gems-p1', priceGrosze:    499, currency: 'PLN' },
+  { id: 'p2', gems: 450,  bonus: 12, googlePlayProductId: 'gems-p2', priceGrosze:   1999, currency: 'PLN' },
+  { id: 'p3', gems: 1200, bonus: 25, googlePlayProductId: 'gems-p3', priceGrosze:   4999, currency: 'PLN' },
+  { id: 'p4', gems: 2800, bonus: 40, googlePlayProductId: 'gems-p4', priceGrosze:   9999, currency: 'PLN' },
+  { id: 'p5', gems: 6500, bonus: 55, googlePlayProductId: 'gems-p5', priceGrosze:  19999, currency: 'PLN' },
   // sp1 = „Królewska oferta" w UI (`gemShop.special.*`). Promo pack — taniej
   // za gem niż p1..p5. Klient marketinguje to jako 70% off; tu zawsze dostępne.
-  { id: 'sp1', gems: 1500, bonus: 0, googlePlayProductId: 'special_royal_1500', priceGrosze: 1499, currency: 'PLN' },
+  { id: 'sp1', gems: 1500, bonus: 0, googlePlayProductId: 'special-royal-1500', priceGrosze: 1499, currency: 'PLN' },
   // VIP — 3000 gemów upfront (≈ 100 dziennie × 30 dni) + 30 dni subskrypcji
   // Szczurogród+ z bonusem +20% XP. Cena 19.99 PLN. Marketing copy
   // (`gemShop.vip.perk*`) musi pasować do faktycznego grantu.
-  { id: 'vip30', gems: 3000, bonus: 0, googlePlayProductId: 'vip_30days', priceGrosze: 1999, currency: 'PLN', subscriptionDays: 30 },
+  { id: 'vip30', gems: 3000, bonus: 0, googlePlayProductId: 'vip-30days', priceGrosze: 1999, currency: 'PLN', subscriptionDays: 30 },
 ] as const;
 
 // ===== Bundle packages — gems + gold + items (PayPal only, na razie) =====

@@ -774,7 +774,7 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           onClick={() =>
             buy(
               {
-                // 'vip30' = id w client billing-catalog.ts → SKU 'vip_30days'
+                // 'vip30' = id w client billing-catalog.ts → SKU 'vip-30days'
                 // w Play Console. Phase 1 implementacja: one-shot consumable
                 // z premium gem-grant (3000 gemów). Faktyczna subskrypcja
                 // (auto-renew + perks) — Phase 2.

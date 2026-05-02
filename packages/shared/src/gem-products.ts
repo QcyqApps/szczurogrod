@@ -13,17 +13,20 @@
 // client only needs the IDs to register with the native IAP plugin (so
 // the plugin can pull localized prices from Play Billing).
 
+// Play Console product ID conventions: dash-separated, lowercase. Underscore'y
+// były wcześniej (Google's docs je dopuszczają), ale nasz Play Console rejekt'uje
+// "_" w product ID, więc trzymamy się dashes wszędzie.
 export const GEM_PRODUCT_IDS = [
-  'gems_p1',
-  'gems_p2',
-  'gems_p3',
-  'gems_p4',
-  'gems_p5',
+  'gems-p1',
+  'gems-p2',
+  'gems-p3',
+  'gems-p4',
+  'gems-p5',
   // VIP — wpięte przez ten sam pipeline (consumable in-app product w Play
   // Console, NIE subskrypcja recurring). Realna subskrypcja z auto-renew
   // wymaga osobnego SKU subscription type + server-side handlerów RTDN —
   // Phase 2. Na razie one-shot 30-dniowy boost z premium gemsami.
-  'vip_30days',
+  'vip-30days',
 ] as const;
 
 export type GemProductId = (typeof GEM_PRODUCT_IDS)[number];

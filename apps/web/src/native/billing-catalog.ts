@@ -1,5 +1,5 @@
 // Tiny client-side mirror of the gem-pack catalog so we can map between the
-// in-shop pack id ('p3') and Google Play product id ('gems_p3') without a
+// in-shop pack id ('p3') and Google Play product id ('gems-p3') without a
 // server round-trip on every buy click. Server stays authoritative for
 // crediting; this is just the SKU-resolution table for the native plugin.
 //
@@ -16,14 +16,14 @@ export interface ClientGemPackage {
 
 // Mapping między packId używanym w UI (`p1`..`p5`, `vip30`) a Google Play
 // SKU. Jawne mapowanie bo SKU dla VIP nie pasuje do prostej konwencji
-// `gems_<id>`.
+// `gems-<id>`.
 const PACKAGES: readonly ClientGemPackage[] = [
-  { id: 'p1', googlePlayProductId: 'gems_p1' },
-  { id: 'p2', googlePlayProductId: 'gems_p2' },
-  { id: 'p3', googlePlayProductId: 'gems_p3' },
-  { id: 'p4', googlePlayProductId: 'gems_p4' },
-  { id: 'p5', googlePlayProductId: 'gems_p5' },
-  { id: 'vip30', googlePlayProductId: 'vip_30days' },
+  { id: 'p1', googlePlayProductId: 'gems-p1' },
+  { id: 'p2', googlePlayProductId: 'gems-p2' },
+  { id: 'p3', googlePlayProductId: 'gems-p3' },
+  { id: 'p4', googlePlayProductId: 'gems-p4' },
+  { id: 'p5', googlePlayProductId: 'gems-p5' },
+  { id: 'vip30', googlePlayProductId: 'vip-30days' },
 ];
 
 export function findPackageById(id: string): ClientGemPackage | undefined {
