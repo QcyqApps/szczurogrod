@@ -740,8 +740,8 @@ export const dict = {
     en: 'Leave work now? You will get {gold} gold and {xp} XP.',
   },
   'work.active.blocksCombat': {
-    pl: 'Pracujesz — walka, lochy, arena i gildia są zablokowane do końca zmiany.',
-    en: 'Working — combat, dungeons, arena and guild fights are locked until shift ends.',
+    pl: 'Pracujesz — możesz przeglądać i zarządzać. Walki, lochy i najazdy ruszą po zmianie.',
+    en: 'Working — browse and manage freely. Fights, dungeons and raids resume after the shift.',
   },
   'work.banner.title': { pl: 'JESTEŚ W PRACY', en: 'YOU ARE AT WORK' },
   'work.banner.body': {
@@ -751,10 +751,6 @@ export const dict = {
   'work.banner.bodyReady': {
     pl: '{kind} — gotowe. Stuknij żeby odebrać zapłatę.',
     en: '{kind} — ready. Tap to collect wages.',
-  },
-  'work.toast.blocked': {
-    pl: 'Pracujesz. Najpierw skończ albo wyjdź ze zmiany.',
-    en: 'You are working. Finish or leave early first.',
   },
   'town.chronicle.title': { pl: 'KRONIKI SZCZUROGRODU', en: 'RATBURG CHRONICLE' },
   'town.chronicle.empty': { pl: 'Kronikarz pisze. Wróć za chwilę.', en: 'The chronicler is writing. Come back in a moment.' },
@@ -846,6 +842,7 @@ export const dict = {
   'char.item.slot.any': { pl: 'Losowy', en: 'Any slot' },
   'char.item.slot.label': { pl: 'Slot: {slot}', en: 'Slot: {slot}' },
   'char.item.btn.equip': { pl: 'ZAŁÓŻ NA POSTAĆ', en: 'EQUIP' },
+  'char.item.btn.equipOffhand': { pl: 'ZAŁÓŻ W DRUGĄ RĘKĘ', en: 'EQUIP OFF-HAND' },
   'char.item.btn.unequip': { pl: 'ZDEJMIJ DO PLECAKA', en: 'UNEQUIP TO BAG' },
   'char.item.btn.use': { pl: 'UŻYJ', en: 'USE' },
   'char.item.btn.sell': { pl: 'SPRZEDAJ ({g} g)', en: 'SELL ({g} g)' },
@@ -1007,14 +1004,6 @@ export const dict = {
   'toast.gemShop.emptyPack': {
     pl: 'Ten zakup niczego nie przyznaje.',
     en: 'This purchase grants nothing.',
-  },
-  'gemShop.web.banner.title': {
-    pl: 'KUP W APLIKACJI',
-    en: 'BUY IN THE APP',
-  },
-  'gemShop.web.banner.body': {
-    pl: 'Klejnoty można kupić tylko w aplikacji Android. W przeglądarce zobaczysz je natychmiast — to samo konto, ten sam stan.',
-    en: 'Gems are sold in the Android app only. You’ll see them in the browser instantly — same account, same state.',
   },
   'gemShop.modal.heading': {
     pl: 'KUP W APLIKACJI',
@@ -2117,6 +2106,27 @@ support@ratburg.app (placeholder — fill in before launch)
   'gemShop.confirm.demo': {
     pl: 'Demo: brak rzeczywistej opłaty',
     en: 'Demo: no real charge',
+  },
+  'gemShop.paypal.title': { pl: 'PŁATNOŚĆ PAYPAL', en: 'PAYPAL CHECKOUT' },
+  'gemShop.paypal.toast.success': {
+    pl: 'Zakup zaksięgowany. Otrzymujesz +{n} gemów.',
+    en: 'Purchase booked. +{n} gems credited.',
+  },
+  'gemShop.paypal.toast.cancelled': {
+    pl: 'Anulowano płatność.',
+    en: 'Payment cancelled.',
+  },
+  'gemShop.paypal.toast.createFailed': {
+    pl: 'Nie udało się rozpocząć płatności. Spróbuj ponownie.',
+    en: 'Could not start payment. Try again.',
+  },
+  'gemShop.paypal.toast.captureFailed': {
+    pl: 'Płatność nie powiodła się ({reason}). Brak obciążenia.',
+    en: 'Payment failed ({reason}). No charge.',
+  },
+  'gemShop.paypal.toast.sdkError': {
+    pl: 'Błąd PayPal. Sprawdź połączenie.',
+    en: 'PayPal error. Check your connection.',
   },
 
   // ===== SeasonPass =====

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { GameIcon } from '@/components/game-icons';
 import { LocTile } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
+import { getSurvivorUrl } from '@/api/survivor-url';
 import { useT } from '@/i18n';
 import type { DictKey } from '@/i18n';
 import type { Character } from '@grodno/shared';
@@ -103,12 +104,7 @@ export function ScreenTown({
 
   const [survivorModalOpen, setSurvivorModalOpen] = useState(false);
   const openSurvivor = () => {
-    const url =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname.startsWith('192.168.')
-        ? `${window.location.protocol}//${window.location.hostname}:5174`
-        : 'https://survivor.ratburg.com';
-    window.open(url, '_blank', 'noopener');
+    window.open(getSurvivorUrl(), '_blank', 'noopener');
   };
 
   return (

@@ -8,6 +8,7 @@ import type { DictKey } from '@/i18n';
 import type { SubScreen, Tab } from '@/types/nav';
 import {
   applyEnhancementToStats,
+  isDaggerWeapon,
   type Character,
   type CharacterClass,
   type EquippedSlot,
@@ -91,7 +92,7 @@ export interface ScreenCharProps {
   char: Character;
   items: readonly InventoryItem[];
   onEditAppearance: () => void;
-  onEquip: (item: InventoryItem) => void | Promise<void>;
+  onEquip: (item: InventoryItem, targetSlot?: 'off') => void | Promise<void>;
   onUnequip: (item: InventoryItem) => void | Promise<void>;
   onDrop: (item: InventoryItem) => void | Promise<void>;
   onSell: (item: InventoryItem) => void | Promise<void>;
@@ -148,10 +149,16 @@ export function ScreenChar({
 
   const classColor = CLASS_COLOR[char.cls] ?? '#2a1810';
   const base = char.stats;
+  // Mirror serwerowego `loadEquipBonuses` (apps/server/src/game/arena.ts):
+  // off-hand sztylet (rogue dual-wield) kontrybuuje 50% atk. Bez tego preview
+  // statów kłamałby vs faktyczne wartości w walce.
+  const OFF_HAND_DAGGER_ATK_MULT = 0.5;
   const bonus = (Object.values(equippedMap) as (InventoryItem | null)[]).reduce(
     (acc, it) => {
       if (!it) return acc;
-      acc.atk += it.atk ?? 0;
+      const atk = it.atk ?? 0;
+      const isOffHandDagger = it.equippedSlot === 'off' && isDaggerWeapon(it);
+      acc.atk += isOffHandDagger ? Math.floor(atk * OFF_HAND_DAGGER_ATK_MULT) : atk;
       acc.def += it.def ?? 0;
       acc.mag += it.mag ?? 0;
       return acc;
@@ -939,6 +946,21 @@ export function ScreenChar({
                       }}
                     >
                       {t('char.item.btn.equip')}
+                    </button>
+                  )}
+                  {/* Łotrzyk + sztylet w torbie → druga opcja: założyć w slot
+                      off-hand (zamiast tarczy). Server ma tę samą regułę
+                      w inventory.equip — klient pre-empt'uje UI. */}
+                  {canEquip && char.cls === 'rogue' && isDaggerWeapon(it) && (
+                    <button
+                      type="button"
+                      className="cbtn green"
+                      onClick={async () => {
+                        await onEquip(it, 'off');
+                        setModal(null);
+                      }}
+                    >
+                      {t('char.item.btn.equipOffhand')}
                     </button>
                   )}
                   {!inBag && (

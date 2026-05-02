@@ -21,3 +21,5 @@ export { GemSinkButton } from './GemSinkButton';
 export type { GemSinkButtonProps } from './GemSinkButton';
 export { ActiveBuffsBar } from './ActiveBuffsBar';
 export type { ActiveBuffsBarProps } from './ActiveBuffsBar';
+export { PayPalCheckoutModal } from './PayPalCheckoutModal';
+export type { PayPalCheckoutModalProps } from './PayPalCheckoutModal';

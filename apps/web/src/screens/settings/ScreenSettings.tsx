@@ -6,6 +6,7 @@ import { useAdminStore } from '@/api/admin-store';
 import { useAuthStore } from '@/api/auth-store';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { trpc } from '@/api/trpc';
+import { getSurvivorUrl } from '@/api/survivor-url';
 import { useT, tStatic } from '@/i18n';
 import { LangPicker } from '@/i18n/LangPicker';
 import { GEM_SINK_COSTS } from '@grodno/shared';
@@ -357,11 +358,7 @@ export function ScreenSettings({
       <Section title={t('settings.section.othergames')} icon="bolt">
         <Button
           onClick={() => {
-            const url =
-              window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
-                ? `${window.location.protocol}//${window.location.hostname}:5174`
-                : 'https://survivor.ratburg.com';
-            window.open(url, '_blank', 'noopener');
+            window.open(getSurvivorUrl(), '_blank', 'noopener');
           }}
           iconName="bolt"
           label={t('settings.btn.survivor')}

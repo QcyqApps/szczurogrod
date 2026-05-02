@@ -181,22 +181,19 @@ async function leaderboard(
 
 async function resolveMyHitsToday(
   db: import('../db/client.js').Db,
-  guildId: string,
   characterId: string,
 ): Promise<number> {
-  const [member] = await db
+  const [row] = await db
     .select({
-      hits: guildMembers.raidHitsToday,
-      date: guildMembers.lastRaidHitDate,
+      hits: characters.raidHitsToday,
+      date: characters.lastRaidHitDate,
     })
-    .from(guildMembers)
-    .where(
-      and(eq(guildMembers.guildId, guildId), eq(guildMembers.characterId, characterId)),
-    )
+    .from(characters)
+    .where(eq(characters.id, characterId))
     .limit(1);
-  if (!member) return 0;
+  if (!row) return 0;
   const today = isoDateUTC();
-  return member.date === today ? member.hits : 0;
+  return row.date === today ? row.hits : 0;
 }
 
 export const guildRaidsRouter = router({
@@ -208,7 +205,7 @@ export const guildRaidsRouter = router({
     }
 
     const boss = await ensureActiveBoss(ctx.db, membership.guildId);
-    const myHitsToday = await resolveMyHitsToday(ctx.db, membership.guildId, char.id);
+    const myHitsToday = await resolveMyHitsToday(ctx.db, char.id);
     const leaders = await leaderboard(ctx.db, boss.id);
 
     return {
@@ -226,17 +223,10 @@ export const guildRaidsRouter = router({
     }
     const { guildId } = await assertCan(ctx.db, char.id, 'raidHit');
 
-    // Daily limit check — reset gdy date'a się zmieniła.
-    const [member] = await ctx.db
-      .select()
-      .from(guildMembers)
-      .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.characterId, char.id)))
-      .limit(1);
-    if (!member) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Nie jesteś w gildii.' });
-    }
+    // Daily limit check — counter siedzi na characters (nie na guild_members),
+    // więc leave/rejoin nie zeruje go. Reset na UTC rollover via date compare.
     const today = isoDateUTC();
-    const hitsTodayBefore = member.lastRaidHitDate === today ? member.raidHitsToday : 0;
+    const hitsTodayBefore = char.lastRaidHitDate === today ? char.raidHitsToday : 0;
     if (hitsTodayBefore >= RAID_HITS_PER_DAY) {
       throw new TRPCError({
         code: 'FORBIDDEN',
@@ -278,12 +268,15 @@ export const guildRaidsRouter = router({
       }
 
       await tx
-        .update(guildMembers)
+        .update(characters)
         .set({
           raidHitsToday: hitsTodayBefore + 1,
           lastRaidHitDate: today,
-          lastActiveAt: new Date(),
         })
+        .where(eq(characters.id, char.id));
+      await tx
+        .update(guildMembers)
+        .set({ lastActiveAt: new Date() })
         .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.characterId, char.id)));
     });
 
@@ -460,7 +453,7 @@ export const guildRaidsRouter = router({
       throw new TRPCError({ code: 'FORBIDDEN', message: `Brak gemów (${cost}).` });
     }
     const [member] = await ctx.db
-      .select()
+      .select({ guildId: guildMembers.guildId })
       .from(guildMembers)
       .where(eq(guildMembers.characterId, char.id))
       .limit(1);
@@ -468,7 +461,7 @@ export const guildRaidsRouter = router({
       throw new TRPCError({ code: 'FORBIDDEN', message: 'Nie jesteś w gildii.' });
     }
     const today = isoDateUTC();
-    const hitsTodayBefore = member.lastRaidHitDate === today ? member.raidHitsToday : 0;
+    const hitsTodayBefore = char.lastRaidHitDate === today ? char.raidHitsToday : 0;
     if (hitsTodayBefore < 3) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -477,15 +470,12 @@ export const guildRaidsRouter = router({
     }
     await ctx.db
       .update(characters)
-      .set({ gems: sql`${characters.gems} - ${cost}` })
-      .where(eq(characters.id, char.id));
-    await ctx.db
-      .update(guildMembers)
       .set({
+        gems: sql`${characters.gems} - ${cost}`,
         raidHitsToday: hitsTodayBefore - 1,
         lastRaidHitDate: today,
       })
-      .where(and(eq(guildMembers.guildId, member.guildId), eq(guildMembers.characterId, char.id)));
+      .where(eq(characters.id, char.id));
     return { ok: true, cost };
   }),
 });

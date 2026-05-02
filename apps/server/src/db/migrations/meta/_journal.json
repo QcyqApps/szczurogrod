@@ -421,6 +421,13 @@
       "when": 1777493668530,
       "tag": "0059_outstanding_rage",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1777702182364,
+      "tag": "0060_mighty_thing",
+      "breakpoints": true
     }
   ]
 }

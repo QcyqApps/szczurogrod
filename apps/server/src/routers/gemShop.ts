@@ -35,6 +35,7 @@ import {
   isPlayBillingConfigured,
   verifyPurchase,
 } from '../services/playBilling.js';
+import { isPayPalConfigured } from '../services/paypal.js';
 import { protectedProcedure, publicProcedure, router } from '../trpc/trpc.js';
 
 const PLATFORM_PLAY = 'play';
@@ -47,8 +48,11 @@ export const gemShopRouter = router({
         gems: p.gems,
         bonus: p.bonus,
         googlePlayProductId: p.googlePlayProductId,
+        priceGrosze: p.priceGrosze,
+        currency: p.currency,
       })),
       playBillingReady: isPlayBillingConfigured(),
+      paypalReady: isPayPalConfigured(),
     });
   }),
 

@@ -28,6 +28,7 @@ import type {
   CharacterClass,
   CharacterStats,
 } from '@grodno/shared';
+import { isDaggerWeapon } from '@grodno/shared';
 import { applyEnhancementToStats } from './blacksmith.js';
 import { rollPlayerAttack } from './combat.js';
 import { isoDateUTC } from './daily.js';
@@ -91,7 +92,15 @@ export function computePower(
  *
  * Enhancement level (Kowal Zygmunt) jest aplikowany per-item: stat × multiplier
  * z `computeEnhancementMultiplier`. Dla level=0 mult=1 (no change).
+ *
+ * Dual-wield nerf: sztylet w slot off-hand kontrybuuje 50% atk (konwencja
+ * z D&D / WoW). Bez tego rogue z dwoma sztyletami bije ~+45% damage vs
+ * sztylet+pusty off-slot — a tarcz po L5 w grze nie ma, więc tradeoff
+ * "drugi sztylet zamiast tarczy" praktycznie nie kosztuje. 50% off-hand
+ * daje wymierną przewagę bez crusha balansu.
  */
+export const OFF_HAND_DAGGER_ATK_MULT = 0.5;
+
 export async function loadEquipBonuses(
   db: Db,
   characterId: string,
@@ -101,6 +110,9 @@ export async function loadEquipBonuses(
       atk: characterItems.atk,
       def: characterItems.def,
       mag: characterItems.mag,
+      icon: characterItems.icon,
+      slot: characterItems.slot,
+      equippedSlot: characterItems.equippedSlot,
       enhancementLevel: characterItems.enhancementLevel,
     })
     .from(characterItems)
@@ -113,8 +125,14 @@ export async function loadEquipBonuses(
   return equipped.reduce<{ atk: number; def: number; mag: number }>(
     (acc, row) => {
       const enhanced = applyEnhancementToStats(row, row.enhancementLevel);
+      const isOffHandDagger =
+        row.equippedSlot === 'off' &&
+        isDaggerWeapon({ slot: row.slot, icon: row.icon });
+      const atkContribution = isOffHandDagger
+        ? Math.floor(enhanced.atk * OFF_HAND_DAGGER_ATK_MULT)
+        : enhanced.atk;
       return {
-        atk: acc.atk + enhanced.atk,
+        atk: acc.atk + atkContribution,
         def: acc.def + enhanced.def,
         mag: acc.mag + enhanced.mag,
       };

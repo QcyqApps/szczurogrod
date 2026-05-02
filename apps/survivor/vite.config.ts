@@ -7,6 +7,14 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  // Sub-path deploy: prod serwuje Okruchy pod /survivor (ratburg.com/survivor,
+  // szczurogrod.pl/survivor). `base` przepisuje wszystkie asset URLe w buildzie
+  // (`/assets/*` → `/survivor/assets/*`) żeby reverse proxy mógł zmappować
+  // path-prefix bez rewrite'owania response body. Capacitor build (mobile,
+  // ładuje pliki z file://) wymaga root'a — przepuść `VITE_BUILD_BASE=/` przy
+  // mobile:build żeby nadpisać. Dev (port 5174 standalone) używa root'a
+  // automatycznie — base działa tylko w build outputzie.
+  base: process.env.VITE_BUILD_BASE ?? '/survivor/',
   resolve: {
     alias: {
       '@': path.resolve(dirname, './src'),

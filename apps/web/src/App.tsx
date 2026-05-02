@@ -40,6 +40,7 @@ import { ScreenTrainer } from '@/screens/trainer';
 import { ScreenWorldMap } from '@/screens/world';
 import { ScreenGemShop } from '@/screens/gem-shop';
 import type { Purchase } from '@/screens/gem-shop';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import {
   ScreenSplash,
   ScreenLogin,
@@ -456,45 +457,26 @@ export default function App() {
     setAppState('tutorial');
   }
 
-  const isWorking = char?.work != null;
-  const navTo = useCallback(
-    (screen: Tab | SubScreen) => {
-      // Praca jest ekskluzywna z walką: każda próba wejścia w lochy / arenę /
-      // wieżę / gildię (przez kafel w mieście, TabBar lub deep-link) pokazuje
-      // toast i przerzuca do tablicy pracy. Server i tak zwróci FORBIDDEN —
-      // tutaj robimy UX'owy pre-empt żeby gracz nie klikał w pustkę.
-      if (
-        isWorking &&
-        (screen === 'arena' ||
-          screen === 'dungeons' ||
-          screen === 'guild' ||
-          screen === 'tower' ||
-          screen === 'dungeon' ||
-          screen === 'world')
-      ) {
-        useToastQueue.getState().push({
-          text: tStatic('work.toast.blocked'),
-          accent: '#7a4a2a',
-        });
-        setSub('work');
-        return;
-      }
-      if (
-        screen === 'town' ||
-        screen === 'char' ||
-        screen === 'quest' ||
-        screen === 'arena' ||
-        screen === 'dungeons' ||
-        screen === 'guild'
-      ) {
-        setSub(null);
-        setTab(screen);
-      } else {
-        setSub(screen);
-      }
-    },
-    [isWorking],
-  );
+  const navTo = useCallback((screen: Tab | SubScreen) => {
+    // Praca i walka nie są ekskluzywne dla nawigacji: gracz może przeglądać
+    // arenę, gildię, lochy, wieżę i mapę świata podczas pracy (zarządzać
+    // zaproszeniami, czytać czat, oglądać liderboardy). Same combat-trigger
+    // mutacje są blokowane serwer-side z `WORKING_BLOCKS_COMBAT_MESSAGE` —
+    // klient surfacuje to przez onError toast na próbie ataku.
+    if (
+      screen === 'town' ||
+      screen === 'char' ||
+      screen === 'quest' ||
+      screen === 'arena' ||
+      screen === 'dungeons' ||
+      screen === 'guild'
+    ) {
+      setSub(null);
+      setTab(screen);
+    } else {
+      setSub(screen);
+    }
+  }, []);
 
   async function startQuest(id: string) {
     try {
@@ -930,8 +912,21 @@ export default function App() {
       />
     );
   } else if (sub === 'gemshop') {
+    // PayPal SDK ładuje się tylko przy otwarciu sklepu — nie blokuje boot'a.
+    // Native build i tak go nie używa (Google Play Billing), ale ScriptProvider
+    // bez VITE_PAYPAL_CLIENT_ID po prostu nie zarejestruje SDK i `<PayPalButtons>`
+    // wyrenderuje warning. Modal otwiera się tylko gdy paypalReady (server check).
+    const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined;
     content = (
-      <ScreenGemShop char={char} onBack={() => setSub(null)} onPurchase={onGemPurchase} />
+      <PayPalScriptProvider
+        options={{
+          clientId: paypalClientId ?? 'test',
+          currency: 'PLN',
+          intent: 'capture',
+        }}
+      >
+        <ScreenGemShop char={char} onBack={() => setSub(null)} onPurchase={onGemPurchase} />
+      </PayPalScriptProvider>
     );
   } else if (sub === 'trainer') {
     content = (
@@ -1039,9 +1034,14 @@ export default function App() {
         char={char}
         items={inventoryQuery.data ?? []}
         onEditAppearance={() => setSub('creator')}
-        onEquip={async (item) => {
+        onEquip={async (item, targetSlot) => {
           if (item.slot === 'potion' || item.slot === 'any') return;
-          await equipMut.mutateAsync({ itemId: item.id, targetSlot: item.slot });
+          await equipMut.mutateAsync({
+            itemId: item.id,
+            // Explicit targetSlot ('off') używany przy dual-wield daggerów
+            // dla łotrzyka. Bez parametru — domyślnie slot pasujący do itemu.
+            targetSlot: targetSlot ?? item.slot,
+          });
         }}
         onUnequip={async (item) => {
           await unequipMut.mutateAsync({ itemId: item.id });

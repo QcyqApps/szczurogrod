@@ -42,6 +42,13 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
       void utils.me.get.invalidate();
       if (data.unlockedAchievements?.length) pushUnlocks(data.unlockedAchievements);
     },
+    onError: (err) => {
+      setFighting(null);
+      pushToast({
+        text: err instanceof TRPCClientError ? err.message : t('arena.toast.buyFailed'),
+        accent: '#c83232',
+      });
+    },
   });
 
   const buyFightMut = trpc.arena.buyExtraFight.useMutation({

@@ -709,15 +709,16 @@ export const gemPurchaseInputSchema = z.object({
   packId: z.string().min(1).max(64),
 });
 
-// Catalog entry returned by `gemShop.list`. Pricing is NOT in the response —
-// the client is expected to read the localized price string from the native
-// IAP plugin (which calls Play Billing for the user's actual currency). The
-// server only owns the contract: which productId yields how many gems.
+// Catalog entry returned by `gemShop.list`. Native (Capacitor) build czyta
+// localized price z Play Billing plugin'u; web (PayPal) używa `priceGrosze`
+// + `currency` z serwera (server-authoritative — klient amount'u nie wysyła).
 export const gemPackageSchema = z.object({
   id: z.string(),
   gems: z.number().int().min(1),
   bonus: z.number().int().min(0),
   googlePlayProductId: z.string(),
+  priceGrosze: z.number().int().min(0),
+  currency: z.literal('PLN'),
 });
 export type GemPackage = z.infer<typeof gemPackageSchema>;
 
@@ -726,6 +727,9 @@ export const gemShopListResponseSchema = z.object({
   /** True iff env has package + service account; lets the client warn when
    *  the server is in unconfigured-mode (purchase will return PLAY_NOT_CONFIGURED). */
   playBillingReady: z.boolean(),
+  /** True gdy server ma PayPal API key+secret. Klient (web) używa do gating'u
+   *  PayPal Buttons render — bez creds renderuje fallback. */
+  paypalReady: z.boolean(),
 });
 export type GemShopListResponse = z.infer<typeof gemShopListResponseSchema>;
 
@@ -745,6 +749,32 @@ export const verifyPlayPurchaseResponseSchema = z.object({
   reason: z.string().nullable(),
 });
 export type VerifyPlayPurchaseResponse = z.infer<typeof verifyPlayPurchaseResponseSchema>;
+
+// ===== PayPal Checkout (web fallback) =====
+// Klient nie wysyła amount'u — server bierze go z GEM_PACKAGES po packId.
+export const paypalCreateOrderInputSchema = z.object({
+  packId: z.string().min(1).max(64),
+});
+export type PaypalCreateOrderInput = z.infer<typeof paypalCreateOrderInputSchema>;
+
+export const paypalCreateOrderResponseSchema = z.object({
+  orderId: z.string(),
+});
+export type PaypalCreateOrderResponse = z.infer<typeof paypalCreateOrderResponseSchema>;
+
+export const paypalCaptureOrderInputSchema = z.object({
+  orderId: z.string().min(1).max(64),
+  packId: z.string().min(1).max(64),
+});
+export type PaypalCaptureOrderInput = z.infer<typeof paypalCaptureOrderInputSchema>;
+
+export const paypalCaptureOrderResponseSchema = z.object({
+  status: z.enum(['credited', 'already_credited', 'rejected']),
+  gemsGranted: z.number().int().min(0),
+  characterGems: z.number().int().min(0),
+  reason: z.string().nullable(),
+});
+export type PaypalCaptureOrderResponse = z.infer<typeof paypalCaptureOrderResponseSchema>;
 
 // ========== Arena ==========
 // Rival — może być real player (id = character uuid) lub NPC synth

@@ -44,7 +44,10 @@ export type GuildAction =
  */
 const NON_LEADER_PERMISSIONS: Record<GuildAction, readonly GuildRank[]> = {
   'chat.send': ['officer', 'member', 'recruit'],
-  'treasury.deposit': ['officer', 'member', 'recruit'],
+  // Anti-alt: rekrut nie może wpłacać do skarbca. Wymaga promocji przez
+  // oficera, co dodaje ludzkie tarcie do farmienia altów. Połączone
+  // z 24h tenure cooldown'em w routerze (DEPOSIT_TENURE_MS).
+  'treasury.deposit': ['officer', 'member'],
   'treasury.withdrawGold': ['officer'],
   'treasury.withdrawGems': [], // tylko lider
   invite: ['officer'],

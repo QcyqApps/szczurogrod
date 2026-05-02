@@ -5,4 +5,5 @@ export * from './quest';
 export * from './schemas';
 export * from './enhancement';
 export * from './gem-products';
+export * from './dual-wield';
 export * as survivor from './survivor';

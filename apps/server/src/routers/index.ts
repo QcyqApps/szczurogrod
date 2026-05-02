@@ -23,6 +23,7 @@ import { landingRouter } from './landing.js';
 import { leaderboardsRouter } from './leaderboards.js';
 import { meRouter } from './me.js';
 import { oracleRouter } from './oracle.js';
+import { paypalRouter } from './paypal.js';
 import { questsRouter } from './quests.js';
 import { shopRouter } from './shop.js';
 import { stablesRouter } from './stables.js';
@@ -57,6 +58,7 @@ export const appRouter = router({
   leaderboards: leaderboardsRouter,
   me: meRouter,
   oracle: oracleRouter,
+  paypal: paypalRouter,
   quests: questsRouter,
   scrapbook: scrapbookRouter,
   seasonPass: seasonPassRouter,

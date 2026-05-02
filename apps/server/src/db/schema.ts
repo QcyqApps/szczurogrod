@@ -166,6 +166,13 @@ export const characters = pgTable(
      */
     guildId: uuid('guild_id'),
     guildRank: varchar('guild_rank', { length: 16 }),
+    /**
+     * Raid hits dziś — przeniesione z guild_members żeby leave/rejoin nie
+     * resetował licznika. Counter żyje na postaci, niezależnie od członkostwa.
+     * Reset na UTC rollover via lastRaidHitDate compare.
+     */
+    raidHitsToday: smallint('raid_hits_today').notNull().default(0),
+    lastRaidHitDate: varchar('last_raid_hit_date', { length: 10 }).notNull().default(''),
     /** Ostatni rename imienia postaci (gem sink). 30-dniowy cooldown, NULL = never renamed. */
     lastRenameAt: timestamp('last_rename_at', { withTimezone: true }),
     /** Zasób "złom" z dismantle u Kowala Zygmunta. Gated na upgrade itemów. */
@@ -743,9 +750,6 @@ export const guildMembers = pgTable(
     contributedGold: bigint('contributed_gold', { mode: 'number' }).notNull().default(0),
     contributedGems: integer('contributed_gems').notNull().default(0),
     lastActiveAt: timestamp('last_active_at', { withTimezone: true }).notNull().defaultNow(),
-    /** Hit counter dla rajdów gildii (Phase 4). Reset na UTC rollover. */
-    raidHitsToday: smallint('raid_hits_today').notNull().default(0),
-    lastRaidHitDate: varchar('last_raid_hit_date', { length: 10 }).notNull().default(''),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.guildId, t.characterId] }),

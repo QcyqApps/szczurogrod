@@ -27,6 +27,18 @@ const envSchema = z.object({
   // Alternative: filesystem path to the JSON. Pick one of the two — JSON env
   // takes precedence when both are set.
   GOOGLE_PLAY_SERVICE_ACCOUNT_FILE: z.string().optional(),
+
+  // ===== PayPal Checkout (web fallback dla nie-Capacitor builds) =====
+  // PayPal "Client ID" (publicznie ekspozowany jako VITE_PAYPAL_CLIENT_ID na
+  // froncie) i "Secret" (server-only, używany do OAuth token exchange).
+  // Sandbox creds dostępne w developer.paypal.com → My Apps & Credentials.
+  PAYPAL_API_KEY: z.string().optional(),
+  PAYPAL_SECRET: z.string().optional(),
+  /** Sandbox: https://api-m.sandbox.paypal.com  ·  Live: https://api-m.paypal.com */
+  PAYPAL_API_BASE: z.string().url().default('https://api-m.sandbox.paypal.com'),
+  /** Webhook ID z PayPal Dashboard → Webhooks. Wymagany dla weryfikacji
+   *  podpisu /webhooks/paypal. Bez niego endpoint odrzuca wszystkie eventy. */
+  PAYPAL_WEBHOOK_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

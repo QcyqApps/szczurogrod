@@ -4,10 +4,12 @@ import type { IconName } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
 import { useT } from '@/i18n';
 import type { DictKey } from '@/i18n';
+import { trpc } from '@/api/trpc';
 import type { Character } from '@grodno/shared';
 import type { Rarity } from '@grodno/shared';
 import { useIsNative } from '@/api/use-is-native';
 import { NativeOnlyPurchaseModal } from '@/components/ui-common/NativeOnlyPurchaseModal';
+import { PayPalCheckoutModal } from '@/components/ui-common';
 import { GiantGemCluster } from './GiantGemCluster';
 
 export type BundleReward =
@@ -145,12 +147,20 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
   const [pulse, setPulse] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ pack: Purchase; displayName: string } | null>(null);
   const [nativeOnlyBlock, setNativeOnlyBlock] = useState<string | null>(null);
+  const [paypal, setPaypal] = useState<{ packId: string; label: string; price: string } | null>(null);
+  const catalogQuery = trpc.gemShop.list.useQuery();
+  const paypalReady = catalogQuery.data?.paypalReady ?? false;
 
   function buy(pack: Purchase, displayName: string) {
-    // Web użytkownik klika BUY na produkcie real-money — bramkujemy modalem
-    // przed pokazaniem confirm dialog. Capacitor build (`native === true`)
-    // przepuszcza wszystko do `confirm` jak dotąd.
+    // Web użytkownik klika BUY na produkcie real-money. Trzy ścieżki:
+    //   - native (Capacitor) → confirm modal → Google Play Billing
+    //   - web + paypalReady + pack ma serwerowy mapping (NIE bundle) → PayPal
+    //   - web bez PayPala lub bundle → fallback NativeOnly modal
     if (!native && pack.real) {
+      if (paypalReady && !pack.bundle) {
+        setPaypal({ packId: pack.id, label: displayName, price: pack.price });
+        return;
+      }
       setNativeOnlyBlock(displayName);
       return;
     }
@@ -231,47 +241,6 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           </div>
         </div>
       </div>
-
-      {!native && (
-        <div
-          className="panel"
-          style={{
-            padding: '10px 12px',
-            marginBottom: 14,
-            background: '#fff7e0',
-            border: '3px solid #2a1810',
-            borderRadius: 10,
-            display: 'flex',
-            gap: 10,
-            alignItems: 'center',
-          }}
-        >
-          <span
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              border: '2.5px solid #2a1810',
-              background: '#fff7e0',
-              flexShrink: 0,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-hidden="true"
-          >
-            <img src="/google-play.png" alt="" width={22} height={22} />
-          </span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="h-title" style={{ fontSize: 13, color: '#2a1810' }}>
-              {t('gemShop.web.banner.title')}
-            </div>
-            <div className="flavor" style={{ fontSize: 14, color: '#5a3a2a', marginTop: 2 }}>
-              {t('gemShop.web.banner.body')}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div
         className="panel"
@@ -789,6 +758,16 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
         <NativeOnlyPurchaseModal
           productLabel={nativeOnlyBlock}
           onClose={() => setNativeOnlyBlock(null)}
+        />
+      )}
+
+      {paypal && (
+        <PayPalCheckoutModal
+          packId={paypal.packId}
+          productLabel={paypal.label}
+          priceLabel={`${paypal.price} ${t('gemShop.currency')}`}
+          onClose={() => setPaypal(null)}
+          onSuccess={() => setPaypal(null)}
         />
       )}
 

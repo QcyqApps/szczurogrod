@@ -63,6 +63,7 @@ import {
   applyStatus,
   createSession,
   deleteSession,
+  findCharSession,
   getEnemy,
   getSession,
   HEAVY_COOLDOWN_TURNS,
@@ -447,6 +448,19 @@ async function applyTowerVictory(
     .from(towerProgress)
     .where(eq(towerProgress.characterId, s.characterId))
     .limit(1);
+
+  // Anti-cheat: jeśli aktualne piętro nie zgadza się z piętrem sesji,
+  // ktoś już skomitował victory dla tej walki (np. parallel-tab exploit
+  // przeszedł wcześniejsze gate'y). No-op zamiast podwójnej nagrody.
+  if (progressRow && progressRow.currentFloor !== floor) {
+    return {
+      newFloor: progressRow.currentFloor,
+      newBestFloor: progressRow.bestFloorThisWeek,
+      reward: null,
+      failedUntil: null,
+    };
+  }
+
   const newFloor = floor + 1;
   const newBest = Math.max(progressRow?.bestFloorThisWeek ?? 0, floor);
 
@@ -629,6 +643,12 @@ export const combatRouter = router({
       }
       if (isWorking(char)) {
         throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
+      }
+      if (findCharSession(char.id)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Masz już otwartą walkę. Skończ ją albo poczekaj aż wygaśnie.',
+        });
       }
       if (char.lvl < enemy.requiredLvl) {
         throw new TRPCError({

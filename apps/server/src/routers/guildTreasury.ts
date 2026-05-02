@@ -25,6 +25,14 @@ import { protectedProcedure, router } from '../trpc/trpc.js';
 /** Daily withdraw cap base = 20% treasury. Vault dodaje więcej. */
 const WITHDRAW_CAP_BASE_PCT = 0.2;
 
+/**
+ * Anti-alt: członek może wpłacać do skarbca dopiero po 24h od dołączenia
+ * do gildii. Wraz z gating'iem rangowym (recruit nie może deposit'ować)
+ * dodaje real-world friction do farmienia altów: alt → join → wait 24h
+ * → promote → deposit. Fast-funding gildii staje się kosztowne czasowo.
+ */
+const DEPOSIT_TENURE_MS = 24 * 60 * 60 * 1000;
+
 async function requireChar(
   db: import('../db/client.js').Db,
   userId: string,
@@ -52,6 +60,24 @@ export const guildTreasuryRouter = router({
     .mutation(async ({ ctx, input }) => {
       const char = await requireChar(ctx.db, ctx.userId);
       const { guildId } = await assertCan(ctx.db, char.id, 'treasury.deposit');
+
+      // Tenure cooldown — 24h od join. Anti-alt: świeżo wprowadzony alt
+      // nie może natychmiast wstrzykiwać gold'a do skarbca.
+      const [member] = await ctx.db
+        .select({ joinedAt: guildMembers.joinedAt })
+        .from(guildMembers)
+        .where(and(eq(guildMembers.guildId, guildId), eq(guildMembers.characterId, char.id)))
+        .limit(1);
+      if (member) {
+        const tenureMs = Date.now() - member.joinedAt.getTime();
+        if (tenureMs < DEPOSIT_TENURE_MS) {
+          const hoursLeft = Math.ceil((DEPOSIT_TENURE_MS - tenureMs) / 3_600_000);
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: `Wpłaty dostępne po 24h od dołączenia. Jeszcze ${hoursLeft}h.`,
+          });
+        }
+      }
 
       if (char.gold < input.gold || char.gems < input.gems) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Masz za mało złota/gemów.' });

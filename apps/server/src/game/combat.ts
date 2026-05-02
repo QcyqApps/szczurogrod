@@ -171,6 +171,20 @@ export function deleteSession(combatId: string): void {
   SESSIONS.delete(combatId);
 }
 
+/**
+ * Active combat session for a character, lub null. Anti-cheat: dwie sesje
+ * z tego samego konta (np. dwie karty przeglądarki na Wieży) by każda
+ * komitowała własną nagrodę za to samo piętro/moba. Engage'y muszą się
+ * upewnić że nie ma jeszcze żywej sesji przed `createSession`.
+ */
+export function findCharSession(characterId: string): CombatSession | null {
+  reapSessions();
+  for (const s of SESSIONS.values()) {
+    if (s.characterId === characterId) return s;
+  }
+  return null;
+}
+
 function reapSessions(): void {
   const now = Date.now();
   for (const [id, s] of SESSIONS) {

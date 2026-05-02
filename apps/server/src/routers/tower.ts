@@ -33,6 +33,7 @@ import {
 } from '../game/buffs.js';
 import {
   createSession,
+  findCharSession,
   type CombatSession,
 } from '../game/combat.js';
 import { applyGuildWarBuffs, loadGuildWarBuffs } from '../game/guilds.js';
@@ -153,6 +154,12 @@ export const towerRouter = router({
     const char = await requireChar(ctx.db, ctx.userId);
     if (isWorking(char)) {
       throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
+    }
+    if (findCharSession(char.id)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Masz już otwartą walkę. Skończ ją albo poczekaj aż wygaśnie.',
+      });
     }
     const progress = await ensureProgress(ctx.db, char.id);
     const now = new Date();

@@ -11,6 +11,7 @@ import { startGuildMaintenance, stopGuildMaintenance } from './game/guild-mainte
 import { startGuildWarsScheduler, stopGuildWarsScheduler } from './game/guild-wars-scheduler.js';
 import { createContext } from './trpc/context.js';
 import { appRouter, type AppRouter } from './routers/index.js';
+import { registerPayPalWebhook } from './webhooks/paypal.js';
 
 async function main() {
   // Hydrate content tables if empty (first boot), then load into the in-memory
@@ -57,6 +58,11 @@ async function main() {
       },
     } satisfies FastifyTRPCPluginOptions<AppRouter>['trpcOptions'],
   });
+
+  // PayPal Checkout — async backstop (PAYMENT.CAPTURE.COMPLETED), poza tRPC
+  // bo zewnętrzny system woła bez naszego JWT. Verify signature → idempotent
+  // grant przez ten sam helper co synchroniczny captureOrder.
+  registerPayPalWebhook(app, db);
 
   await app.listen({ host: env.HOST, port: env.PORT });
   app.log.info(`Szczurogród server listening on http://${env.HOST}:${env.PORT}`);

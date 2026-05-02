@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
-import type { InventoryItem, Rarity, SellItemResult } from '@grodno/shared';
-import { equipItemInputSchema, itemIdInputSchema } from '@grodno/shared';
+import type { CharacterClass, InventoryItem, Rarity, SellItemResult } from '@grodno/shared';
+import { equipItemInputSchema, isDaggerWeapon, itemIdInputSchema } from '@grodno/shared';
 import { REGISTRY, type ItemTemplate } from '../content/registry.js';
 import { characterItems, characters } from '../db/schema.js';
 import { applyBuff, type BuffKind } from '../game/buffs.js';
@@ -66,6 +66,7 @@ async function requireCharacter(
       hp: characters.hp,
       hpMax: characters.hpMax,
       gold: characters.gold,
+      cls: characters.cls,
     })
     .from(characters)
     .where(eq(characters.userId, userId))
@@ -95,7 +96,19 @@ export const inventoryRouter = router({
     if (item.slot === 'potion' || item.slot === 'any') {
       throw new TRPCError({ code: 'FORBIDDEN', message: 'Item is not equippable' });
     }
-    if (item.slot !== input.targetSlot) {
+
+    // Standardowo slot itemu musi się zgadzać z targetSlot. Wyjątek: łotrzyk
+    // może założyć sztylet (broń typu dagger) w slot off-hand zamiast tarczy
+    // (dual-wield). Tylko ta jedna kombinacja.
+    const tpl = resolveTemplate(item);
+    const itemIcon = tpl?.icon ?? item.icon;
+    const isDualWieldOffSlot =
+      input.targetSlot === 'off' &&
+      item.slot === 'weapon' &&
+      (char.cls as CharacterClass) === 'rogue' &&
+      isDaggerWeapon({ slot: item.slot, icon: itemIcon });
+
+    if (item.slot !== input.targetSlot && !isDualWieldOffSlot) {
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: `Item fits slot ${item.slot}, not ${input.targetSlot}`,

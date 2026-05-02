@@ -9,6 +9,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/api/auth-store';
 import { trpc } from '@/api/trpc';
+import { getSurvivorUrl } from '@/api/survivor-url';
 import { useT, useLangStore } from '@/i18n';
 import { renderChronicleEntry } from '@/i18n/chronicle-templates';
 import { IcoCoin, IcoPaw, IcoSword, IcoMagic } from '@/components/icons';
@@ -418,12 +419,7 @@ function DiscordCard() {
 
 function SurvivorCard() {
   const t = useT();
-  const url =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' ||
-      window.location.hostname.startsWith('192.168.'))
-      ? `${window.location.protocol}//${window.location.hostname}:5174`
-      : 'https://survivor.ratburg.com';
+  const url = getSurvivorUrl();
   return (
     <a
       href={url}

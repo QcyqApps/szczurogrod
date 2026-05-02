@@ -319,6 +319,10 @@ export function ScreenDungeon({
       }
     } catch (e) {
       console.error('combat.engage failed', e);
+      pushToast({
+        text: e instanceof TRPCClientError ? e.message : tStatic('toast.failed'),
+        accent: '#c83232',
+      });
     }
   }
 
