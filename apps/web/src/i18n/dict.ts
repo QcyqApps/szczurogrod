@@ -1874,8 +1874,12 @@ support@ratburg.app (placeholder — fill in before launch)
     en: 'What changed lately. Newest first.',
   },
   'patches.btn.refresh': { pl: 'ODŚWIEŻ STRONĘ (CTRL+F5)', en: 'HARD REFRESH (CTRL+F5)' },
+  'patches.btn.prev': { pl: '← POPRZEDNIA', en: '← PREV' },
+  'patches.btn.next': { pl: 'NASTĘPNA →', en: 'NEXT →' },
+  'patches.pageOf': { pl: 'strona {page} / {total}', en: 'page {page} / {total}' },
   'patches.loading': { pl: 'Wczytuję…', en: 'Loading…' },
   'patches.empty': { pl: 'Pierwsza łatka jeszcze nie wyszła.', en: 'No patches yet.' },
+  'settings.btn.patches': { pl: 'Kronika łatek', en: 'Patch log' },
   'worldBoss.modal.killer': { pl: 'OSTATNI CIOS!', en: 'KILLING BLOW!' },
   'worldBoss.modal.killed': { pl: 'PADŁ', en: 'DEFEATED' },
   'worldBoss.modal.killBlurb': {

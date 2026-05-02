@@ -1478,9 +1478,12 @@ export const patches = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     /** Semver albo dowolna etykieta. Pokazywana w UI obok tytułu. */
     version: varchar('version', { length: 64 }).notNull(),
-    title: varchar('title', { length: 255 }).notNull(),
-    /** Markdown / plain text. Renderujemy paragrafami. */
-    body: text('body').notNull(),
+    titlePl: varchar('title_pl', { length: 255 }).notNull(),
+    /** Markdown / plain text PL. Renderujemy paragrafami. */
+    bodyPl: text('body_pl').notNull(),
+    titleEn: varchar('title_en', { length: 255 }).notNull(),
+    /** Markdown / plain text EN. */
+    bodyEn: text('body_en').notNull(),
     releasedAt: timestamp('released_at', { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

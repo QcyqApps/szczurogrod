@@ -456,6 +456,13 @@
       "when": 1777723300000,
       "tag": "0064_discord_plus",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1777725900000,
+      "tag": "0065_patches_i18n",
+      "breakpoints": true
     }
   ]
 }

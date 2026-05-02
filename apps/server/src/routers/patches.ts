@@ -1,50 +1,65 @@
 // Patch log router.
 //
-// `list` — public, klient pull'uje z refetchInterval'em ~5 minut. Jeśli
-//   najnowszy id różni się od localStorage `lastSeenPatchId`, banner zachęca
-//   do hard-refresha.
+// `list` — public, paginowane (default page=0, pageSize=10). Klient pull'uje
+//   z refetchInterval'em ~5 minut. Jeśli najnowszy id różni się od
+//   localStorage `lastSeenPatchId`, banner zachęca do hard-refresha.
 // `create` — admin-gated (x-admin-token). Wywoływane przez Claude Code
-//   po explicitnym approval'u w czacie. Alternatywnie skrypt
-//   `scripts/add-patch.ts` z bezpośrednim DB connectem (mirrored shape).
+//   po explicitnym approval'u w czacie z PL+EN tłumaczeniem. Alternatywnie
+//   skrypt `scripts/add-patch.ts` z bezpośrednim DB connectem.
 
-import { desc } from 'drizzle-orm';
-import { z } from 'zod';
-import type { PatchListResponse } from '@grodno/shared';
+import { desc, sql } from 'drizzle-orm';
+import {
+  patchCreateInputSchema,
+  patchListInputSchema,
+  type PatchListResponse,
+} from '@grodno/shared';
 import { patches } from '../db/schema.js';
 import { adminProcedure, publicProcedure, router } from '../trpc/trpc.js';
 
-const LIST_LIMIT = 30;
-
-const patchCreateInputSchema = z.object({
-  version: z.string().min(1).max(64),
-  title: z.string().min(1).max(255),
-  body: z.string().min(1).max(20_000),
-});
+const MAX_PAGE_SIZE = 50;
 
 export const patchesRouter = router({
-  list: publicProcedure.query(async ({ ctx }): Promise<PatchListResponse> => {
-    const rows = await ctx.db
-      .select({
-        id: patches.id,
-        version: patches.version,
-        title: patches.title,
-        body: patches.body,
-        releasedAt: patches.releasedAt,
-      })
-      .from(patches)
-      .orderBy(desc(patches.releasedAt))
-      .limit(LIST_LIMIT);
+  list: publicProcedure
+    .input(patchListInputSchema.optional())
+    .query(async ({ ctx, input }): Promise<PatchListResponse> => {
+      const page = input?.page ?? 0;
+      const pageSize = Math.min(input?.pageSize ?? 10, MAX_PAGE_SIZE);
+      const offset = page * pageSize;
 
-    return {
-      entries: rows.map((r) => ({
-        id: r.id,
-        version: r.version,
-        title: r.title,
-        body: r.body,
-        releasedAt: r.releasedAt.getTime(),
-      })),
-    };
-  }),
+      const [{ count }] = await ctx.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(patches);
+
+      const rows = await ctx.db
+        .select({
+          id: patches.id,
+          version: patches.version,
+          titlePl: patches.titlePl,
+          bodyPl: patches.bodyPl,
+          titleEn: patches.titleEn,
+          bodyEn: patches.bodyEn,
+          releasedAt: patches.releasedAt,
+        })
+        .from(patches)
+        .orderBy(desc(patches.releasedAt))
+        .limit(pageSize)
+        .offset(offset);
+
+      return {
+        entries: rows.map((r) => ({
+          id: r.id,
+          version: r.version,
+          titlePl: r.titlePl,
+          bodyPl: r.bodyPl,
+          titleEn: r.titleEn,
+          bodyEn: r.bodyEn,
+          releasedAt: r.releasedAt.getTime(),
+        })),
+        total: count ?? 0,
+        page,
+        pageSize,
+      };
+    }),
 
   create: adminProcedure
     .input(patchCreateInputSchema)
@@ -53,20 +68,24 @@ export const patchesRouter = router({
         .insert(patches)
         .values({
           version: input.version,
-          title: input.title,
-          body: input.body,
+          titlePl: input.titlePl,
+          bodyPl: input.bodyPl,
+          titleEn: input.titleEn,
+          bodyEn: input.bodyEn,
         })
         .returning({
           id: patches.id,
           version: patches.version,
-          title: patches.title,
+          titlePl: patches.titlePl,
+          titleEn: patches.titleEn,
           releasedAt: patches.releasedAt,
         });
       return {
         ok: true as const,
         id: row.id,
         version: row.version,
-        title: row.title,
+        titlePl: row.titlePl,
+        titleEn: row.titleEn,
         releasedAt: row.releasedAt.getTime(),
       };
     }),

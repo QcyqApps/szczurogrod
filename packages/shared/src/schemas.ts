@@ -2011,17 +2011,39 @@ export type WorldBossShopBuyResponse = z.infer<typeof worldBossShopBuyResponseSc
 export const patchSchema = z.object({
   id: z.string().uuid(),
   version: z.string().min(1).max(64),
-  title: z.string().min(1).max(255),
-  body: z.string(),
+  titlePl: z.string().min(1).max(255),
+  bodyPl: z.string(),
+  titleEn: z.string().min(1).max(255),
+  bodyEn: z.string(),
   /** Unix ms. */
   releasedAt: z.number().int().nonnegative(),
 });
 export type Patch = z.infer<typeof patchSchema>;
 
+export const patchListInputSchema = z.object({
+  /** 0-indexed page. */
+  page: z.number().int().min(0).default(0),
+  /** Capped to MAX_PAGE_SIZE w router'ze. */
+  pageSize: z.number().int().min(1).max(50).default(10),
+});
+export type PatchListInput = z.infer<typeof patchListInputSchema>;
+
 export const patchListResponseSchema = z.object({
   entries: z.array(patchSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().min(0),
+  pageSize: z.number().int().min(1),
 });
 export type PatchListResponse = z.infer<typeof patchListResponseSchema>;
+
+export const patchCreateInputSchema = z.object({
+  version: z.string().min(1).max(64),
+  titlePl: z.string().min(1).max(255),
+  bodyPl: z.string().min(1).max(20_000),
+  titleEn: z.string().min(1).max(255),
+  bodyEn: z.string().min(1).max(20_000),
+});
+export type PatchCreateInput = z.infer<typeof patchCreateInputSchema>;
 
 // ========== Hall of Fame / Kroniki Chwały (unified leaderboards) ==========
 //

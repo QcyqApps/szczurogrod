@@ -25,6 +25,7 @@ export interface ScreenSettingsProps {
   onAccountDeleted: () => void;
   onEditAppearance: () => void;
   onReplayTutorial: () => void;
+  onShowPatches: () => void;
   onRename: (newName: string) => void;
   renamePending: boolean;
 }
@@ -42,6 +43,7 @@ export function ScreenSettings({
   onAccountDeleted,
   onEditAppearance,
   onReplayTutorial,
+  onShowPatches,
   onRename,
   renamePending,
 }: ScreenSettingsProps) {
@@ -347,6 +349,7 @@ export function ScreenSettings({
       <Section title={t('settings.section.game')} icon="dice">
         <Button onClick={onEditAppearance} iconName="spark" label={t('settings.btn.editAppearance')} />
         <Button onClick={onReplayTutorial} iconName="scroll" label={t('settings.btn.replayTutorial')} />
+        <Button onClick={onShowPatches} iconName="scroll" label={t('settings.btn.patches')} />
       </Section>
 
       <Section title={t('settings.section.community')} icon="megaphone">

@@ -1045,6 +1045,7 @@ export default function App() {
           setSub(null);
           setAppState('tutorial');
         }}
+        onShowPatches={() => setSub('patches')}
       />
     );
   } else if (tab === 'town') {
