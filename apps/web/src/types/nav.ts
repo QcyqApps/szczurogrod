@@ -9,6 +9,7 @@ export type SubScreen =
   | 'dice'
   | 'dungeon'
   | 'oracle'
+  | 'patches'
   | 'shop'
   | 'tavern'
   | 'daily'

@@ -306,6 +306,50 @@ export const dict = {
     pl: 'Discord — pogadaj z graczami',
     en: 'Discord — chat with players',
   },
+  'settings.section.plus': {
+    pl: 'SZCZUROGRÓD+',
+    en: 'RATBURG+',
+  },
+  'settings.plus.kicker': {
+    pl: '+20% XP do każdej akcji.',
+    en: '+20% XP for every action.',
+  },
+  'settings.plus.flavor': {
+    pl: 'Mikstura wytrwałości w formie subskrypcji.',
+    en: 'Persistence potion, in subscription form.',
+  },
+  'settings.plus.activeUntil': {
+    pl: 'Aktywne do: {date}',
+    en: 'Active until: {date}',
+  },
+  'settings.plus.daysLeft': {
+    pl: 'Pozostało {n} dni',
+    en: '{n} days left',
+  },
+  'settings.plus.inactive': {
+    pl: 'Subskrypcja nieaktywna.',
+    en: 'Subscription inactive.',
+  },
+  'settings.plus.btn.buy': {
+    pl: '+30 DNI',
+    en: '+30 DAYS',
+  },
+  'settings.plus.btn.extend': {
+    pl: 'PRZEDŁUŻ +30 DNI',
+    en: 'EXTEND +30 DAYS',
+  },
+  'settings.plus.cap': {
+    pl: 'Maks. 90 dni od dziś (anti-hoard).',
+    en: 'Max 90 days from today (anti-hoard).',
+  },
+  'settings.plus.toast.success': {
+    pl: 'Szczurogród+ przedłużony o 30 dni.',
+    en: 'Ratburg+ extended by 30 days.',
+  },
+  'settings.plus.toast.cap': {
+    pl: 'Już masz max 90 dni. Wróć później.',
+    en: 'Already at max 90 days. Come back later.',
+  },
 
   // ===== Create character =====
   'create.title': {
@@ -1817,6 +1861,21 @@ support@ratburg.app (placeholder — fill in before launch)
     pl: 'Po killu nagrody dzielą się po rankingu obrażeń: top 1 garść gemów i złota plus tytuł, top 10 mniej, top 100 jeszcze mniej. Każdy kto trafił, dostaje też trochę za sam udział.',
     en: 'On kill, rewards split by damage ranking: top 1 grabs gems, gold and a title. Top 10 less, top 100 less still. Anyone who hit gets a participation cut.',
   },
+  'updateBanner.line': {
+    pl: 'Pojawiła się nowa wersja ({version}). Odśwież, żeby pobrać.',
+    en: 'New version is out ({version}). Refresh to grab it.',
+  },
+  'updateBanner.btn.show': { pl: 'CO NOWEGO', en: 'WHAT\'S NEW' },
+  'updateBanner.btn.refresh': { pl: 'ODŚWIEŻ', en: 'REFRESH' },
+  'patches.title': { pl: 'CO NOWEGO', en: 'WHAT\'S NEW' },
+  'patches.heading': { pl: 'KRONIKA ŁATEK', en: 'PATCH LOG' },
+  'patches.flavor': {
+    pl: 'Co tu się ostatnio zmieniło. W kolejności od najświeższych.',
+    en: 'What changed lately. Newest first.',
+  },
+  'patches.btn.refresh': { pl: 'ODŚWIEŻ STRONĘ (CTRL+F5)', en: 'HARD REFRESH (CTRL+F5)' },
+  'patches.loading': { pl: 'Wczytuję…', en: 'Loading…' },
+  'patches.empty': { pl: 'Pierwsza łatka jeszcze nie wyszła.', en: 'No patches yet.' },
   'worldBoss.modal.killer': { pl: 'OSTATNI CIOS!', en: 'KILLING BLOW!' },
   'worldBoss.modal.killed': { pl: 'PADŁ', en: 'DEFEATED' },
   'worldBoss.modal.killBlurb': {
@@ -2977,6 +3036,22 @@ support@ratburg.app (placeholder — fill in before launch)
   'achievements.empty': {
     pl: 'Brak osiągnięć w tej kategorii.',
     en: 'No achievements in this category.',
+  },
+  'achievements.discord.cta': {
+    pl: 'OTWÓRZ DISCORD I ODBIERZ',
+    en: 'OPEN DISCORD & CLAIM',
+  },
+  'achievements.discord.hint': {
+    pl: 'Dołącz do serwera, wróć tu i kliknij.',
+    en: 'Join the server, come back, click.',
+  },
+  'achievements.discord.toast.claimed': {
+    pl: 'Witaj w Szczurogrodzie. Nagroda doliczona.',
+    en: 'Welcome to Ratburg. Reward credited.',
+  },
+  'achievements.discord.toast.alreadyClaimed': {
+    pl: 'Już odebrano. Pamiętamy.',
+    en: 'Already claimed. We remember.',
   },
 
   // ===== Chronicle =====

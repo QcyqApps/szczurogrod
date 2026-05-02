@@ -3,7 +3,10 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@grodno/shared';
 import { IcoCoin, IcoGem } from '@/components/icons';
 import { trpc } from '@/api/trpc';
+import { useToastQueue } from '@/api/toast-queue-store';
 import { useT, useContentT, type DictKey } from '@/i18n';
+
+const DISCORD_URL = 'https://discord.gg/uk3cCeNKxf';
 
 type AchCategory = 'combat' | 'loot' | 'progression' | 'economy';
 type AchTier = 'bronze' | 'silver' | 'gold' | 'legendary';
@@ -135,9 +138,13 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
             {q.isLoading ? t('achievements.loading') : t('achievements.empty')}
           </div>
         )}
-        {filtered.map((it) => (
-          <AchievementCard key={it.id} item={it} />
-        ))}
+        {filtered.map((it) =>
+          it.id === 'discord_joined' && it.unlockedAt === null ? (
+            <DiscordClaimCard key={it.id} item={it} />
+          ) : (
+            <AchievementCard key={it.id} item={it} />
+          ),
+        )}
       </div>
 
       <button
@@ -147,6 +154,109 @@ export function ScreenAchievements({ onBack }: ScreenAchievementsProps) {
         onClick={onBack}
       >
         {t('btn.back')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Wariant karty achievementu dla `discord_joined` — gracz musi otworzyć link
+ * i wrócić, więc dajemy combo CTA: open + claim w jednym kliknięciu.
+ * Zamykany standardowy `AchievementCard` używany jest po unlock'u.
+ */
+function DiscordClaimCard({ item }: { item: AchItem }) {
+  const t = useT();
+  const tc = useContentT();
+  const utils = trpc.useUtils();
+  const pushToast = useToastQueue((s) => s.push);
+  const claimMut = trpc.achievements.claimDiscord.useMutation({
+    onSuccess: (data) => {
+      if (data.alreadyClaimed) {
+        pushToast({ text: t('achievements.discord.toast.alreadyClaimed'), accent: '#5a3a2a' });
+      } else {
+        pushToast({ text: t('achievements.discord.toast.claimed'), accent: '#a04ef0' });
+      }
+      void utils.achievements.list.invalidate();
+      void utils.me.get.invalidate();
+    },
+  });
+
+  return (
+    <div
+      className="panel-tight"
+      style={{
+        padding: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        background: 'linear-gradient(180deg, #4a3a6a 0%, #2a1a3a 100%)',
+        border: '2.5px solid #2a1810',
+        borderRadius: 8,
+        color: '#fff3e0',
+        boxShadow: '0 0 12px #5865f240',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 10,
+            border: '2.5px solid #2a1810',
+            background: '#5865f2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <GameIcon name={item.icon as IconName} size={36} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="h-title" style={{ fontSize: 14, lineHeight: 1 }}>
+            {tc.achievementName(item.id, item.name)}
+          </div>
+          <div style={{ fontSize: 13, color: '#d8c8b0', marginTop: 2 }}>
+            {tc.achievementDesc(item.id, item.desc)}
+          </div>
+          <div
+            className="mono"
+            style={{
+              fontSize: 11,
+              marginTop: 4,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              opacity: 0.9,
+            }}
+          >
+            {item.rewardGold > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                <IcoCoin s={11} /> {item.rewardGold}
+              </span>
+            )}
+            {item.rewardGems > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                <IcoGem s={11} /> {item.rewardGems}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flavor light" style={{ fontSize: 14, color: '#d8c8b0' }}>
+        {t('achievements.discord.hint')}
+      </div>
+      <button
+        type="button"
+        className="cbtn green"
+        style={{ width: '100%' }}
+        disabled={claimMut.isPending}
+        onClick={() => {
+          window.open(DISCORD_URL, '_blank', 'noopener');
+          claimMut.mutate();
+        }}
+      >
+        {t('achievements.discord.cta')}
       </button>
     </div>
   );

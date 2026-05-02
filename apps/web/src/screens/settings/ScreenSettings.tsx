@@ -19,6 +19,7 @@ export interface ScreenSettingsProps {
   isGuest: boolean;
   characterName: string;
   playerGems: number;
+  szczurogrodPlusUntil: number | null;
   onBack: () => void;
   onLogout: () => void;
   onAccountDeleted: () => void;
@@ -28,11 +29,14 @@ export interface ScreenSettingsProps {
   renamePending: boolean;
 }
 
+const SZCZUROGROD_PLUS_PRICE_GEMS = 200;
+
 export function ScreenSettings({
   email,
   isGuest,
   characterName,
   playerGems,
+  szczurogrodPlusUntil,
   onBack,
   onLogout,
   onAccountDeleted,
@@ -355,6 +359,11 @@ export function ScreenSettings({
         />
       </Section>
 
+      <SubscriptionSection
+        playerGems={playerGems}
+        szczurogrodPlusUntil={szczurogrodPlusUntil}
+      />
+
       <Section title={t('settings.section.othergames')} icon="bolt">
         <Button
           onClick={() => {
@@ -493,6 +502,122 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span style={{ color: '#5a3a2a' }}>{label}</span>
       {children}
     </div>
+  );
+}
+
+/**
+ * Szczurogród+ subscription — kupno / przedłużenie za gemy. Aktywna subskrypcja
+ * wstrzykuje +20% XP do każdego gain'u (server-side, w applyXpBonus). Cap na
+ * 90 dni od dziś, więc przy max stack'u przycisk się wyłącza.
+ */
+function SubscriptionSection({
+  playerGems,
+  szczurogrodPlusUntil,
+}: {
+  playerGems: number;
+  szczurogrodPlusUntil: number | null;
+}) {
+  const t = useT();
+  const utils = trpc.useUtils();
+  const pushToast = useToastQueue((s) => s.push);
+  const now = Date.now();
+  const isActive = szczurogrodPlusUntil !== null && szczurogrodPlusUntil > now;
+  const daysLeft = isActive
+    ? Math.ceil((szczurogrodPlusUntil! - now) / (24 * 60 * 60 * 1000))
+    : 0;
+  const buyMut = trpc.me.buySzczurogrodPlus.useMutation({
+    onSuccess: () => {
+      pushToast({ text: t('settings.plus.toast.success'), accent: '#a04ef0' });
+      void utils.me.get.invalidate();
+    },
+    onError: (err) => {
+      const isCap = err instanceof TRPCClientError && err.message.includes('90');
+      pushToast({
+        text: isCap
+          ? t('settings.plus.toast.cap')
+          : err instanceof TRPCClientError
+            ? err.message
+            : 'Nie udało się.',
+        accent: '#c83232',
+      });
+    },
+  });
+
+  const cantAfford = playerGems < SZCZUROGROD_PLUS_PRICE_GEMS;
+  const buyDisabled = cantAfford || buyMut.isPending;
+
+  return (
+    <Section title={t('settings.section.plus')} icon="megaphone">
+      <div className="flavor light" style={{ fontSize: 14, marginBottom: 4, color: '#5a3a2a' }}>
+        {t('settings.plus.kicker')}
+      </div>
+      <div
+        className="flavor"
+        style={{ fontSize: 14, marginBottom: 8, color: '#5a3a2a', fontStyle: 'italic' }}
+      >
+        {t('settings.plus.flavor')}
+      </div>
+      {isActive && szczurogrodPlusUntil ? (
+        <div
+          style={{
+            background: 'linear-gradient(180deg, #4a3a6a 0%, #2a1a3a 100%)',
+            border: '2.5px solid #a04ef0',
+            borderRadius: 8,
+            padding: '8px 10px',
+            color: '#fff3e0',
+            marginBottom: 8,
+            textAlign: 'center',
+          }}
+        >
+          <div className="h-title" style={{ fontSize: 13 }}>
+            {t('settings.plus.daysLeft').replace('{n}', String(daysLeft))}
+          </div>
+          <div className="mono" style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>
+            {t('settings.plus.activeUntil').replace(
+              '{date}',
+              new Date(szczurogrodPlusUntil).toLocaleDateString(),
+            )}
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            background: '#e8dcb9',
+            border: '2px dashed #2a1810',
+            borderRadius: 8,
+            padding: '6px 10px',
+            color: '#5a3a2a',
+            fontSize: 13,
+            marginBottom: 8,
+            textAlign: 'center',
+          }}
+        >
+          {t('settings.plus.inactive')}
+        </div>
+      )}
+      <button
+        type="button"
+        className="cbtn green"
+        style={{
+          width: '100%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+        }}
+        disabled={buyDisabled}
+        onClick={() => buyMut.mutate()}
+      >
+        {isActive ? t('settings.plus.btn.extend') : t('settings.plus.btn.buy')} ·{' '}
+        <IcoGem s={12} /> {SZCZUROGROD_PLUS_PRICE_GEMS}
+      </button>
+      <div
+        className="flavor"
+        style={{ fontSize: 14, color: '#5a3a2a', textAlign: 'center', marginTop: 6 }}
+      >
+        {t('settings.plus.cap')}
+      </div>
+    </Section>
   );
 }
 

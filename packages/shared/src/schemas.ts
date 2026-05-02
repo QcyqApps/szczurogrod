@@ -2001,6 +2001,28 @@ export const worldBossShopBuyResponseSchema = z.object({
 });
 export type WorldBossShopBuyResponse = z.infer<typeof worldBossShopBuyResponseSchema>;
 
+// ========== Patch log ==========
+//
+// Klient pull'uje `patches.list` co ~5 minut. Jeśli najnowszy id różni się
+// od localStorage `lastSeenPatchId`, banner zachęca do hard-refresha
+// (window.location.reload + cache clear). Tylko web — w Capacitorze
+// banner jest pomijany.
+
+export const patchSchema = z.object({
+  id: z.string().uuid(),
+  version: z.string().min(1).max(64),
+  title: z.string().min(1).max(255),
+  body: z.string(),
+  /** Unix ms. */
+  releasedAt: z.number().int().nonnegative(),
+});
+export type Patch = z.infer<typeof patchSchema>;
+
+export const patchListResponseSchema = z.object({
+  entries: z.array(patchSchema),
+});
+export type PatchListResponse = z.infer<typeof patchListResponseSchema>;
+
 // ========== Hall of Fame / Kroniki Chwały (unified leaderboards) ==========
 //
 // Cztery taby agregowanych rankingów: poziom, achievementy, arena, gildie.
@@ -2059,6 +2081,31 @@ export const landingPublicResponseSchema = z.object({
     .nullable(),
 });
 export type LandingPublicResponse = z.infer<typeof landingPublicResponseSchema>;
+
+// ========== Discord claim ==========
+//
+// Gracz klika „Dołączyłem do Discorda" — server bumpuje achievement i jeśli
+// to pierwsze odblokowanie, zwraca payload (klient pokazuje modal).
+// Idempotentny — drugi claim zwraca alreadyClaimed:true bez nagrody.
+
+export const discordClaimResponseSchema = z.object({
+  alreadyClaimed: z.boolean(),
+  unlocked: achievementUnlockPayloadSchema.nullable(),
+});
+export type DiscordClaimResponse = z.infer<typeof discordClaimResponseSchema>;
+
+// ========== Szczurogród+ subscription ==========
+//
+// Subskrypcja premium za gemy. +20% XP do każdego gain'u (quests, combat,
+// daily, work, oracle, season pass, survivor idle XP claim).
+// Cap stack do 90 dni od chwili zakupu — anti-hoard.
+
+export const buySzczurogrodPlusResponseSchema = z.object({
+  ok: z.literal(true),
+  cost: z.number().int().nonnegative(),
+  szczurogrodPlusUntil: z.number().int().nonnegative(),
+});
+export type BuySzczurogrodPlusResponse = z.infer<typeof buySzczurogrodPlusResponseSchema>;
 
 // Type re-exports for convenience
 export type RegisterInput = z.infer<typeof registerInputSchema>;

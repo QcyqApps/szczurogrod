@@ -442,6 +442,20 @@
       "when": 1777716000000,
       "tag": "0062_world_boss_phase2",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1777722500000,
+      "tag": "0063_patches",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1777723300000,
+      "tag": "0064_discord_plus",
+      "breakpoints": true
     }
   ]
 }

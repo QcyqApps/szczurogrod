@@ -225,6 +225,13 @@ export const characters = pgTable(
     workStartedAt: timestamp('work_started_at', { withTimezone: true }),
     workEndsAt: timestamp('work_ends_at', { withTimezone: true }),
     workKind: varchar('work_kind', { length: 32 }),
+    /**
+     * Szczurogród+ subskrypcja — aktywna gdy `now < szczurogrodPlusUntil`.
+     * Daje +20% XP do wszystkich źródeł. Płatna w gemach (`me.buySzczurogrodPlus`),
+     * extends do max +90 dni do przodu (anti-stacking lifetime). NULL = nigdy
+     * nie kupione lub wygasło dawno temu (lazy — nie czyścimy NULL'em).
+     */
+    szczurogrodPlusUntil: timestamp('szczurogrod_plus_until', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1455,6 +1462,30 @@ export const survivorSkillProgression = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.nodeId] }),
+  }),
+);
+
+// ========== Patch log ==========
+// Lista wersji/changelog'ów wystawiana graczom. Polling co kilka minut z
+// klienta wykrywa nowy wpis i pokazuje banner „Pojawiła się aktualizacja —
+// odśwież stronę". Pisanie: skrypt `scripts/add-patch.ts` (wymaga
+// PROD_DATABASE_URL env). Brak admin endpointu w API — patch log nie jest
+// edytowany przez gracza ani przez UI w grze.
+
+export const patches = pgTable(
+  'patches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Semver albo dowolna etykieta. Pokazywana w UI obok tytułu. */
+    version: varchar('version', { length: 64 }).notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    /** Markdown / plain text. Renderujemy paragrafami. */
+    body: text('body').notNull(),
+    releasedAt: timestamp('released_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    releasedIdx: index('patches_released_idx').on(t.releasedAt),
   }),
 );
 

@@ -59,6 +59,7 @@ import {
   itemTemplateToRowValues,
 } from '../game/inventory.js';
 import { applyXpGain, summarizeLevelUps } from '../game/leveling.js';
+import { applyXpBonus } from '../game/subscription.js';
 import {
   applyStatus,
   createSession,
@@ -163,6 +164,7 @@ async function applyVictoryReward(
       mpMax: characters.mpMax,
       stamina: characters.stamina,
       staminaMax: characters.staminaMax,
+      szczurogrodPlusUntil: characters.szczurogrodPlusUntil,
     })
     .from(characters)
     .where(eq(characters.id, s.characterId))
@@ -180,7 +182,10 @@ async function applyVictoryReward(
   // arena/tower mają osobne flow z tym samym helperem.
   const scrapbookBuffs = await loadScrapbookBuffs(db, s.characterId);
   const goldGain = applyScrapbookGoldBonus(goldBase, scrapbookBuffs);
-  const xpGain = Math.ceil(xpBase * (1 + scrapbookBuffs.xpPct / 100));
+  // Szczurogród+ ×1.20 (multiplikatywnie ze scrapbook'iem) — last in chain
+  // przed applyXpGain żeby cascade level-upów liczył się od pełnego XP.
+  const xpFromScrapbook = Math.ceil(xpBase * (1 + scrapbookBuffs.xpPct / 100));
+  const xpGain = applyXpBonus(row, xpFromScrapbook);
 
   const leveling = applyXpGain(
     {

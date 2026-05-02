@@ -29,6 +29,7 @@ import {
   users,
 } from '../db/schema.js';
 import { applyXpGain, summarizeLevelUps, xpToNext } from '../game/leveling.js';
+import { applyXpBonus } from '../game/subscription.js';
 import { computeOkruchyPayout, validateRunReport } from '../game/survivor/payout.js';
 import { protectedProcedure, publicProcedure, router } from '../trpc/trpc.js';
 
@@ -503,7 +504,8 @@ export const survivorRouter = router({
       });
     }
 
-    const totalXp = pending.reduce((sum, g) => sum + g.xpAmount, 0);
+    const totalXpRaw = pending.reduce((sum, g) => sum + g.xpAmount, 0);
+    const totalXp = applyXpBonus(char, totalXpRaw);
     const leveling = applyXpGain(char, totalXp);
     const levelUp = summarizeLevelUps(leveling.ups);
     const grantIds = pending.map((g) => g.id);

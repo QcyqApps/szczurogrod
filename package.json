@@ -23,7 +23,8 @@
     "android": "bash scripts/android-run.sh",
     "android:open": "pnpm --filter @grodno/web cap:open:android",
     "android:keystore": "bash scripts/android-keystore.sh",
-    "android:release": "bash scripts/android-release.sh"
+    "android:release": "bash scripts/android-release.sh",
+    "patch:add": "pnpm --filter @grodno/server exec tsx scripts/add-patch.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

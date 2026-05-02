@@ -99,6 +99,12 @@ export interface Character {
     /** True gdy `Date.now() >= endsAt` — można odebrać. */
     ready: boolean;
   } | null;
+  /**
+   * Szczurogród+ subskrypcja — unix millis wygaśnięcia. NULL = brak subskrypcji.
+   * Klient porównuje z Date.now() żeby pokazać badge / countdown w settings.
+   * Aktywna subskrypcja nadaje +20% XP do każdego gain'u.
+   */
+  szczurogrodPlusUntil: number | null;
 }
 
 export type BuffKind =

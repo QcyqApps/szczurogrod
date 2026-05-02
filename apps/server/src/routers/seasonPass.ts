@@ -23,6 +23,7 @@ import {
 import { REGISTRY } from '../content/registry.js';
 import { applyXpGain, summarizeLevelUps } from '../game/leveling.js';
 import { registerScrapbookFind } from '../game/scrapbook.js';
+import { applyXpBonus } from '../game/subscription.js';
 import {
   FREE_TRACK,
   PREMIUM_TRACK,
@@ -242,6 +243,7 @@ export const seasonPassRouter = router({
 
         // 3. XP z level-up cascade.
         if (reward.xp && reward.xp > 0) {
+          const xpGain = applyXpBonus(char, reward.xp);
           const { progression, ups } = applyXpGain(
             {
               cls: char.cls,
@@ -255,7 +257,7 @@ export const seasonPassRouter = router({
               stamina: char.stamina,
               staminaMax: char.staminaMax,
             },
-            reward.xp,
+            xpGain,
           );
           await tx
             .update(characters)

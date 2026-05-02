@@ -23,3 +23,5 @@ export { ActiveBuffsBar } from './ActiveBuffsBar';
 export type { ActiveBuffsBarProps } from './ActiveBuffsBar';
 export { PayPalCheckoutModal } from './PayPalCheckoutModal';
 export type { PayPalCheckoutModalProps } from './PayPalCheckoutModal';
+export { UpdateBanner } from './UpdateBanner';
+export type { UpdateBannerProps } from './UpdateBanner';

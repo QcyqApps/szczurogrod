@@ -18,6 +18,7 @@ import {
 } from '../game/achievements.js';
 import { logLevelMilestone, MILESTONES } from '../game/chronicle.js';
 import { applyXpGain } from '../game/leveling.js';
+import { applyXpBonus } from '../game/subscription.js';
 import { registerScrapbookFind } from '../game/scrapbook.js';
 import { protectedProcedure, router } from '../trpc/trpc.js';
 
@@ -85,7 +86,9 @@ export const dailyRouter = router({
 
     const mult = levelMultiplier(char.lvl);
     const goldDelta = Math.round(reward.gold * mult);
-    const xpDelta = Math.round(reward.xp * mult);
+    const xpDeltaRaw = Math.round(reward.xp * mult);
+    // Szczurogród+ bonus +20% XP — wpinany przed applyXpGain.
+    const xpDelta = applyXpBonus(char, xpDeltaRaw);
     const gemsDelta = reward.gems; // gems nie skalują — są drogą walutą
     // Keys don't scale — a key is a key; day-3 gives 2, doesn't become 6 at L30.
     const keysDelta = Math.min(reward.keys, DUNGEON_KEYS_MAX - char.dungeonKeys);

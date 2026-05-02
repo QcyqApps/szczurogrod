@@ -30,6 +30,7 @@ import {
   MILESTONES,
 } from '../game/chronicle.js';
 import { applyXpGain, summarizeLevelUps } from '../game/leveling.js';
+import { applyXpBonus } from '../game/subscription.js';
 import { applyMountSpeed, getActiveMount } from '../game/mounts.js';
 import { getBossUniqueDrop, getQuestTemplate, rollLoot } from '../game/quests.js';
 import { SEASON_PASS_XP_PER_QUEST_COLLECT } from '../game/season-pass.js';
@@ -232,8 +233,11 @@ export const questsRouter = router({
       const loot = uniqueDrop ?? rollLoot(tpl.diff, effectiveChance, char.cls);
       // Scrapbook +1% XP @ 25% wypełnienia. Mnoży tylko XP — gold quest
       // pozostaje surowy (scrapbook gold celuje arena/raid/PvE-mob loop).
+      // Szczurogród+ subskrypcja: dodatkowe ×1.20 (multiplikatywnie ze
+      // scrapbook'iem) — wpinane przez applyXpBonus przed applyXpGain.
       const scrapbookBuffs = await loadScrapbookBuffs(ctx.db, char.id);
-      const xpGain = Math.ceil(tpl.xp * (1 + scrapbookBuffs.xpPct / 100));
+      const xpFromScrapbook = Math.ceil(tpl.xp * (1 + scrapbookBuffs.xpPct / 100));
+      const xpGain = applyXpBonus(char, xpFromScrapbook);
       const leveling = applyXpGain(char, xpGain);
       const levelUp = summarizeLevelUps(leveling.ups);
 

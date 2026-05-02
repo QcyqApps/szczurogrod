@@ -9,6 +9,7 @@ import {
   ToastContainer,
   TopBar,
   QuestRewardModal,
+  UpdateBanner,
 } from '@/components/ui-common';
 import type { Tab } from '@/components/ui-common';
 import { ScreenTown } from '@/screens/town';
@@ -34,6 +35,7 @@ import { ScreenOracle } from '@/screens/oracle';
 import { ScreenBlessing } from '@/screens/blessing';
 import { ScreenWitch } from '@/screens/witch';
 import { ScreenWork } from '@/screens/work';
+import { ScreenPatches } from '@/screens/patches';
 import { ScreenSeasonPass } from '@/screens/season-pass';
 import { ScreenSettings } from '@/screens/settings';
 import { ScreenStables } from '@/screens/stables';
@@ -51,6 +53,7 @@ import {
 import type { CreateCharPayload, LoginPayload } from '@/screens/auth';
 import { monsterBySlug } from '@/components/monsters';
 import { useAuthStore } from '@/api/auth-store';
+import { usePatchTrackerStore } from '@/api/patch-tracker-store';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { isNative } from '@/api/use-is-native';
@@ -94,6 +97,30 @@ export default function App() {
     enabled: Boolean(accessToken) && (appState === 'game' || appState === 'tutorial'),
   });
   const char: Character | null = meQuery.data ?? null;
+
+  // Patch log polling — sprawdza co 5 minut czy jest nowy patch. Tylko web —
+  // w Capacitorze bundle leci z natywnego shell'a, banner nie ma sensu.
+  const lastSeenPatchId = usePatchTrackerStore((s) => s.lastSeenPatchId);
+  const patchesQuery = trpc.patches.list.useQuery(undefined, {
+    enabled: !isNative() && appState === 'game',
+    refetchInterval: 5 * 60_000,
+    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+  });
+  const latestPatch = patchesQuery.data?.entries[0] ?? null;
+  // Banner gdy najnowszy patch nie zgadza się z `lastSeenPatchId`. Pierwsze
+  // wejście (lastSeen=null) — markSeen w efekcie poniżej, bez bannera, żeby
+  // nie wyświetlał się każdemu nowemu graczowi tylko po release.
+  const hasUpdate = Boolean(
+    latestPatch && lastSeenPatchId !== null && latestPatch.id !== lastSeenPatchId,
+  );
+  useEffect(() => {
+    // Pierwsze wejście (brak last-seen) — nie pokazuj bannera, ustaw current
+    // jako baseline. Banner odpali się dopiero gdy serwer zwróci NOWSZY id.
+    if (latestPatch && lastSeenPatchId === null) {
+      usePatchTrackerStore.getState().markSeen(latestPatch.id);
+    }
+  }, [latestPatch, lastSeenPatchId]);
 
   const questsQuery = trpc.quests.list.useQuery(undefined, {
     enabled: Boolean(accessToken) && Boolean(char) && appState === 'game',
@@ -988,6 +1015,8 @@ export default function App() {
     content = <ScreenWork onBack={() => setSub(null)} />;
   } else if (sub === 'seasonPass') {
     content = <ScreenSeasonPass onBack={() => setSub(null)} />;
+  } else if (sub === 'patches') {
+    content = <ScreenPatches onBack={() => setSub(null)} />;
   } else if (sub === 'settings') {
     content = (
       <ScreenSettings
@@ -995,6 +1024,7 @@ export default function App() {
         isGuest={authIsGuest}
         characterName={char.name}
         playerGems={char.gems}
+        szczurogrodPlusUntil={char.szczurogrodPlusUntil}
         onRename={(newName) => renameMut.mutate({ name: newName })}
         renamePending={renameMut.isPending}
         onBack={() => setSub(null)}
@@ -1113,6 +1143,12 @@ export default function App() {
               }}
               onSettings={() => setSub('settings')}
             />
+            {hasUpdate && latestPatch && (
+              <UpdateBanner
+                latestVersion={latestPatch.version}
+                onShowPatches={() => setSub('patches')}
+              />
+            )}
             <ActiveBuffsBar buffs={char.activeBuffs} />
           </div>
         )}

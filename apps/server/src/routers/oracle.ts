@@ -23,6 +23,7 @@ import {
 } from '../game/inventory.js';
 import { applyXpGain, summarizeLevelUps } from '../game/leveling.js';
 import { performOraclePull } from '../game/oracle.js';
+import { applyXpBonus } from '../game/subscription.js';
 import { registerScrapbookFind } from '../game/scrapbook.js';
 import { protectedProcedure, router } from '../trpc/trpc.js';
 
@@ -156,6 +157,7 @@ export const oracleRouter = router({
 
         // 3. XP z level-up cascade.
         if (reward.xp > 0) {
+          const xpGain = applyXpBonus(char, reward.xp);
           const { progression, ups } = applyXpGain(
             {
               cls: char.cls,
@@ -169,7 +171,7 @@ export const oracleRouter = router({
               stamina: char.stamina,
               staminaMax: char.staminaMax,
             },
-            reward.xp,
+            xpGain,
           );
           await tx
             .update(characters)

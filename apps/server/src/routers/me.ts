@@ -55,6 +55,11 @@ import { xpToNext } from '../game/leveling.js';
 import { getActiveMount } from '../game/mounts.js';
 import { applyHpRegen, applyMpRegen } from '../game/regen.js';
 import { applyStaminaRegen } from '../game/stamina.js';
+import {
+  SZCZUROGROD_PLUS_DURATION_DAYS,
+  SZCZUROGROD_PLUS_PRICE_GEMS,
+  extendSubscription,
+} from '../game/subscription.js';
 import { computeHealerCost, HEALER_COOLDOWN_MS } from '../game/tavern.js';
 import { getKind as getWorkKind } from '../game/work.js';
 import {
@@ -240,6 +245,7 @@ function rowToCharacter(
       sourceItemId: b.sourceItemId,
       isCurse: b.isCurse,
     })),
+    szczurogrodPlusUntil: row.szczurogrodPlusUntil ? row.szczurogrodPlusUntil.getTime() : null,
   };
 }
 
@@ -823,4 +829,48 @@ export const meRouter = router({
 
       return { ok: true };
     }),
+
+  /**
+   * Gem sink: kupno / przedłużenie Szczurogród+ (200💎 → +30 dni).
+   * Stack do MAX 90 dni od chwili zakupu (anti-hoard). Aktywna subskrypcja
+   * nadaje +20% XP do każdego gain'u (quests, combat, daily, work, oracle,
+   * season pass, survivor idle XP).
+   */
+  buySzczurogrodPlus: protectedProcedure.mutation(async ({ ctx }) => {
+    const [char] = await ctx.db
+      .select({
+        id: characters.id,
+        gems: characters.gems,
+        szczurogrodPlusUntil: characters.szczurogrodPlusUntil,
+      })
+      .from(characters)
+      .where(eq(characters.userId, ctx.userId))
+      .limit(1);
+    if (!char) throw new TRPCError({ code: 'NOT_FOUND', message: 'Brak postaci.' });
+    const cost = SZCZUROGROD_PLUS_PRICE_GEMS;
+    if (char.gems < cost) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: `Brak gemów (${cost}).` });
+    }
+    const now = new Date();
+    const newUntil = extendSubscription(
+      char.szczurogrodPlusUntil,
+      SZCZUROGROD_PLUS_DURATION_DAYS,
+      now,
+    );
+    if (newUntil.getTime() <= (char.szczurogrodPlusUntil?.getTime() ?? 0)) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Subskrypcja na maksymalnym poziomie (90 dni). Wróć później.',
+      });
+    }
+    await ctx.db
+      .update(characters)
+      .set({
+        gems: sql`${characters.gems} - ${cost}`,
+        szczurogrodPlusUntil: newUntil,
+        updatedAt: now,
+      })
+      .where(eq(characters.id, char.id));
+    return { ok: true as const, cost, szczurogrodPlusUntil: newUntil.getTime() };
+  }),
 });

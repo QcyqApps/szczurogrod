@@ -8,6 +8,7 @@ import {
 } from '@grodno/shared';
 import { characters } from '../db/schema.js';
 import { applyXpGain, summarizeLevelUps } from '../game/leveling.js';
+import { applyXpBonus } from '../game/subscription.js';
 import {
   WORK_DURATIONS_HOURS,
   WORK_KINDS,
@@ -126,7 +127,8 @@ export const workRouter = router({
     );
     const hours = isValidDuration(hoursRaw) ? hoursRaw : 1;
     const kindSlug = (isValidKind(char.workKind) ? char.workKind : 'rolnik') as WorkKindSlug;
-    const { gold, xp } = computeReward(char.lvl, hours, kindSlug);
+    const { gold, xp: xpRaw } = computeReward(char.lvl, hours, kindSlug);
+    const xp = applyXpBonus(char, xpRaw);
     const leveling = applyXpGain(char, xp);
     await ctx.db
       .update(characters)
@@ -171,7 +173,8 @@ export const workRouter = router({
     const hours = isValidDuration(hoursRaw) ? hoursRaw : 1;
     const kindSlug = (isValidKind(char.workKind) ? char.workKind : 'rolnik') as WorkKindSlug;
     const elapsedMs = Math.max(0, Date.now() - char.workStartedAt.getTime());
-    const { gold, xp, fraction } = computePartialReward(char.lvl, hours, kindSlug, elapsedMs);
+    const { gold, xp: xpRaw, fraction } = computePartialReward(char.lvl, hours, kindSlug, elapsedMs);
+    const xp = applyXpBonus(char, xpRaw);
     const leveling = applyXpGain(char, xp);
     await ctx.db
       .update(characters)
