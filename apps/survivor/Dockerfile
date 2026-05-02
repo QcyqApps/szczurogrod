@@ -34,6 +34,11 @@ COPY apps/server/tsconfig*.json apps/server/
 ARG VITE_API_URL=https://tidle.ovh/grodno
 ENV VITE_API_URL=${VITE_API_URL}
 
+# PayPal client-id — survivor współdzieli auth/billing z głównym webem.
+# Brak → SDK loaduje się z `clientId: 'test'` i guziki PayPala są martwe.
+ARG VITE_PAYPAL_CLIENT_ID
+ENV VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
+
 RUN pnpm --filter @grodno/survivor build
 
 # ---- Stage 2: nginx static serve ----

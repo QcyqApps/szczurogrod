@@ -50,6 +50,22 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # PayPal — zakupy klejnotów na webie (ratburg.com / szczurogrod.pl).
+      # Bez API_KEY+SECRET serwer zwraca paypalReady:false z gemShop.list,
+      # przez co klient pokazuje fallback „Payments only via Google Play".
+      # API_BASE: live = api-m.paypal.com, sandbox = api-m.sandbox.paypal.com.
+      # WEBHOOK_ID weryfikuje podpis na /webhooks/paypal — bez niego eventy
+      # są odrzucane.
+      PAYPAL_API_KEY: ${PAYPAL_API_KEY:?PAYPAL_API_KEY wymagane}
+      PAYPAL_SECRET: ${PAYPAL_SECRET:?PAYPAL_SECRET wymagane}
+      PAYPAL_API_BASE: ${PAYPAL_API_BASE:-https://api-m.paypal.com}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
+      # Google Play Billing — weryfikacja zakupów z aplikacji Capacitor.
+      # Web ich nie używa, ale gdy aplikacja z Play będzie live, brak tych
+      # env'ów oznacza playBillingReady:false i każdy zakup jest rejected
+      # ze statusem PLAY_NOT_CONFIGURED.
+      GOOGLE_PLAY_PACKAGE_NAME: ${GOOGLE_PLAY_PACKAGE_NAME:-}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}
     networks:
       # `internal` — komunikacja z postgresem.
       # `shared-proxy` — wystawienie pod nginx'a który siedzi w tej samej sieci.
@@ -79,6 +95,11 @@ services:
         # Override przez `VITE_API_URL=https://staging.tidle.ovh/grodno docker
         # compose --profile app build web` jeśli inny env. Default to prod.
         VITE_API_URL: ${VITE_API_URL:-https://tidle.ovh/grodno}
+        # PayPal client-id musi być znany w build-time (Vite inline'uje
+        # import.meta.env.* w bundlu). Bez niego SDK ładuje się z fallback'iem
+        # `clientId: 'test'` i guziki PayPala są martwe nawet gdy backend
+        # zwraca paypalReady:true.
+        VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:?VITE_PAYPAL_CLIENT_ID wymagane}
     container_name: grodno-web
     restart: unless-stopped
     networks:
@@ -102,6 +123,8 @@ services:
       dockerfile: apps/survivor/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://tidle.ovh/grodno}
+        # Survivor współdzieli auth/billing z głównym webem — ten sam client-id.
+        VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:?VITE_PAYPAL_CLIENT_ID wymagane}
     container_name: grodno-survivor
     restart: unless-stopped
     networks:

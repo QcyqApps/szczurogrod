@@ -42,6 +42,13 @@ COPY apps/server/tsconfig*.json apps/server/
 ARG VITE_API_URL=https://tidle.ovh/grodno
 ENV VITE_API_URL=${VITE_API_URL}
 
+# VITE_PAYPAL_CLIENT_ID — PayPal SDK client-id, bake'owany w bundle.
+# Brak → App.tsx fallback'uje na `clientId: 'test'`, guziki PayPala
+# renderują się jako sandbox/test i nie obsłużą prawdziwego zakupu.
+# Wartość bezpieczna do publikacji (publiczny identyfikator merchanta).
+ARG VITE_PAYPAL_CLIENT_ID
+ENV VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
+
 RUN pnpm --filter @grodno/web build
 
 # ---- Stage 2: nginx static serve ----
