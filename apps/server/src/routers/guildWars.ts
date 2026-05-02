@@ -40,6 +40,7 @@ import {
 } from '../db/schema.js';
 import { collectBump } from '../game/achievements.js';
 import { loadEquipBonuses, type CombatFighter } from '../game/arena.js';
+import { invalidateTopWarCache } from './town.js';
 import { isoDateUTC } from '../game/daily.js';
 import {
   WAR_COMMIT_WINDOW_MS,
@@ -232,6 +233,7 @@ export const guildWarsRouter = router({
       ]);
 
       await collectBump(unlocks, ctx.db, char.id, 'guild_war_declared');
+      invalidateTopWarCache();
 
       return { ok: true, warId: created!.id, unlockedAchievements: unlocks };
     }),

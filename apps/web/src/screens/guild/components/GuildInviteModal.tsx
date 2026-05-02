@@ -3,7 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { PortraitByClass } from '@/components/portraits';
-import { useT, tStatic, type DictKey } from '@/i18n';
+import { useT, tStatic, type DictKey , translateServerError} from '@/i18n';
 
 export interface GuildInviteModalProps {
   onClose: () => void;
@@ -45,7 +45,7 @@ export function GuildInviteModal({ onClose }: GuildInviteModalProps) {
     },
     onError: (err) => {
       const msg =
-        err instanceof TRPCClientError ? err.message : tStatic('guildInvite.toast.fail');
+        err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildInvite.toast.fail');
       pushToast({ text: msg, accent: '#c83232', ttlMs: 4200 });
     },
   });

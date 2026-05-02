@@ -32,7 +32,12 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: 'http',
-    url: 'https://tidle.ovh/grodno/',
+    // SPA host (kontener `grodno-web` w nginx) — TU jest zbudowany web bundle.
+    // `tidle.ovh/grodno` to BACKEND API (Fastify), nie ma tam statycznego SPA;
+    // wczytanie tego URL w WebView dawało 404 "Route get:/ not found".
+    // Bundle deployowany na ratburg.com ma `VITE_API_URL=https://tidle.ovh/grodno`
+    // wbakerowane (patrz docs/nginx.conf).
+    url: 'https://ratburg.com/',
     cleartext: false,
   },
   plugins: {

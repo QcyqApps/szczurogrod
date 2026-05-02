@@ -184,6 +184,17 @@ export const statusEffectSchema = z.object({
 });
 export type StatusEffect = z.infer<typeof statusEffectSchema>;
 
+/**
+ * Combat-scoped buff (czyli żyje TYLKO w sesji walki, znika z `engage` nowej).
+ * Mirror `playerStatus` ale dodatni efekt. Klient pokazuje pill „+8 ATK · 2 tury".
+ */
+export const combatBuffSchema = z.object({
+  kind: z.literal('atk_flat'),
+  magnitude: z.number().int(),
+  turnsRemaining: z.number().int().min(0),
+});
+export type CombatBuff = z.infer<typeof combatBuffSchema>;
+
 export const combatStateSchema = z.object({
   combatId: z.string().uuid(),
   enemySlug: z.string(),
@@ -204,12 +215,18 @@ export const combatStateSchema = z.object({
   playerMag: z.number().int(),
   playerSpd: z.number().int(),
   playerDef: z.number().int(),
+  /** Player class — driver dla per-class spell behavior + UI label. */
+  playerCls: z.enum(['warrior', 'mage', 'rogue']),
   /** Turns remaining until MOCNY is usable again (0 = ready). */
   heavyCooldown: z.number().int().min(0),
+  /** Turns remaining until spell (per klasa) jest usable again (0 = ready). */
+  magicCooldown: z.number().int().min(0),
   /** True when engage consumed an active trop — rewards doubled on victory. */
   trackBonus: z.boolean(),
   /** Active DOTs / debuffs on the player. Empty if clean. */
   playerStatus: z.array(statusEffectSchema),
+  /** Active combat-scoped buffs (np. atk_flat z Krzyku Bojowego). */
+  playerBuffs: z.array(combatBuffSchema),
   status: z.enum(['fight', 'victory', 'defeat']),
 });
 
@@ -2103,6 +2120,29 @@ export const landingPublicResponseSchema = z.object({
     .nullable(),
 });
 export type LandingPublicResponse = z.infer<typeof landingPublicResponseSchema>;
+
+// ========== Town: server-wide top war banner ==========
+//
+// Pokazujemy WSZYSTKIM w mieście banner gdy gdzieś idzie / ma startować
+// wojna. „Top" = priorytet `resolving > scheduled`, w obrębie statusu
+// najbliższy `scheduledAt`. Tylko jeden banner naraz. Cache 30s server-side.
+
+export const townTopWarSchema = z.object({
+  warId: z.string().uuid(),
+  attackerName: z.string(),
+  attackerTag: z.string(),
+  defenderName: z.string(),
+  defenderTag: z.string(),
+  status: z.enum(['scheduled', 'resolving']),
+  /** Unix ms — start wojny. Klient pokazuje countdown lub „trwa". */
+  scheduledAt: z.number().int().nonnegative(),
+});
+export type TownTopWar = z.infer<typeof townTopWarSchema>;
+
+export const townTopWarResponseSchema = z.object({
+  war: townTopWarSchema.nullable(),
+});
+export type TownTopWarResponse = z.infer<typeof townTopWarResponseSchema>;
 
 // ========== Discord claim ==========
 //

@@ -4,7 +4,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { GameIcon } from '@/components/game-icons';
-import { useT } from '@/i18n';
+import { useT , translateServerError} from '@/i18n';
 import { GuildEmblem } from './components/GuildEmblem';
 import { GuildCreateModal } from './components/GuildCreateModal';
 
@@ -33,7 +33,7 @@ export function GuildNoneView() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('guild.none.toast.applyFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('guild.none.toast.applyFailed'),
         accent: '#c83232',
       });
     },
@@ -47,7 +47,7 @@ export function GuildNoneView() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('guild.none.toast.acceptFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('guild.none.toast.acceptFailed'),
         accent: '#c83232',
       });
     },

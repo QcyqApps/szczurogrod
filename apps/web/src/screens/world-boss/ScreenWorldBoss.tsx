@@ -14,7 +14,7 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
 import { GemSinkButton, HelpIcon } from '@/components/ui-common';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type {
   CharacterClass,
   WorldBossHitResponse,
@@ -67,7 +67,7 @@ export function ScreenWorldBoss({ myCharClass, onBack }: Props) {
     onSuccess: (data) => setBattle(data),
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('worldBoss.toast.hitFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('worldBoss.toast.hitFail'),
         accent: '#c83232',
       });
     },
@@ -86,7 +86,7 @@ export function ScreenWorldBoss({ myCharClass, onBack }: Props) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('worldBoss.toast.hitFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('worldBoss.toast.hitFail'),
         accent: '#c83232',
       });
     },
@@ -112,7 +112,7 @@ export function ScreenWorldBoss({ myCharClass, onBack }: Props) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('worldBoss.toast.hitFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('worldBoss.toast.hitFail'),
         accent: '#c83232',
       });
     },
@@ -133,7 +133,7 @@ export function ScreenWorldBoss({ myCharClass, onBack }: Props) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('worldBoss.toast.hitFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('worldBoss.toast.hitFail'),
         accent: '#c83232',
       });
     },

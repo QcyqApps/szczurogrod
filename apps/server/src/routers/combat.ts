@@ -61,16 +61,21 @@ import {
 import { applyXpGain, summarizeLevelUps } from '../game/leveling.js';
 import { applyXpBonus } from '../game/subscription.js';
 import {
+  aggregateCombatAtkBonus,
   applyStatus,
   createSession,
   deleteSession,
-  findCharSession,
+  forfeitOrphanedSession,
   getEnemy,
   getSession,
   HEAVY_COOLDOWN_TURNS,
+  MAGIC_COOLDOWN_TURNS_BY_CLASS,
+  MAGIC_MP_COST_BY_CLASS,
   rollEnemyAttack,
   rollMobLoot,
   rollPlayerAttack,
+  rollPlayerSpell,
+  tickCombatBuffs,
   tickPlayerStatus,
   type CombatSession,
 } from '../game/combat.js';
@@ -118,9 +123,12 @@ function toCombatState(s: CombatSession): CombatState {
     playerMag: s.playerMag,
     playerSpd: s.playerSpd,
     playerDef: s.playerDef,
+    playerCls: s.playerCls,
     heavyCooldown: s.heavyCooldown,
+    magicCooldown: s.magicCooldown,
     trackBonus: s.trackBonus,
     playerStatus: s.playerStatus,
+    playerBuffs: s.playerBuffs,
     status: s.status,
   };
 }
@@ -649,12 +657,11 @@ export const combatRouter = router({
       if (isWorking(char)) {
         throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
       }
-      if (findCharSession(char.id)) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Masz już otwartą walkę. Skończ ją albo poczekaj aż wygaśnie.',
-        });
-      }
+      // Auto-forfeit poprzedniej sesji (refresh / wyjście z apki / crash). Nie
+      // blokujemy gracza komunikatem „masz już walkę" — persistujemy mid-fight
+      // HP/MP i tworzymy nową sesję. Cost: poprzedni klucz spalony, HP się
+      // nie regeneruje. Mirror manual flee.
+      await forfeitOrphanedSession(ctx.db, char.id);
       if (char.lvl < enemy.requiredLvl) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -874,8 +881,10 @@ export const combatRouter = router({
         playerCls: char.cls,
         playerHealBonus: buff?.healBonus ?? 0,
         heavyCooldown: 0,
+        magicCooldown: 0,
         trackBonus,
         playerStatus: [],
+        playerBuffs: [],
         status: 'fight',
         rewardApplied: false,
         createdAt: Date.now(),
@@ -891,8 +900,17 @@ export const combatRouter = router({
       if (s.status !== 'fight') {
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Combat already ended' });
       }
-      if (input.kind === 'magic' && s.playerMp < 10) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not enough MP' });
+      if (input.kind === 'magic') {
+        const mpCost = MAGIC_MP_COST_BY_CLASS[s.playerCls];
+        if (s.playerMp < mpCost) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not enough MP' });
+        }
+        if (s.magicCooldown > 0) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: `Czar jeszcze niegotowy (${s.magicCooldown})`,
+          });
+        }
       }
       if (input.kind === 'heavy' && s.heavyCooldown > 0) {
         throw new TRPCError({
@@ -910,20 +928,43 @@ export const combatRouter = router({
       s.playerStatus = statusTick.next;
       s.playerHp = Math.max(0, s.playerHp - statusTick.dmg);
 
-      const playerRoll = rollPlayerAttack(
-        input.kind,
-        { atk: s.playerAtk, mag: s.playerMag, spd: s.playerSpd },
-        s.enemy.def,
-      );
-      // MP is spent even on a missed cast — committing to the spell, not landing it.
-      if (input.kind === 'magic') s.playerMp = Math.max(0, s.playerMp - 10);
-      // Cooldown is consumed by the swing (hit or miss) — the animation, the
-      // stance, the commit. A whiffed heavy still locks the cooldown.
-      if (input.kind === 'heavy') {
-        s.heavyCooldown = HEAVY_COOLDOWN_TURNS;
-      } else if (s.heavyCooldown > 0) {
-        s.heavyCooldown -= 1;
+      // Aggregate combat-scoped buffs PRZED tickiem — buff zaaplikowany w turze
+      // poprzedniej musi działać na atak tej tury. Tick decyduje czy zostaje
+      // na następną. „turnsRemaining: 2" = 2 efektywne ataki z buffem.
+      const buffAtkBonus = aggregateCombatAtkBonus(s.playerBuffs);
+      s.playerBuffs = tickCombatBuffs(s.playerBuffs);
+
+      // === 2. Action dispatch ===
+      // norm/heavy → rollPlayerAttack (z buff'owanym ATK), magic → rollPlayerSpell
+      // (per-class behavior: mage damage, warrior buff+heal, rogue forced crit).
+      let playerRoll: { dmg: number; crit: boolean; miss: boolean };
+      if (input.kind === 'magic') {
+        const spell = rollPlayerSpell(
+          s.playerCls,
+          { atk: s.playerAtk, mag: s.playerMag, spd: s.playerSpd },
+          s.enemy.def,
+        );
+        playerRoll = { dmg: spell.dmg, crit: spell.crit, miss: false };
+        if (spell.buff) s.playerBuffs.push(spell.buff);
+        if (spell.healSelf > 0) {
+          s.playerHp = Math.min(s.playerHpMax, s.playerHp + spell.healSelf);
+        }
+        s.playerMp = Math.max(0, s.playerMp - MAGIC_MP_COST_BY_CLASS[s.playerCls]);
+        s.magicCooldown = MAGIC_COOLDOWN_TURNS_BY_CLASS[s.playerCls];
+      } else {
+        const effAtk = s.playerAtk + buffAtkBonus;
+        playerRoll = rollPlayerAttack(
+          input.kind,
+          { atk: effAtk, mag: s.playerMag, spd: s.playerSpd },
+          s.enemy.def,
+        );
+        if (input.kind === 'heavy') {
+          s.heavyCooldown = HEAVY_COOLDOWN_TURNS;
+        }
       }
+      // Decrement cooldowns na turach NIE wykorzystujących danej akcji.
+      if (input.kind !== 'heavy' && s.heavyCooldown > 0) s.heavyCooldown -= 1;
+      if (input.kind !== 'magic' && s.magicCooldown > 0) s.magicCooldown -= 1;
       s.enemyHp = Math.max(0, s.enemyHp - playerRoll.dmg);
 
       let enemyDmg = 0;
@@ -1078,8 +1119,11 @@ export const combatRouter = router({
       s.playerMp = Math.min(s.playerMpMax, s.playerMp + mpHeal);
       const healedHp = s.playerHp - beforeHp;
       const healedMp = s.playerMp - beforeMp;
-      // Heal eats a turn, so the heavy cooldown ticks down.
+      // Heal zjada turę — heavy/magic cooldown'y ticknie, combat buff też
+      // (gracz nie może zalegać heali by przedłużać Krzyk Bojowy).
       if (s.heavyCooldown > 0) s.heavyCooldown -= 1;
+      if (s.magicCooldown > 0) s.magicCooldown -= 1;
+      s.playerBuffs = tickCombatBuffs(s.playerBuffs);
 
       // Consume one charge — delete the row if this was the last one.
       if (itemRow.qty <= 1) {

@@ -195,6 +195,11 @@ export interface DailyDayReward {
 
 export interface ContentRegistry {
   items: Map<string, ItemTemplate>;
+  /** Sekundarny lookup po nazwie itemu (case-sensitive). Używane gdy code-time
+   *  ma do dyspozycji tylko nazwę (bundle delivery, gem shop preview), bo
+   *  primary keys w `items` to content-hashe `contentId()` — niemożliwe do
+   *  zhardcodeowania. Pierwszy dopasowany wygrywa (przy duplikatach nazw). */
+  itemsByName: Map<string, ItemTemplate>;
   enemies: Map<string, EnemyTemplate>;
   quests: Map<string, QuestTemplate>;
   companions: Map<string, CompanionTemplate>;
@@ -220,6 +225,7 @@ export interface ContentRegistry {
 function emptyRegistry(): ContentRegistry {
   return {
     items: new Map(),
+    itemsByName: new Map(),
     enemies: new Map(),
     quests: new Map(),
     companions: new Map(),
@@ -270,7 +276,11 @@ export async function buildRegistry(db: Db): Promise<ContentRegistry> {
 
   const itemRows = await db.select().from(itemTemplates);
   for (const row of itemRows) {
-    reg.items.set(row.id, rowToItemTemplate(row));
+    const tpl = rowToItemTemplate(row);
+    reg.items.set(row.id, tpl);
+    if (!reg.itemsByName.has(row.name)) {
+      reg.itemsByName.set(row.name, tpl);
+    }
   }
 
   const enemyRows = await db.select().from(enemyTemplates);

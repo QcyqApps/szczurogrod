@@ -2,33 +2,29 @@ import { TRPCError } from '@trpc/server';
 import { eq, sql } from 'drizzle-orm';
 import type { ActiveCompanion, CompanionOffer } from '@grodno/shared';
 import { GEM_SINK_COSTS, hireCompanionInputSchema } from '@grodno/shared';
-import { REGISTRY, type CompanionTemplate } from '../content/registry.js';
 import { characterCompanions, characters } from '../db/schema.js';
 import { getChapterByLevel } from '../game/chapters.js';
 import {
   computeHealerCost,
   getCompanion,
+  getCompanionOffer,
   getRumorsForDate,
   HEALER_COOLDOWN_MS,
+  rerollCompanionOffer,
 } from '../game/tavern.js';
 import { isoDateUTC } from '../game/daily.js';
-import { protectedProcedure, publicProcedure, router } from '../trpc/trpc.js';
-
-function templateToOffer(t: CompanionTemplate): CompanionOffer {
-  return {
-    slug: t.slug,
-    name: t.name,
-    cls: t.cls,
-    lvl: t.lvl,
-    price: t.price,
-    trait: t.trait,
-  };
-}
+import { protectedProcedure, router } from '../trpc/trpc.js';
 
 export const tavernRouter = router({
-  listCompanions: publicProcedure.query((): CompanionOffer[] =>
-    [...REGISTRY.companions.values()].map(templateToOffer),
-  ),
+  listCompanions: protectedProcedure.query(async ({ ctx }): Promise<CompanionOffer[]> => {
+    const [char] = await ctx.db
+      .select({ id: characters.id })
+      .from(characters)
+      .where(eq(characters.userId, ctx.userId))
+      .limit(1);
+    if (!char) return [];
+    return getCompanionOffer(char.id, isoDateUTC());
+  }),
 
   getRumors: protectedProcedure.query(async ({ ctx }): Promise<string[]> => {
     const [row] = await ctx.db
@@ -55,7 +51,15 @@ export const tavernRouter = router({
     if (!row) return null;
     const tpl = getCompanion(row.companionSlug);
     if (!tpl) return null;
-    return { ...templateToOffer(tpl), hiredAt: row.hiredAt.getTime() };
+    return {
+      slug: tpl.slug,
+      name: tpl.name,
+      cls: tpl.cls,
+      lvl: tpl.lvl,
+      price: tpl.price,
+      trait: tpl.trait,
+      hiredAt: row.hiredAt.getTime(),
+    };
   }),
 
   hire: protectedProcedure.input(hireCompanionInputSchema).mutation(async ({ ctx, input }) => {
@@ -195,14 +199,15 @@ export const tavernRouter = router({
   }),
 
   /**
-   * Gem sink: refresh offer kompanów — nowa oferta na dziś (reroll).
-   * Implementacja: nasz tavern.listCompanions zwraca WSZYSTKICH z registry,
-   * oferta nie ma osobnego gate'owania per-dzień. Reroll w tym systemie
-   * pełni rolę flavor / reset seen-state (klient może trzymać "last seen offer
-   * hash" i resetować). Server po prostu odejmuje gemy i zwraca nowy batch
-   * (same lista, ale można dodać per-char limitów w przyszłości).
+   * Gem sink: refresh oferty kompanów. Bumpuje nonce w in-memory cache i
+   * zwraca nową listę. listCompanions następnym razem widzi tę samą zmienioną
+   * ofertę (wspólny cache). Daily reset implicit przez datę w seed'zie.
    */
-  rerollCompanions: protectedProcedure.mutation(async ({ ctx }) => {
+  rerollCompanions: protectedProcedure.mutation(async ({ ctx }): Promise<{
+    ok: true;
+    cost: number;
+    offer: CompanionOffer[];
+  }> => {
     const [char] = await ctx.db
       .select({ id: characters.id, gems: characters.gems })
       .from(characters)
@@ -217,6 +222,7 @@ export const tavernRouter = router({
       .update(characters)
       .set({ gems: sql`${characters.gems} - ${cost}` })
       .where(eq(characters.id, char.id));
-    return { ok: true, cost };
+    const offer = rerollCompanionOffer(char.id, isoDateUTC());
+    return { ok: true, cost, offer };
   }),
 });

@@ -3,7 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { PortraitByClass } from '@/components/portraits';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type { GuildWarParticipant } from '@grodno/shared';
 
 export interface WarLineupEditorProps {
@@ -34,7 +34,7 @@ export function WarLineupEditor({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.lineup.toast.fail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildWars.lineup.toast.fail'),
         accent: '#c83232',
       });
     },

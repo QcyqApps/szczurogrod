@@ -1,11 +1,14 @@
 // Server-authoritative combat engine. RNG runs here; client never touches dmg math.
 
+import { eq } from 'drizzle-orm';
 import type {
   CharacterClass,
   EnemyAbility,
   Rarity,
   StatusEffect,
 } from '@grodno/shared';
+import type { Db } from '../db/client.js';
+import { characters } from '../db/schema.js';
 import { REGISTRY, type EnemyTemplate, type ItemTemplate, type MobTier } from '../content/registry.js';
 import type { LootTemplate } from './quests.js';
 
@@ -145,13 +148,52 @@ export interface CombatSession {
    * (including heal). Exposed to the client so the button can show the badge.
    */
   heavyCooldown: number;
+  /**
+   * Turns remaining until per-class spell jest usable again. Mage = 0 (no CD
+   * po caście — ograniczeniem jest MP). Warrior/rogue = MAGIC_COOLDOWN_TURNS_BY_CLASS
+   * po użyciu. Decrement na non-magic turach (mirror heavyCooldown).
+   */
+  magicCooldown: number;
+  /**
+   * Combat-scoped buffs (np. atk_flat z Krzyku Bojowego warrior'a). Tickowane
+   * na początku każdej tury gracza. Znikają z `engage` nowej walki — nie
+   * persystują w DB. Mirror `playerStatus` ale dodatni efekt.
+   */
+  playerBuffs: ActiveCombatBuff[];
   status: 'fight' | 'victory' | 'defeat';
   rewardApplied: boolean;
   createdAt: number;
 }
 
+/**
+ * Combat-scoped buff (sesja-only). Aktualnie tylko `atk_flat` używany przez
+ * Krzyk Bojowy warrior'a. Łatwo rozszerzyć o inne kindy gdy klasy dostaną
+ * więcej spelli.
+ */
+export interface ActiveCombatBuff {
+  kind: 'atk_flat';
+  magnitude: number;
+  turnsRemaining: number;
+}
+
 /** How many turns MOCNY is locked after use. */
 export const HEAVY_COOLDOWN_TURNS = 3;
+
+/**
+ * Spell cost + cooldown per klasa. Mage gra w „spam Iskry" (CD=0, cost 10 MP,
+ * cap 120 → 12 cast'ów do OOM). Warrior/rogue mają burst z cooldownem 4 tury,
+ * niska cena (5/8 MP) bo MP cap też niski (40/60).
+ */
+export const MAGIC_MP_COST_BY_CLASS: Record<CharacterClass, number> = {
+  warrior: 5,
+  mage: 10,
+  rogue: 8,
+};
+export const MAGIC_COOLDOWN_TURNS_BY_CLASS: Record<CharacterClass, number> = {
+  warrior: 4,
+  mage: 0,
+  rogue: 4,
+};
 
 // In-memory session store. For multi-instance deployments move to Redis.
 const SESSIONS = new Map<string, CombatSession>();
@@ -176,13 +218,56 @@ export function deleteSession(combatId: string): void {
  * z tego samego konta (np. dwie karty przeglądarki na Wieży) by każda
  * komitowała własną nagrodę za to samo piętro/moba. Engage'y muszą się
  * upewnić że nie ma jeszcze żywej sesji przed `createSession`.
+ *
+ * Auto-clean: jeśli znajdziemy sesję która już skończyła się (victory/defeat),
+ * usuwamy ją i zwracamy null. To naprawia case gdy klient nie wywołał
+ * `combat.end` (np. Brave / ad-blocker / refresh / crash). Anty-cheat trzymamy
+ * — nagroda za victory aplikuje się wewnątrz `attack` mutation w momencie
+ * flipa statusu, więc usunięcie post-fight sesji nie pozwala na double-claim.
  */
 export function findCharSession(characterId: string): CombatSession | null {
   reapSessions();
-  for (const s of SESSIONS.values()) {
-    if (s.characterId === characterId) return s;
+  for (const [id, s] of SESSIONS) {
+    if (s.characterId !== characterId) continue;
+    if (s.status !== 'fight') {
+      SESSIONS.delete(id);
+      continue;
+    }
+    return s;
   }
   return null;
+}
+
+/**
+ * Forfeit + cleanup wszystkich sesji gracza (po refreshu / wyjściu z apki).
+ * Wywoływane przez engage'y zamiast rzucania „Masz już otwartą walkę".
+ * Zachowanie:
+ *   - victory/defeat → po prostu delete (nagroda została aplikowana w `attack`)
+ *   - fight → persist HP/MP do `characters` + delete (== voluntary flee)
+ * Cost dla gracza: spalony klucz/cooldown z poprzedniego engage'u nie wraca,
+ * HP/MP zostają takie jakie były na starcie zaginionego turn'a (mid-fight HP
+ * zapamiętane na klipie poprzedniej tury — ostatni `attack` zapisał je do `s`).
+ * Zwraca true gdy coś sprzątnęliśmy (do logging w razie potrzeby).
+ */
+export async function forfeitOrphanedSession(
+  db: Db,
+  characterId: string,
+): Promise<boolean> {
+  reapSessions();
+  let cleaned = false;
+  for (const [id, s] of SESSIONS) {
+    if (s.characterId !== characterId) continue;
+    if (s.status === 'fight') {
+      // Persistuj bieżące HP/MP — gracz wrócił z low HP nadal jest osłabiony.
+      await db
+        .update(characters)
+        .set({ hp: s.playerHp, mp: s.playerMp, updatedAt: new Date() })
+        .where(eq(characters.id, s.characterId));
+    }
+    SESSIONS.delete(id);
+    cleaned = true;
+  }
+  return cleaned;
 }
 
 function reapSessions(): void {
@@ -287,6 +372,80 @@ export function rollPlayerAttack(
   if (crit) raw *= CRIT_MULT;
   const dmg = reduce(Math.round(raw), effectiveDef);
   return { dmg, crit, miss: false };
+}
+
+/**
+ * Rezultat rzucenia per-class spell'a. Każda klasa ma inne pole nonnull:
+ * - mage: `dmg` (immediate damage z def-pierce 50%).
+ * - warrior: `buff` (atk_flat 8/2 tury) + `healSelf` (15 HP).
+ * - rogue: `dmg` z forced critem + def-pierce 30%.
+ */
+export interface SpellResult {
+  dmg: number;
+  crit: boolean;
+  /** Buff aplikowany do `playerBuffs` po caście. Null = brak buff'a. */
+  buff: ActiveCombatBuff | null;
+  /** HP do dodania do gracza (clamp do `playerHpMax` przez caller'a). 0 = brak heala. */
+  healSelf: number;
+}
+
+/**
+ * Per-class spell roll. Mage = current Iskra formula. Warrior = Krzyk Bojowy
+ * (zero damage, buff + heal). Rogue = Sztylet w Plecy (forced crit + 30% pierce).
+ */
+export function rollPlayerSpell(
+  cls: CharacterClass,
+  eff: PlayerCombatStats,
+  enemyDef: number,
+): SpellResult {
+  if (cls === 'mage') {
+    const raw = eff.mag * PLAYER_ATK_SCALE + PLAYER_MAGIC_FLAT + Math.random() * 8;
+    const crit = Math.random() < CRIT_RATE;
+    const finalRaw = crit ? raw * CRIT_MULT : raw;
+    const effectiveDef = Math.floor(enemyDef * 0.5);
+    const dmg = reduce(Math.round(finalRaw), effectiveDef);
+    return { dmg, crit, buff: null, healSelf: 0 };
+  }
+  if (cls === 'warrior') {
+    return {
+      dmg: 0,
+      crit: false,
+      buff: { kind: 'atk_flat', magnitude: 8, turnsRemaining: 2 },
+      healSelf: 15,
+    };
+  }
+  // rogue: Sztylet w Plecy — guaranteed crit, 30% def pierce.
+  const raw = eff.atk * 0.4 + 5 + Math.random() * 4;
+  const finalRaw = raw * CRIT_MULT;
+  const effectiveDef = Math.floor(enemyDef * 0.7);
+  const dmg = reduce(Math.round(finalRaw), effectiveDef);
+  return { dmg, crit: true, buff: null, healSelf: 0 };
+}
+
+/**
+ * Tickuje combat buffy na początku tury gracza. Decrement turnsRemaining,
+ * drop'uje wygasłe. Mirror `tickPlayerStatus` ale dla pozytywnych efektów.
+ */
+export function tickCombatBuffs(buffs: readonly ActiveCombatBuff[]): ActiveCombatBuff[] {
+  const next: ActiveCombatBuff[] = [];
+  for (const b of buffs) {
+    const remaining = b.turnsRemaining - 1;
+    if (remaining > 0) next.push({ ...b, turnsRemaining: remaining });
+  }
+  return next;
+}
+
+/**
+ * Suma wszystkich `atk_flat` buffów. Caller dodaje to do `eff.atk` przed
+ * rolling normalnego/heavy ataku. Magic spell mage'a też kiedyś może być
+ * boost'owany — na razie tylko atak fizyczny.
+ */
+export function aggregateCombatAtkBonus(buffs: readonly ActiveCombatBuff[]): number {
+  let sum = 0;
+  for (const b of buffs) {
+    if (b.kind === 'atk_flat') sum += b.magnitude;
+  }
+  return sum;
 }
 
 export interface EnemyAttackRollFull extends EnemyAttackRoll {

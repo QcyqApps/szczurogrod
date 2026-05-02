@@ -5,7 +5,7 @@ import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { PortraitByClass } from '@/components/portraits';
-import { useT, tStatic, type DictKey } from '@/i18n';
+import { useT, tStatic, type DictKey , translateServerError} from '@/i18n';
 import type { GuildGetResponse, GuildMember, GuildRank } from '@grodno/shared';
 import { GuildInviteModal } from './components/GuildInviteModal';
 
@@ -122,7 +122,7 @@ function MemberRow({ member, isMe, myRank, lastInList, onTransferLeader }: Membe
 
   const handleError = (err: unknown) => {
     pushToast({
-      text: err instanceof TRPCClientError ? err.message : tStatic('guildMembers.toast.failed'),
+      text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildMembers.toast.failed'),
       accent: '#c83232',
     });
   };
@@ -352,7 +352,7 @@ function ApplicationsModal({ onClose }: ApplicationsModalProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildMembers.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildMembers.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -489,7 +489,7 @@ function ConfirmTransferModal({ target, onClose }: ConfirmTransferModalProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildMembers.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildMembers.toast.failed'),
         accent: '#c83232',
       });
     },

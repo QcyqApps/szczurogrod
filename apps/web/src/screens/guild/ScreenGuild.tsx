@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
-import { useT, type DictKey } from '@/i18n';
+import { useT, type DictKey , translateServerError} from '@/i18n';
 import { GuildNoneView } from './GuildNoneView';
 import { GuildTabMembers } from './GuildTabMembers';
 import { GuildTabChat } from './GuildTabChat';
@@ -10,9 +10,11 @@ import { GuildTabTreasury } from './GuildTabTreasury';
 import { GuildTabBuildings } from './GuildTabBuildings';
 import { GuildTabWars } from './GuildTabWars';
 import { GuildTabRaids } from './GuildTabRaids';
+import { GuildTabBrowse } from './GuildTabBrowse';
 import { GuildEmblem } from './components/GuildEmblem';
+import { consumePendingGuildTab } from './pending-tab';
 
-type Tab = 'members' | 'chat' | 'treasury' | 'buildings' | 'wars' | 'raids';
+type Tab = 'members' | 'chat' | 'treasury' | 'buildings' | 'wars' | 'raids' | 'browse';
 
 const TAB_LABEL_KEY: Record<Tab, DictKey> = {
   members: 'guild.tab.members',
@@ -21,6 +23,7 @@ const TAB_LABEL_KEY: Record<Tab, DictKey> = {
   buildings: 'guild.tab.buildings',
   wars: 'guild.tab.wars',
   raids: 'guild.tab.raids',
+  browse: 'guild.tab.browse',
 };
 
 export function ScreenGuild() {
@@ -38,8 +41,16 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
   const utils = trpc.useUtils();
   const pushToast = useToastQueue((s) => s.push);
   const guildQuery = trpc.guild.get.useQuery();
-  const [tab, setTab] = useState<Tab>('members');
+  const [tab, setTab] = useState<Tab>(() => consumePendingGuildTab() ?? 'members');
   const [confirmLeave, setConfirmLeave] = useState(false);
+
+  // Drugi mount po pierwszej nawigacji może mieć pending tab. Czytamy też tu
+  // (rzadki edge: gracz wszedł do gildii, banner z town'u dostarczył pending,
+  // ale ScreenGuild był w drugim cyklu re-render'u bez initial state).
+  useEffect(() => {
+    const pending = consumePendingGuildTab();
+    if (pending) setTab(pending);
+  }, []);
 
   const leaveMut = trpc.guild.leave.useMutation({
     onSuccess: () => {
@@ -48,7 +59,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('guild.toast.leaveFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('guild.toast.leaveFailed'),
         accent: '#c83232',
       });
     },
@@ -61,7 +72,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('guild.toast.disbandFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('guild.toast.disbandFailed'),
         accent: '#c83232',
       });
     },
@@ -146,11 +157,11 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
         </div>
       </div>
 
-      {/* Tab pills */}
+      {/* Tab pills — 7 zakładek w 2 rzędach (4+3). Mobile-friendly. */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: 'repeat(4, 1fr)',
           gap: 4,
           padding: '0 12px',
           marginBottom: 4,
@@ -191,6 +202,7 @@ function GuildMemberView({ myCharId }: { myCharId: string }) {
       {tab === 'buildings' && <GuildTabBuildings myRank={data.myRank} />}
       {tab === 'wars' && <GuildTabWars myRank={data.myRank} />}
       {tab === 'raids' && <GuildTabRaids />}
+      {tab === 'browse' && <GuildTabBrowse />}
 
       {/* Leave / disband */}
       <div style={{ padding: 12, borderTop: '1.5px dashed #c8b890', marginTop: 8 }}>

@@ -7,6 +7,8 @@ import { useT } from '@/i18n';
 import type { DictKey } from '@/i18n';
 import type { Character } from '@grodno/shared';
 import type { SubScreen, Tab } from '@/types/nav';
+import { setPendingGuildTab } from '@/screens/guild/pending-tab';
+import { setPendingWarId } from '@/screens/war/pending-war';
 
 const FALLBACK_KEY: Record<string, DictKey> = {
   warrior: 'town.flavor.warrior',
@@ -86,6 +88,26 @@ export function ScreenTown({
   });
   const invitesCount = invitesQuery.data?.invites.length ?? 0;
 
+  // Server-wide top war — pokazujemy WSZYSTKIM. Cache server-side 30s.
+  const topWarQuery = trpc.town.topWar.useQuery(undefined, {
+    refetchInterval: 30_000,
+    staleTime: 30_000,
+  });
+  const topWar = topWarQuery.data?.war ?? null;
+
+  // Per-guild banner: aktywna wojna gildyjna + aktywny rajd. Tylko gdy w gildii.
+  const inGuild = char.guild !== null;
+  const myWarsQuery = trpc.guildWars.list.useQuery(undefined, {
+    enabled: inGuild,
+    refetchInterval: 60_000,
+  });
+  const myActiveWar = myWarsQuery.data?.active ?? null;
+  const myRaidQuery = trpc.guildRaids.current.useQuery(undefined, {
+    enabled: inGuild,
+    refetchInterval: 60_000,
+  });
+  const myRaid = myRaidQuery.data ?? null;
+
   // Warunki kontekstowe dla castle animations. Liczone raz przy render'ze;
   // gdy gracz wisi w grze przez cały wieczór, rozblysk okien i tak się
   // aktywuje przy następnym me.get invalidate (co kilka minut). Dokładność
@@ -93,22 +115,188 @@ export function ScreenTown({
   const hour = new Date().getHours();
   const isEvening = hour >= 17 || hour < 7; // 17:00 – 06:59 lokalnie
 
-  // 1Hz tick gdy aktywna praca trwa — countdown na bannerze bez network traffic.
+  // 1Hz tick — driver dla countdown'ów na bannerach (work, war scheduled).
   const [, tickRerender] = useState(0);
   const isWorking = char.work !== null;
+  const needsCountdown =
+    (isWorking && !char.work?.ready) ||
+    !!topWar ||
+    !!myActiveWar;
   useEffect(() => {
-    if (!isWorking || char.work?.ready) return;
+    if (!needsCountdown) return;
     const handle = setInterval(() => tickRerender((x) => x + 1), 1000);
     return () => clearInterval(handle);
-  }, [isWorking, char.work?.ready]);
+  }, [needsCountdown]);
 
   const [survivorModalOpen, setSurvivorModalOpen] = useState(false);
   const openSurvivor = () => {
     window.open(getSurvivorUrl(), '_blank', 'noopener');
   };
 
+  // Helper: format ms left jako „HH:MM" lub „MMm Ss" gdy <1h.
+  const fmtCountdown = (msLeft: number): string => {
+    if (msLeft <= 0) return '0s';
+    const totalSec = Math.floor(msLeft / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  const onTopWarClick = () => {
+    if (!topWar) return;
+    const myGuildId = char.guild?.id ?? null;
+    // Members atak/def kierujemy do swojej gildii, na zakładkę wojen.
+    // Reszta — read-only spectator.
+    if (myGuildId) {
+      // Dopasowanie po nazwie/tagu, bo topWar nie ma id'ka gildii (privacy).
+      // Tag jest unikalny, więc starcza.
+      if (
+        char.guild?.tag === topWar.attackerTag ||
+        char.guild?.tag === topWar.defenderTag
+      ) {
+        setPendingGuildTab('wars');
+        nav('guild');
+        return;
+      }
+    }
+    setPendingWarId(topWar.warId);
+    nav('warSpectator');
+  };
+
   return (
     <div className="screen-in" style={{ padding: '12px 12px 10px' }}>
+      {topWar && (
+        <button
+          type="button"
+          onClick={onTopWarClick}
+          style={{
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            gap: 10,
+            padding: 10,
+            marginBottom: 10,
+            border: '2.5px solid #2a1810',
+            borderRadius: 10,
+            background: 'linear-gradient(90deg, #c83232 0%, #6a1818 100%)',
+            boxShadow: '2px 2px 0 #2a1810',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textAlign: 'left',
+            color: '#fff5e0',
+          }}
+        >
+          <GameIcon name="sword" size={28} />
+          <div style={{ flex: 1 }}>
+            <div className="h-title clean" style={{ fontSize: 13, color: '#fff5e0' }}>
+              {t('town.banner.topWar.title')}
+            </div>
+            <div style={{ fontSize: 12, color: '#ffd8b8' }}>
+              <b>[{topWar.attackerTag}]</b> {t('town.banner.topWar.vs')}{' '}
+              <b>[{topWar.defenderTag}]</b>
+              {' · '}
+              {topWar.status === 'resolving'
+                ? t('town.banner.topWar.resolving')
+                : t('town.banner.topWar.startsIn').replace(
+                    '{time}',
+                    fmtCountdown(topWar.scheduledAt - Date.now()),
+                  )}
+            </div>
+          </div>
+          <GameIcon name="arrow-right" size={18} />
+        </button>
+      )}
+      {inGuild && myActiveWar && (
+        <button
+          type="button"
+          onClick={() => {
+            setPendingGuildTab('wars');
+            nav('guild');
+          }}
+          style={{
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            gap: 10,
+            padding: 10,
+            marginBottom: 10,
+            border: '2.5px solid #2a1810',
+            borderRadius: 10,
+            background: 'linear-gradient(90deg, #8a3a30 0%, #c86a3a 100%)',
+            boxShadow: '2px 2px 0 #2a1810',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textAlign: 'left',
+            color: '#fff5e0',
+          }}
+        >
+          <GameIcon name="banner" size={28} />
+          <div style={{ flex: 1 }}>
+            <div className="h-title clean" style={{ fontSize: 13, color: '#fff5e0' }}>
+              {t('town.banner.myWar.title')}
+            </div>
+            <div style={{ fontSize: 12, color: '#ffd8b8' }}>
+              <b>[{myActiveWar.attackerGuildTag}]</b> {t('town.banner.topWar.vs')}{' '}
+              <b>[{myActiveWar.defenderGuildTag}]</b>
+              {' · '}
+              {myActiveWar.status === 'resolving'
+                ? t('town.banner.myWar.resolving')
+                : t('town.banner.myWar.startsIn').replace(
+                    '{time}',
+                    fmtCountdown(myActiveWar.scheduledAt - Date.now()),
+                  )}
+            </div>
+          </div>
+          <GameIcon name="arrow-right" size={18} />
+        </button>
+      )}
+      {inGuild && myRaid && (
+        <button
+          type="button"
+          onClick={() => {
+            setPendingGuildTab('raids');
+            nav('guild');
+          }}
+          style={{
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            gap: 10,
+            padding: 10,
+            marginBottom: 10,
+            border: '2.5px solid #2a1810',
+            borderRadius: 10,
+            background: 'linear-gradient(90deg, #4a2a6a 0%, #2a1850 100%)',
+            boxShadow: '2px 2px 0 #2a1810',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            textAlign: 'left',
+            color: '#fff5e0',
+          }}
+        >
+          <GameIcon name="bolt" size={28} />
+          <div style={{ flex: 1 }}>
+            <div className="h-title clean" style={{ fontSize: 13, color: '#fff5e0' }}>
+              {t('town.banner.myRaid.title')}
+            </div>
+            <div style={{ fontSize: 12, color: '#d8b8ff' }}>
+              <b>{myRaid.boss.name}</b> (T{myRaid.boss.tier})
+              {' · '}
+              <span className="mono">
+                {myRaid.boss.hpCurrent}/{myRaid.boss.hpMax}
+              </span>
+              {' · '}
+              {t('town.banner.myRaid.hits')
+                .replace('{cur}', String(myRaid.myHitsToday))
+                .replace('{max}', String(myRaid.myHitsMax))}
+            </div>
+          </div>
+          <GameIcon name="arrow-right" size={18} />
+        </button>
+      )}
       {char.work && (
         <WorkBanner
           kindName={char.work.kindName}

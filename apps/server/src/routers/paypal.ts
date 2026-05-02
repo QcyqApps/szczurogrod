@@ -26,6 +26,7 @@ import {
 import { REGISTRY } from '../content/registry.js';
 import { characterItems, characters, gemPurchases } from '../db/schema.js';
 import { itemTemplateToRowValues } from '../game/inventory.js';
+import { extendSubscription } from '../game/subscription.js';
 import {
   findPaypalTarget,
   priceToPayPalAmount,
@@ -122,13 +123,14 @@ export async function grantPayPalCapture(
     }
     if (bundle.itemTemplateIds && bundle.itemTemplateIds.length > 0) {
       const rows: (typeof characterItems.$inferInsert)[] = [];
-      for (const templateId of bundle.itemTemplateIds) {
-        const tpl = REGISTRY.items.get(templateId);
+      for (const tplName of bundle.itemTemplateIds) {
+        // bundle config trzyma NAZWY (`Miecz Świtu` etc.), bo `REGISTRY.items`
+        // jest keyowany content-hashem niemożliwym do zhardcoded'owania.
+        const tpl = REGISTRY.itemsByName.get(tplName);
         if (!tpl) {
-          // Missing template = content drift. Skipujemy ten item, ale gemy +
-          // gold idą — gracz dostaje co najmniej częściowo, niż nic. Logujemy
-          // żeby content team mogł poprawić registry.
-          console.warn(`[paypal] bundle ${bundle.id}: template ${templateId} not in registry, skipping item`);
+          // Missing template = content drift (rename, removal). Skipujemy ten
+          // item, ale gemy + gold idą. Logujemy żeby content team poprawił config.
+          console.warn(`[paypal] bundle ${bundle.id}: item "${tplName}" not in registry, skipping`);
           continue;
         }
         rows.push(itemTemplateToRowValues(tpl, args.characterId, 'bundle'));
@@ -144,6 +146,25 @@ export async function grantPayPalCapture(
     .set({ gems: sql`${characters.gems} + ${totalGems}` })
     .where(eq(characters.id, args.characterId))
     .returning({ gems: characters.gems });
+
+  // Subskrypcja Szczurogród+ dla paczek z `subscriptionDays` (vip30 — 30 dni
+  // +20% XP). Cap 90 dni, gdy gracz już ma aktywną — extendSubscription
+  // dodaje od `until`, nie od `now`.
+  if (target.kind === 'gems' && target.pkg.subscriptionDays && target.pkg.subscriptionDays > 0) {
+    const [charSub] = await db
+      .select({ szczurogrodPlusUntil: characters.szczurogrodPlusUntil })
+      .from(characters)
+      .where(eq(characters.id, args.characterId))
+      .limit(1);
+    const newUntil = extendSubscription(
+      charSub?.szczurogrodPlusUntil ?? null,
+      target.pkg.subscriptionDays,
+    );
+    await db
+      .update(characters)
+      .set({ szczurogrodPlusUntil: newUntil, updatedAt: new Date() })
+      .where(eq(characters.id, args.characterId));
+  }
 
   return {
     status: 'credited',

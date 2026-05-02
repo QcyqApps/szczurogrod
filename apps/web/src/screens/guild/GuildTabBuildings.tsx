@@ -3,7 +3,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
-import { useT, tStatic, useContentT } from '@/i18n';
+import { useT, tStatic, useContentT , translateServerError} from '@/i18n';
 import type {
   GuildBuildingBuffSpec,
   GuildBuildingEntry,
@@ -86,7 +86,7 @@ function BuildingCard({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildBuildings.toast.refused'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildBuildings.toast.refused'),
         accent: '#c83232',
       });
     },

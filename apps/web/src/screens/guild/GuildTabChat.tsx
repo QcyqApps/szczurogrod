@@ -3,7 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { PortraitByClass } from '@/components/portraits';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type { GuildChatMessage, GuildRank } from '@grodno/shared';
 
 const POLL_INTERVAL_MS = 8000;
@@ -27,7 +27,7 @@ export function GuildTabChat() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildChat.toast.deleteFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildChat.toast.deleteFailed'),
         accent: '#c83232',
       });
     },
@@ -72,7 +72,7 @@ export function GuildTabChat() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildChat.toast.sendFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildChat.toast.sendFailed'),
         accent: '#c83232',
       });
     },

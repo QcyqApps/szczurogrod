@@ -21,6 +21,7 @@
 
 import { TRPCError } from '@trpc/server';
 import { eq, sql } from 'drizzle-orm';
+import { extendSubscription } from '../game/subscription.js';
 import {
   gemShopListResponseSchema,
   verifyPlayPurchaseInputSchema,
@@ -28,8 +29,9 @@ import {
   type GemShopListResponse,
   type VerifyPlayPurchaseResponse,
 } from '@grodno/shared';
+import { REGISTRY } from '../content/registry.js';
 import { characters, gemPurchases } from '../db/schema.js';
-import { findPackageByProductId, GEM_PACKAGES } from '../game/gemPackages.js';
+import { BUNDLE_PACKAGES, findPackageByProductId, GEM_PACKAGES } from '../game/gemPackages.js';
 import {
   consumePurchase,
   isPlayBillingConfigured,
@@ -54,6 +56,81 @@ export const gemShopRouter = router({
       playBillingReady: isPlayBillingConfigured(),
       paypalReady: isPayPalConfigured(),
     });
+  }),
+
+  /**
+   * Item preview dla wszystkich bundle'i w `BUNDLE_PACKAGES`. Klient renderuje
+   * bundle'y z hardcoded'em; tutaj zwracamy faktyczne template stats z REGISTRY,
+   * żeby gracz mógł kliknąć na item w bundle i zobaczyć co dostanie.
+   * Per-templateId aggregowane qty (bundle b2 ma s-buff-mp25 ×5 → qty=5).
+   */
+  bundlePreview: publicProcedure.query(() => {
+    const previews: Array<{
+      bundleId: string;
+      items: Array<{
+        templateId: string;
+        qty: number;
+        name: string;
+        icon: string;
+        slot: string;
+        rarity: string;
+        atk: number;
+        def: number;
+        mag: number;
+        hpHeal: number;
+        mpHeal: number;
+        desc: string;
+        allowedClasses: readonly string[] | null;
+      }>;
+    }> = [];
+
+    for (const bundle of BUNDLE_PACKAGES) {
+      if (!bundle.itemTemplateIds || bundle.itemTemplateIds.length === 0) continue;
+      // `itemTemplateIds` w bundle config to NAZWY itemów. Aggregate by name → qty.
+      const qtyByName = new Map<string, number>();
+      for (const name of bundle.itemTemplateIds) {
+        qtyByName.set(name, (qtyByName.get(name) ?? 0) + 1);
+      }
+      const items: Array<{
+        templateId: string;
+        qty: number;
+        name: string;
+        icon: string;
+        slot: string;
+        rarity: string;
+        atk: number;
+        def: number;
+        mag: number;
+        hpHeal: number;
+        mpHeal: number;
+        desc: string;
+        allowedClasses: readonly string[] | null;
+      }> = [];
+      for (const [tplName, qty] of qtyByName) {
+        const tpl = REGISTRY.itemsByName.get(tplName);
+        if (!tpl) continue; // content drift — skip silently
+        items.push({
+          // Klient klucze przez `templateId` (nazwa) — server zwraca tę samą nazwę,
+          // więc bundleItemMap.get(name) hit się dopasuje.
+          templateId: tplName,
+          qty,
+          name: tpl.name,
+          icon: tpl.icon,
+          slot: tpl.slot,
+          rarity: tpl.rarity,
+          atk: tpl.atk ?? 0,
+          def: tpl.def ?? 0,
+          mag: tpl.mag ?? 0,
+          hpHeal: tpl.hpHeal ?? 0,
+          mpHeal: tpl.mpHeal ?? 0,
+          desc: tpl.desc ?? '',
+          allowedClasses: tpl.allowedClasses ?? null,
+        });
+      }
+      previews.push({ bundleId: bundle.id, items });
+    }
+
+    return { bundles: previews };
   }),
 
   verifyPlay: protectedProcedure
@@ -167,6 +244,24 @@ export const gemShopRouter = router({
         .where(eq(characters.id, char.id))
         .returning({ gems: characters.gems });
       const newGems = updated?.gems ?? char.gems + totalGems;
+
+      // Subskrypcja Szczurogród+ — paczki z `subscriptionDays` (vip30) extendują
+      // `szczurogrodPlusUntil` o N dni (cap 90 dni). Anti-stack przez extendSubscription.
+      if (pkg.subscriptionDays && pkg.subscriptionDays > 0) {
+        const [charSub] = await ctx.db
+          .select({ szczurogrodPlusUntil: characters.szczurogrodPlusUntil })
+          .from(characters)
+          .where(eq(characters.id, char.id))
+          .limit(1);
+        const newUntil = extendSubscription(
+          charSub?.szczurogrodPlusUntil ?? null,
+          pkg.subscriptionDays,
+        );
+        await ctx.db
+          .update(characters)
+          .set({ szczurogrodPlusUntil: newUntil, updatedAt: new Date() })
+          .where(eq(characters.id, char.id));
+      }
 
       // Best-effort consume — frees the SKU for repurchase. If this fails
       // (network, transient Google hiccup) we mark status='verified' and

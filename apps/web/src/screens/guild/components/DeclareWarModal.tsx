@@ -2,7 +2,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import { GuildEmblem } from './GuildEmblem';
 
 export interface DeclareWarModalProps {
@@ -27,7 +27,7 @@ export function DeclareWarModal({ onClose }: DeclareWarModalProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.declare.toast.fail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildWars.declare.toast.fail'),
         accent: '#c83232',
         ttlMs: 4500,
       });

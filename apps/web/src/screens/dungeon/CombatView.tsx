@@ -85,8 +85,24 @@ function previewRange(
   kind: AttackKind,
   eff: { atk: number; mag: number; spd: number },
   enemyDef: number,
+  cls: 'warrior' | 'mage' | 'rogue' = 'mage',
 ): { lo: number; hi: number } {
   if (kind === 'magic') {
+    // Per-class spell preview — mirror rollPlayerSpell w game/combat.ts.
+    if (cls === 'warrior') {
+      // Krzyk Bojowy — zero immediate damage. Caller pokazuje alt label.
+      return { lo: 0, hi: 0 };
+    }
+    if (cls === 'rogue') {
+      // Sztylet w Plecy: forced crit ×1.6, def pierce 30%.
+      const pierce = Math.floor(enemyDef * 0.7);
+      const base = (eff.atk * 0.4 + 5) * 1.6;
+      return {
+        lo: previewReduce(Math.round(base), pierce),
+        hi: previewReduce(Math.round(base + 4 * 1.6), pierce),
+      };
+    }
+    // mage: Iskra — current formula (50% def pierce).
     const pierce = Math.floor(enemyDef * 0.5);
     const base = eff.mag * PLAYER_ATK_SCALE_CLIENT + PLAYER_MAGIC_FLAT_CLIENT;
     return {
@@ -377,13 +393,23 @@ export function CombatView({
     }
   }, [onSerialContinue, serialContinuing]);
 
+  // Ref pattern żeby setTimeout NIE resetował się przy każdym re-renderze
+  // parentu. ScreenDungeon nie memoizuje `continueSerial`, więc po każdym
+  // me.get/combat.enemies invalidate (a przy victory leci ich kilka)
+  // `onSerialContinue` to nowy reference → triggerSerialContinue recompute →
+  // jeśli efekt timera zależałby od niego, cleanup'owałby setTimeout przed
+  // 5s. Ref izoluje deps efektu do `serialCountdownStart` (start/stop only),
+  // a w środku setTimeout woła ZAWSZE najnowszy callback.
+  const triggerSerialContinueRef = useRef(triggerSerialContinue);
+  triggerSerialContinueRef.current = triggerSerialContinue;
+
   useEffect(() => {
     if (serialCountdownStart === null) return;
     const handle = setTimeout(() => {
-      void triggerSerialContinue();
+      void triggerSerialContinueRef.current();
     }, SERIAL_CONTINUE_MS);
     return () => clearTimeout(handle);
-  }, [serialCountdownStart, triggerSerialContinue]);
+  }, [serialCountdownStart]);
 
   // Kiedy parent dostarcza nowy initialState (nowa walka w serii), CombatView
   // resetuje swój wewnętrzny stan, log, animacje i loot — bez tego widać
@@ -487,6 +513,10 @@ export function CombatView({
 
   async function attack(kind: AttackKind) {
     if (state.status !== 'fight' || locked) return;
+    // Snapshot pre-mutation values żeby wykryć buff/heal'ujące spelle
+    // (warrior Krzyk Bojowy: dmg=0 ale +HP i +ATK buff).
+    const prevPlayerHp = state.playerHp;
+    const prevBuffsCount = state.playerBuffs.length;
     try {
       const res = await attackMut.mutateAsync({ combatId: state.combatId, kind });
       // DOT tick happens BEFORE the swing (patrz combat.ts). Pokazujemy go
@@ -496,9 +526,22 @@ export function CombatView({
         addDmg('player', res.playerStatusDmg, 'poison');
         pushLog(t('combat.log.poisonTick').replace('{dmg}', String(res.playerStatusDmg)));
       }
+      // Spell typu „buff/heal" (warrior Krzyk Bojowy): dmg=0, brak miss'a,
+      // ale rosną HP i/lub `playerBuffs`. Nie pokazujemy fałszywego „-0" na
+      // przeciwniku — zamiast tego heal popup na graczu i log o buff'ie.
+      const isBuffSpell =
+        kind === 'magic' &&
+        !res.playerMiss &&
+        res.playerDmg === 0 &&
+        (res.state.playerHp > prevPlayerHp ||
+          res.state.playerBuffs.length > prevBuffsCount);
       if (res.playerMiss) {
         addDmg('enemy', 0, 'miss');
         pushLog(t('combat.log.miss').replace('{name}', char.name));
+      } else if (isBuffSpell) {
+        const healAmount = res.state.playerHp - prevPlayerHp;
+        if (healAmount > 0) addDmg('player', healAmount, 'heal');
+        pushLog(t('combat.log.spellBuff').replace('{name}', char.name));
       } else {
         setAnims((a) => ({ ...a, enemy: 'shake' }));
         setTimeout(() => setAnims((a) => ({ ...a, enemy: '' })), 400);
@@ -556,6 +599,11 @@ export function CombatView({
       }
     } catch (e) {
       console.error('combat.attack failed', e);
+      // Defensive: w sim mode useEffect re-fire'uje natychmiast po `locked`
+      // flip (mutation pending → false na error). Bez tego sim'owy retry
+      // pętli requesty 0ms → server crash. Lock 800ms daje state'owi szansę
+      // się zaktualizować (np. invalidate me.get) i breakuje tight loop.
+      holdTurnLock(false);
     }
   }
 
@@ -625,7 +673,17 @@ export function CombatView({
       void attack('heavy');
       return;
     }
-    if (simUseMagic && state.playerMp >= 10) {
+    // Magic gate musi mirror'ować server: cooldown 0 ORAZ MP >= per-class cost.
+    // Bez tego sim na warrior'ze (Krzyk, cooldown 4) zapętla się — server
+    // odrzuca FORBIDDEN, mutation throw'uje, locked flipuje, useEffect re-fire,
+    // request loop → server crash.
+    const spellMpCost =
+      state.playerCls === 'warrior' ? 5 : state.playerCls === 'rogue' ? 8 : 10;
+    if (
+      simUseMagic &&
+      state.magicCooldown === 0 &&
+      state.playerMp >= spellMpCost
+    ) {
       void attack('magic');
       return;
     }
@@ -877,6 +935,30 @@ export function CombatView({
               ))}
             </div>
           )}
+          {state.playerBuffs.length > 0 && (
+            <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {state.playerBuffs.map((b, i) => (
+                <div
+                  key={`buff-${b.kind}-${i}`}
+                  style={{
+                    fontSize: 9,
+                    fontFamily: 'Luckiest Guy, sans-serif',
+                    letterSpacing: 0.3,
+                    background: '#a8632a',
+                    color: '#fff5d8',
+                    border: '1.5px solid #2a1810',
+                    borderRadius: 999,
+                    padding: '1px 6px',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={t('combat.buff.title')}
+                >
+                  +{b.magnitude} ATK · {b.turnsRemaining}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1031,7 +1113,25 @@ export function CombatView({
             const eff = { atk: state.playerAtk, mag: state.playerMag, spd: state.playerSpd };
             const norm = previewRange('norm', eff, state.enemyDef);
             const heavy = previewRange('heavy', eff, state.enemyDef);
-            const magic = previewRange('magic', eff, state.enemyDef);
+            const magic = previewRange('magic', eff, state.enemyDef, state.playerCls);
+            // Per-class spell config — mirror MAGIC_*_BY_CLASS w game/combat.ts.
+            const spellMpCost = state.playerCls === 'warrior' ? 5 : state.playerCls === 'rogue' ? 8 : 10;
+            const spellLabelKey =
+              state.playerCls === 'warrior'
+                ? 'combat.btn.spell.warrior'
+                : state.playerCls === 'rogue'
+                  ? 'combat.btn.spell.rogue'
+                  : 'combat.btn.spell.mage';
+            const spellTitleKey =
+              state.playerCls === 'warrior'
+                ? 'combat.btn.spell.title.warrior'
+                : state.playerCls === 'rogue'
+                  ? 'combat.btn.spell.title.rogue'
+                  : 'combat.btn.spell.title.mage';
+            const spellPreview =
+              state.playerCls === 'warrior'
+                ? '+8 ATK / +15 HP'
+                : `${magic.lo}–${magic.hi}`;
             const missPct = heavyMissPct(state.playerSpd);
             const heavyLocked = state.heavyCooldown > 0;
             return (
@@ -1088,16 +1188,24 @@ export function CombatView({
                   type="button"
                   className="cbtn"
                   onClick={() => attack('magic')}
-                  disabled={locked || state.playerMp < 10}
+                  disabled={locked || state.playerMp < spellMpCost || state.magicCooldown > 0}
                   style={{ background: '#6a3a8a', color: '#fff' }}
-                  title={t('combat.btn.magic.title')}
+                  title={t(spellTitleKey)}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <GameIcon name="magic" size={18} /> {t('combat.btn.magic')}
+                      <GameIcon name="magic" size={18} /> {t(spellLabelKey)}
+                      {state.magicCooldown > 0 && (
+                        <>
+                          <IcoClock s={12} />
+                          {state.magicCooldown}
+                        </>
+                      )}
                     </span>
                     <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 400 }}>
-                      {magic.lo}–{magic.hi} · −10 MP
+                      {state.magicCooldown > 0
+                        ? t('combat.btn.spell.cooldown')
+                        : `${spellPreview} · −${spellMpCost} MP`}
                     </span>
                   </div>
                 </button>

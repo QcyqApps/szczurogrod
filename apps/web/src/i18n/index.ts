@@ -7,3 +7,4 @@ export { useLangStore, type Lang } from './store';
 export { useT, tStatic } from './use-t';
 export type { DictKey } from './dict';
 export { useContentT, CONTENT_EN } from './content';
+export { translateServerError } from './server-errors';

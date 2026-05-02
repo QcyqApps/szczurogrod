@@ -8,7 +8,7 @@ import { GemSinkButton } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { useUnlockQueue } from '@/api/unlock-queue-store';
-import { useT } from '@/i18n';
+import { useT , translateServerError} from '@/i18n';
 import {
   GEM_SINK_COSTS,
   type ArenaFightResult,
@@ -45,7 +45,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
     onError: (err) => {
       setFighting(null);
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('arena.toast.buyFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('arena.toast.buyFailed'),
         accent: '#c83232',
       });
     },
@@ -59,7 +59,7 @@ export function ScreenArena({ char, onBack }: ScreenArenaProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('arena.toast.buyFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('arena.toast.buyFailed'),
         accent: '#c83232',
       });
     },

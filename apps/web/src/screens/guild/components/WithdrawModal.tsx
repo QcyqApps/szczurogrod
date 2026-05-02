@@ -3,7 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoCoin, IcoGem } from '@/components/icons';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type { GuildRank } from '@grodno/shared';
 
 export interface WithdrawModalProps {
@@ -43,7 +43,7 @@ export function WithdrawModal({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildWithdraw.toast.fail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildWithdraw.toast.fail'),
         accent: '#c83232',
         ttlMs: 4200,
       });

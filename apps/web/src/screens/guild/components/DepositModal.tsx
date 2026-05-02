@@ -3,7 +3,7 @@ import { TRPCClientError } from '@trpc/client';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoCoin, IcoGem } from '@/components/icons';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 
 export interface DepositModalProps {
   onClose: () => void;
@@ -29,7 +29,7 @@ export function DepositModal({ onClose }: DepositModalProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildDeposit.toast.fail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildDeposit.toast.fail'),
         accent: '#c83232',
       });
     },

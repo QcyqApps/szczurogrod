@@ -152,6 +152,95 @@ export function getCompanion(slug: string): CompanionTemplate | null {
   return REGISTRY.companions.get(slug) ?? null;
 }
 
+/**
+ * Ile kompanów pokazujemy w ofercie tawerny per gracz. Wybierane deterministycznie
+ * z całego registry przez (characterId + date + nonce). Mniej niż liczba registry
+ * = "refresh" ma sens (cycle przez resztę).
+ */
+export const COMPANION_OFFER_SIZE = 5;
+
+interface CompanionOfferCacheEntry {
+  date: string;
+  nonce: number;
+  offer: CompanionOffer[];
+}
+
+const COMPANION_OFFER_CACHE = new Map<string, CompanionOfferCacheEntry>();
+
+// Mała seedowalna PRNG (mulberry32) — deterministyczny shuffle bez external deps.
+function mulberry32(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(input: string): number {
+  // Simple xmur3 — wystarczy jako seed dla mulberry32.
+  let h = 1779033703 ^ input.length;
+  for (let i = 0; i < input.length; i++) {
+    h = Math.imul(h ^ input.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return h >>> 0;
+}
+
+function templateToOffer(t: CompanionTemplate): CompanionOffer {
+  return {
+    slug: t.slug,
+    name: t.name,
+    cls: t.cls,
+    lvl: t.lvl,
+    price: t.price,
+    trait: t.trait,
+  };
+}
+
+function buildOffer(characterId: string, date: string, nonce: number): CompanionOffer[] {
+  const all = [...REGISTRY.companions.values()].map(templateToOffer);
+  if (all.length <= COMPANION_OFFER_SIZE) return all;
+  const seed = hashSeed(`${characterId}|${date}|${nonce}`);
+  const rng = mulberry32(seed);
+  // Fisher-Yates seedowany shuffle.
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = all[i]!;
+    all[i] = all[j]!;
+    all[j] = tmp;
+  }
+  return all.slice(0, COMPANION_OFFER_SIZE);
+}
+
+/**
+ * Daily-rotated subset of companions for `characterId`. Cached in-memory dla
+ * tego samego dnia — wszystkie wywołania w obrębie dnia zwracają tę samą listę,
+ * dopóki gracz nie wywoła `rerollCompanionOffer`.
+ */
+export function getCompanionOffer(characterId: string, today: string): CompanionOffer[] {
+  const cached = COMPANION_OFFER_CACHE.get(characterId);
+  if (cached && cached.date === today) return cached.offer;
+  const nonce = 0;
+  const offer = buildOffer(characterId, today, nonce);
+  COMPANION_OFFER_CACHE.set(characterId, { date: today, nonce, offer });
+  return offer;
+}
+
+/**
+ * Inkrementuje nonce dla gracza i zwraca nowy zestaw kompanów. Nonce zawsze
+ * skacze o 1, więc przy registry.size > offer_size każdy reroll widać.
+ */
+export function rerollCompanionOffer(characterId: string, today: string): CompanionOffer[] {
+  const cached = COMPANION_OFFER_CACHE.get(characterId);
+  const nonce = (cached?.date === today ? cached.nonce : 0) + 1;
+  const offer = buildOffer(characterId, today, nonce);
+  COMPANION_OFFER_CACHE.set(characterId, { date: today, nonce, offer });
+  return offer;
+}
+
 /** How long the tavern healer sleeps off the ale before the next visit. */
 export const HEALER_COOLDOWN_MS = 60 * 60 * 1000;
 

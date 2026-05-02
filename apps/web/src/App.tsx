@@ -37,6 +37,7 @@ import { ScreenWitch } from '@/screens/witch';
 import { ScreenWork } from '@/screens/work';
 import { ScreenPatches } from '@/screens/patches';
 import { ScreenSeasonPass } from '@/screens/season-pass';
+import { ScreenWarSpectator } from '@/screens/war';
 import { ScreenSettings } from '@/screens/settings';
 import { ScreenStables } from '@/screens/stables';
 import { ScreenTrainer } from '@/screens/trainer';
@@ -60,7 +61,7 @@ import { isNative } from '@/api/use-is-native';
 import { hideSplashAfterMount } from '@/native/capacitor-init';
 import { trpc } from '@/api/trpc';
 import { BillingError, finishPurchase, purchase as nativePurchase } from '@/native/billing';
-import { tStatic } from '@/i18n';
+import { tStatic, translateServerError } from '@/i18n';
 import { findPackageById } from '@/native/billing-catalog';
 import type {
   Character,
@@ -181,7 +182,7 @@ export default function App() {
       void utils.me.get.invalidate();
     },
     onError: (err) => {
-      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+      useToastQueue.getState().push({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
   const refillStaminaMut = trpc.me.refillStamina.useMutation({
@@ -190,7 +191,7 @@ export default function App() {
       useToastQueue.getState().push({ text: tStatic('toast.staminaRefilled'), accent: '#2a4a3a' });
     },
     onError: (err) => {
-      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+      useToastQueue.getState().push({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
   const renameMut = trpc.me.rename.useMutation({
@@ -202,7 +203,7 @@ export default function App() {
       });
     },
     onError: (err) => {
-      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+      useToastQueue.getState().push({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
 
@@ -315,7 +316,7 @@ export default function App() {
       if (data.levelUp) setLevelUp(data.levelUp);
     },
     onError: (err) => {
-      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+      useToastQueue.getState().push({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
 
@@ -355,7 +356,7 @@ export default function App() {
       });
     },
     onError: (err) => {
-      useToastQueue.getState().push({ text: err.message, accent: '#c83232' });
+      useToastQueue.getState().push({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
 
@@ -387,7 +388,7 @@ export default function App() {
       pushToast({ text: tStatic('toast.healInstant'), accent: '#2a4a3a' });
     },
     onError: (err) => {
-      pushToast({ text: err.message, accent: '#c83232' });
+      pushToast({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
   const rerollCompanionsMut = trpc.tavern.rerollCompanions.useMutation({
@@ -397,7 +398,7 @@ export default function App() {
       pushToast({ text: 'Nowa lista towarzyszy.', accent: '#2a4a3a' });
     },
     onError: (err) => {
-      pushToast({ text: err.message, accent: '#c83232' });
+      pushToast({ text: translateServerError(err.message), accent: '#c83232' });
     },
   });
 
@@ -1025,6 +1026,8 @@ export default function App() {
     content = <ScreenSeasonPass onBack={() => setSub(null)} />;
   } else if (sub === 'patches') {
     content = <ScreenPatches onBack={() => setSub(null)} />;
+  } else if (sub === 'warSpectator') {
+    content = <ScreenWarSpectator onBack={() => setSub(null)} />;
   } else if (sub === 'settings') {
     content = (
       <ScreenSettings

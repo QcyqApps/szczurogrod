@@ -11,7 +11,7 @@ import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoClock, IcoCoin, IcoGem } from '@/components/icons';
 import { GameIcon } from '@/components/game-icons';
 import { GemSinkButton } from '@/components/ui-common';
-import { useT, tStatic, useContentT } from '@/i18n';
+import { useT, tStatic, useContentT , translateServerError} from '@/i18n';
 import type { DictKey } from '@/i18n';
 import type { DiceRollResponse } from '@grodno/shared';
 
@@ -55,7 +55,7 @@ export function ScreenDice({ onBack }: ScreenDiceProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('dice.toast.refused'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('dice.toast.refused'),
         accent: '#c83232',
       });
     },

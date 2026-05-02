@@ -14,7 +14,7 @@ import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoClock, IcoCoin, IcoGem } from '@/components/icons';
 import { GameIcon } from '@/components/game-icons';
 import { LevelUpModal } from '@/components/ui-common';
-import { useT, tStatic, useContentT } from '@/i18n';
+import { useT, tStatic, useContentT , translateServerError} from '@/i18n';
 import type { IconName, OraclePullResponse } from '@grodno/shared';
 
 export interface ScreenOracleProps {
@@ -58,7 +58,7 @@ export function ScreenOracle({ onBack }: ScreenOracleProps) {
     onError: (err) => {
       setPickedCard(null);
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('oracle.declined'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('oracle.declined'),
         accent: '#c83232',
       });
     },

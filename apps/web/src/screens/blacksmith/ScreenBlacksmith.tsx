@@ -4,7 +4,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { IcoCoin, IcoGem } from '@/components/icons';
-import { useT, useContentT, type DictKey } from '@/i18n';
+import { useT, useContentT, type DictKey , translateServerError} from '@/i18n';
 import type { IconName, InventoryItem, Rarity } from '@grodno/shared';
 
 const RARITY_COLOR: Record<Rarity, string> = {
@@ -193,7 +193,7 @@ function UpgradeView({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('blacksmith.toast.error'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('blacksmith.toast.error'),
         accent: '#c83232',
       });
     },
@@ -348,7 +348,7 @@ function DismantleView({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('blacksmith.toast.error'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('blacksmith.toast.error'),
         accent: '#c83232',
       });
     },

@@ -8,7 +8,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { IcoCoin, IcoHeart, IcoMagic, IcoShield, IcoSword, IcoClock } from '@/components/icons';
 import { GemSinkButton, HelpIcon } from '@/components/ui-common';
-import { useT, tStatic, useContentT } from '@/i18n';
+import { useT, tStatic, useContentT , translateServerError} from '@/i18n';
 import type { ActiveCurse, BuffKind } from '@grodno/shared';
 
 export interface ScreenWitchProps {
@@ -42,7 +42,7 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('witch.toast.refused'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('witch.toast.refused'),
         accent: '#c83232',
       });
     },
@@ -61,7 +61,7 @@ export function ScreenWitch({ onBack }: ScreenWitchProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('witch.toast.refused'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('witch.toast.refused'),
         accent: '#c83232',
       });
     },

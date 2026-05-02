@@ -31,6 +31,7 @@ import {
   type WarParticipant,
   resolveGauntlet,
 } from './guild-wars.js';
+import { invalidateTopWarCache } from '../routers/town.js';
 
 const TICK_INTERVAL_MS = 60_000;
 let schedulerHandle: NodeJS.Timeout | null = null;
@@ -80,6 +81,7 @@ async function resolveOne(db: Db, warId: string): Promise<void> {
     .where(and(eq(guildWars.id, warId), eq(guildWars.status, 'scheduled')))
     .returning();
   if (claimed.length === 0) return; // race — ktoś inny przejął
+  invalidateTopWarCache();
 
   const [war] = claimed;
   if (!war) return;
@@ -277,6 +279,7 @@ async function resolveOne(db: Db, warId: string): Promise<void> {
     }
   }
 
+  invalidateTopWarCache();
   console.log(
     `[guild-wars-scheduler] resolved war ${warId}: ${result.winner} wins ${result.attackerScore}:${result.defenderScore}`,
   );

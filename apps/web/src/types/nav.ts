@@ -22,6 +22,7 @@ export type SubScreen =
   | 'stables'
   | 'tower'
   | 'trainer'
+  | 'warSpectator'
   | 'witch'
   | 'work'
   | 'world'

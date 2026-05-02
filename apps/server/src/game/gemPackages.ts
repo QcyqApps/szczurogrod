@@ -30,6 +30,12 @@ export interface GemPackage {
   priceGrosze: number;
   /** ISO-4217. PayPal akceptuje PLN. */
   currency: 'PLN';
+  /**
+   * Dni subskrypcji Szczurogród+ przyznane razem z gemami. Gdy `> 0`, grant
+   * oprócz `gems` extenduje `characters.szczurogrodPlusUntil` (cap 90 dni
+   * od now). Używane przez vip30 — paczka VIP daje też +20% XP przez 30 dni.
+   */
+  subscriptionDays?: number;
 }
 
 export const GEM_PACKAGES: readonly GemPackage[] = [
@@ -38,12 +44,13 @@ export const GEM_PACKAGES: readonly GemPackage[] = [
   { id: 'p3', gems: 1200, bonus: 25, googlePlayProductId: 'gems_p3', priceGrosze:   4999, currency: 'PLN' },
   { id: 'p4', gems: 2800, bonus: 40, googlePlayProductId: 'gems_p4', priceGrosze:   9999, currency: 'PLN' },
   { id: 'p5', gems: 6500, bonus: 55, googlePlayProductId: 'gems_p5', priceGrosze:  19999, currency: 'PLN' },
-  // VIP — Phase 1: one-shot consumable z premium gem-grant (3000 gemów).
-  // Phase 2 doda `vip_expires_at` na characterze + premium perks (daily
-  // gems, +50% gold, crown). Na razie kupujący dostają 3000 gemów (~30
-  // dni × ~100/dzień) jako wymierna wartość pasująca do brandu „SUBSKRYPCJA".
-  // Cena 19.99 PLN — match z dict 'gemShop.vip.price' i CTA na buttonie.
-  { id: 'vip30', gems: 3000, bonus: 0, googlePlayProductId: 'vip_30days', priceGrosze: 1999, currency: 'PLN' },
+  // sp1 = „Królewska oferta" w UI (`gemShop.special.*`). Promo pack — taniej
+  // za gem niż p1..p5. Klient marketinguje to jako 70% off; tu zawsze dostępne.
+  { id: 'sp1', gems: 1500, bonus: 0, googlePlayProductId: 'special_royal_1500', priceGrosze: 1499, currency: 'PLN' },
+  // VIP — 3000 gemów upfront (≈ 100 dziennie × 30 dni) + 30 dni subskrypcji
+  // Szczurogród+ z bonusem +20% XP. Cena 19.99 PLN. Marketing copy
+  // (`gemShop.vip.perk*`) musi pasować do faktycznego grantu.
+  { id: 'vip30', gems: 3000, bonus: 0, googlePlayProductId: 'vip_30days', priceGrosze: 1999, currency: 'PLN', subscriptionDays: 30 },
 ] as const;
 
 // ===== Bundle packages — gems + gold + items (PayPal only, na razie) =====
@@ -65,6 +72,11 @@ export interface BundlePackage {
   itemTemplateIds?: readonly string[];
 }
 
+// `itemTemplateIds` to NAZWY itemów (lookup `REGISTRY.itemsByName.get`), NIE
+// shop catalog id'ki ('s9', 's14', ...). Kluczem w `REGISTRY.items` jest
+// content-hash z `seed.ts::contentId(item)`, niemożliwy do zhardcoded'owania.
+// Lookup przez nazwę → stabilna względem rebuild'a hash'a. Zmiana nazwy itemu
+// wymaga update'u tutaj (drift = silent skip + console.warn w PayPal grant).
 export const BUNDLE_PACKAGES: readonly BundlePackage[] = [
   {
     id: 'b1',
@@ -73,7 +85,7 @@ export const BUNDLE_PACKAGES: readonly BundlePackage[] = [
     priceGrosze: 999,
     currency: 'PLN',
     goldBonus: 5_000,
-    itemTemplateIds: ['s9'], // Miecz Świtu — sword-dawn icon match
+    itemTemplateIds: ['Miecz Świtu'],
   },
   {
     id: 'b2',
@@ -81,7 +93,14 @@ export const BUNDLE_PACKAGES: readonly BundlePackage[] = [
     bonus: 0,
     priceGrosze: 2499,
     currency: 'PLN',
-    itemTemplateIds: ['s14', 's-buff-mp25', 's-buff-mp25', 's-buff-mp25', 's-buff-mp25', 's-buff-mp25'],
+    itemTemplateIds: [
+      'Kostur Chaosu',
+      'Mikstura Głębokiej Many',
+      'Mikstura Głębokiej Many',
+      'Mikstura Głębokiej Many',
+      'Mikstura Głębokiej Many',
+      'Mikstura Głębokiej Many',
+    ],
   },
 ];
 

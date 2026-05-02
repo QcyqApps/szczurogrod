@@ -80,25 +80,6 @@ export function ScreenTrainer({ quote, pending, onBuy, onBack }: ScreenTrainerPr
 
       <div className="panel" style={{ padding: 12, marginBottom: 12 }}>
         <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 10,
-          }}
-        >
-          <span
-            className="h-title"
-            style={{ fontSize: 14, color: '#5a3a2a', letterSpacing: 0.4 }}
-          >
-            {t('trainer.wallet')}
-          </span>
-          <span className="pip gold" style={{ fontSize: 14 }}>
-            <IcoCoin s={14} /> {quote?.gold.toLocaleString('pl') ?? '—'}
-          </span>
-        </div>
-
-        <div
           className="flavor light"
           style={{ fontSize: 14, color: '#7a5a3a', marginBottom: 10, textAlign: 'center' }}
         >

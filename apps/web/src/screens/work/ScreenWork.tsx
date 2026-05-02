@@ -10,7 +10,7 @@ import { GameIcon } from '@/components/game-icons';
 import { IcoClock, IcoCoin } from '@/components/icons';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type { LevelUpInfo, WorkKind, WorkOption } from '@grodno/shared';
 import { LevelUpModal } from '@/components/ui-common';
 
@@ -50,7 +50,7 @@ export function ScreenWork({ onBack }: ScreenWorkProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('work.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('work.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -71,7 +71,7 @@ export function ScreenWork({ onBack }: ScreenWorkProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('work.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('work.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -95,7 +95,7 @@ export function ScreenWork({ onBack }: ScreenWorkProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('work.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('work.toast.failed'),
         accent: '#c83232',
       });
     },

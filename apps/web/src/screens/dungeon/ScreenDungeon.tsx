@@ -14,7 +14,7 @@ import type { MonsterRecipe, MonsterSlug, MonsterTier } from '@/components/monst
 import { GemSinkButton, HelpIcon } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
-import { useT, tStatic, useContentT, type DictKey } from '@/i18n';
+import { useT, tStatic, useContentT, type DictKey , translateServerError} from '@/i18n';
 import {
   GEM_SINK_COSTS,
   type Character,
@@ -162,7 +162,7 @@ export function ScreenDungeon({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('toast.failed'),
         accent: '#c83232',
       });
     },
@@ -175,7 +175,7 @@ export function ScreenDungeon({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('toast.failed'),
         accent: '#c83232',
       });
     },
@@ -188,7 +188,7 @@ export function ScreenDungeon({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('toast.failed'),
         accent: '#c83232',
       });
     },

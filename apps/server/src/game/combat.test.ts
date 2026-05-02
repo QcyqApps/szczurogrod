@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  aggregateCombatAtkBonus,
   reduce,
   rollEnemyAttack,
   rollPlayerAttack,
+  rollPlayerSpell,
   rollRarity,
+  tickCombatBuffs,
   RARITY_WEIGHTS,
 } from './combat.js';
 
@@ -207,5 +210,79 @@ describe('rollEnemyAttack', () => {
     const res = rollEnemyAttack(20, { def: 50, spd: 0 }, 'warrior');
     expect(res.dodged).toBe(false);
     expect(res.dmg).toBe(14);
+  });
+});
+
+describe('rollPlayerSpell — class variants', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('mage Iskra: damage uses mag stat + 50% def pierce', () => {
+    // Order: 1st random = rng bonus (0), 2nd random = crit roll (0.99 → no crit).
+    const seq = [0, 0.99];
+    vi.spyOn(Math, 'random').mockImplementation(() => seq.shift() ?? 0);
+    // raw = 20*0.5 + 8 + 0 = 18. effDef = floor(40*0.5) = 20.
+    // reduce(18, 20) = ceil(1800/120) = 15.
+    const r = rollPlayerSpell('mage', { atk: 0, mag: 20, spd: 0 }, 40);
+    expect(r.dmg).toBe(15);
+    expect(r.crit).toBe(false);
+    expect(r.buff).toBeNull();
+    expect(r.healSelf).toBe(0);
+  });
+
+  it('warrior Krzyk Bojowy: zero dmg, atk_flat buff 8/2 + heal 15', () => {
+    const r = rollPlayerSpell('warrior', { atk: 25, mag: 4, spd: 7 }, 50);
+    expect(r.dmg).toBe(0);
+    expect(r.crit).toBe(false);
+    expect(r.buff).toEqual({ kind: 'atk_flat', magnitude: 8, turnsRemaining: 2 });
+    expect(r.healSelf).toBe(15);
+  });
+
+  it('rogue Sztylet w Plecy: forced crit + 30% def pierce', () => {
+    // rng bonus 0 → raw = 14*0.4 + 5 = 10.6. Crit ×1.6 = 16.96. effDef = floor(40*0.7)=28.
+    // reduce(round(16.96)=17, 28) = ceil(1700/128) = 14.
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const r = rollPlayerSpell('rogue', { atk: 14, mag: 6, spd: 16 }, 40);
+    expect(r.crit).toBe(true);
+    expect(r.dmg).toBeGreaterThan(0);
+    expect(r.buff).toBeNull();
+    expect(r.healSelf).toBe(0);
+  });
+
+  it('rogue zawsze critauje (10 prób z różnymi RNG)', () => {
+    for (let i = 0; i < 10; i += 1) {
+      vi.spyOn(Math, 'random').mockReturnValue(i / 10);
+      const r = rollPlayerSpell('rogue', { atk: 14, mag: 0, spd: 16 }, 0);
+      expect(r.crit).toBe(true);
+    }
+  });
+});
+
+describe('tickCombatBuffs', () => {
+  it('decrement turnsRemaining + drop wygasłe', () => {
+    const next = tickCombatBuffs([
+      { kind: 'atk_flat', magnitude: 8, turnsRemaining: 2 },
+      { kind: 'atk_flat', magnitude: 4, turnsRemaining: 1 },
+    ]);
+    expect(next).toEqual([{ kind: 'atk_flat', magnitude: 8, turnsRemaining: 1 }]);
+  });
+
+  it('pusta lista zwraca pustą', () => {
+    expect(tickCombatBuffs([])).toEqual([]);
+  });
+});
+
+describe('aggregateCombatAtkBonus', () => {
+  it('sumuje wszystkie atk_flat magnitudes', () => {
+    const sum = aggregateCombatAtkBonus([
+      { kind: 'atk_flat', magnitude: 8, turnsRemaining: 2 },
+      { kind: 'atk_flat', magnitude: 4, turnsRemaining: 1 },
+    ]);
+    expect(sum).toBe(12);
+  });
+
+  it('pusta lista → 0', () => {
+    expect(aggregateCombatAtkBonus([])).toBe(0);
   });
 });

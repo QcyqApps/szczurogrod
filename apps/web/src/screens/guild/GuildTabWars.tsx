@@ -4,7 +4,7 @@ import { trpc } from '@/api/trpc';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { IcoClock } from '@/components/icons';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type { GuildRank, GuildWarSummary } from '@grodno/shared';
 import { DeclareWarModal } from './components/DeclareWarModal';
 import { WarLineupEditor } from './components/WarLineupEditor';
@@ -116,7 +116,7 @@ function ActiveWarPanel({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.toast.commitFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildWars.toast.commitFail'),
         accent: '#c83232',
       });
     },
@@ -129,7 +129,7 @@ function ActiveWarPanel({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildWars.toast.cancelFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildWars.toast.cancelFail'),
         accent: '#c83232',
       });
     },

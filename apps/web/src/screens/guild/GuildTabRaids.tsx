@@ -6,7 +6,7 @@ import { useUnlockQueue } from '@/api/unlock-queue-store';
 import { GameIcon } from '@/components/game-icons';
 import { GemSinkButton } from '@/components/ui-common';
 import { IcoCoin, IcoGem } from '@/components/icons';
-import { useT, tStatic, useContentT } from '@/i18n';
+import { useT, tStatic, useContentT , translateServerError} from '@/i18n';
 import { GEM_SINK_COSTS, type GuildRaidHitResponse, type IconName } from '@grodno/shared';
 import { RaidHitResultModal } from './components/RaidHitResultModal';
 
@@ -29,7 +29,7 @@ export function GuildTabRaids() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildRaids.toast.fail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildRaids.toast.fail'),
         accent: '#c83232',
       });
     },
@@ -49,7 +49,7 @@ export function GuildTabRaids() {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('guildRaids.toast.hitFail'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('guildRaids.toast.hitFail'),
         accent: '#c83232',
       });
     },

@@ -33,7 +33,7 @@ import {
 } from '../game/buffs.js';
 import {
   createSession,
-  findCharSession,
+  forfeitOrphanedSession,
   type CombatSession,
 } from '../game/combat.js';
 import { applyGuildWarBuffs, loadGuildWarBuffs } from '../game/guilds.js';
@@ -155,12 +155,10 @@ export const towerRouter = router({
     if (isWorking(char)) {
       throw new TRPCError({ code: 'FORBIDDEN', message: WORKING_BLOCKS_COMBAT_MESSAGE });
     }
-    if (findCharSession(char.id)) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Masz już otwartą walkę. Skończ ją albo poczekaj aż wygaśnie.',
-      });
-    }
+    // Auto-forfeit poprzedniej sesji (po refreshu / wyjściu z apki). Persistuje
+    // mid-fight HP/MP — nowa walka zaczyna się ze stanem postaci jaki był na
+    // klipie ostatniej tury. Mirror flow w `combat.engage`.
+    await forfeitOrphanedSession(ctx.db, char.id);
     const progress = await ensureProgress(ctx.db, char.id);
     const now = new Date();
 
@@ -259,8 +257,10 @@ export const towerRouter = router({
       playerCls: char.cls as CharacterClass,
       playerHealBonus: buff?.healBonus ?? 0,
       heavyCooldown: 0,
+      magicCooldown: 0,
       trackBonus: false,
       playerStatus: [],
+      playerBuffs: [],
       status: 'fight',
       rewardApplied: false,
       createdAt: Date.now(),
@@ -285,9 +285,12 @@ export const towerRouter = router({
       playerMag: session.playerMag,
       playerSpd: session.playerSpd,
       playerDef: session.playerDef,
+      playerCls: session.playerCls,
       heavyCooldown: session.heavyCooldown,
+      magicCooldown: session.magicCooldown,
       trackBonus: false,
       playerStatus: [],
+      playerBuffs: [],
       status: 'fight',
     };
     return state;

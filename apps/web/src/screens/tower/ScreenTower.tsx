@@ -6,7 +6,7 @@ import { IcoClock, IcoCoin, IcoGem } from '@/components/icons';
 import { Monster, monsterBySlug } from '@/components/monsters';
 import type { MonsterSlug } from '@/components/monsters';
 import { GemSinkButton } from '@/components/ui-common';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import type { DictKey } from '@/i18n';
 import type {
   Character,
@@ -44,7 +44,7 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
   const engageMut = trpc.tower.engage.useMutation({
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('tower.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('tower.toast.failed'),
         accent: '#c83232',
       });
     },
@@ -57,7 +57,7 @@ export function ScreenTower({ onBack }: ScreenTowerProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('tower.toast.failed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('tower.toast.failed'),
         accent: '#c83232',
       });
     },

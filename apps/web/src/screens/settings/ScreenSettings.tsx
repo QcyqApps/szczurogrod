@@ -7,7 +7,7 @@ import { useAuthStore } from '@/api/auth-store';
 import { useToastQueue } from '@/api/toast-queue-store';
 import { trpc } from '@/api/trpc';
 import { getSurvivorUrl } from '@/api/survivor-url';
-import { useT, tStatic } from '@/i18n';
+import { useT, tStatic , translateServerError} from '@/i18n';
 import { LangPicker } from '@/i18n/LangPicker';
 import { GEM_SINK_COSTS } from '@grodno/shared';
 
@@ -75,7 +75,7 @@ export function ScreenSettings({
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : 'Nie udało się.',
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : 'Nie udało się.',
         accent: '#c83232',
       });
     },

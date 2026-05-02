@@ -11,11 +11,20 @@ import { useIsNative } from '@/api/use-is-native';
 import { NativeOnlyPurchaseModal } from '@/components/ui-common/NativeOnlyPurchaseModal';
 import { PayPalCheckoutModal } from '@/components/ui-common';
 import { GiantGemCluster } from './GiantGemCluster';
+import { BundleItemPreviewModal, type BundleItemPreview } from './BundleItemPreviewModal';
 
 export type BundleReward =
   | { kind: 'gems'; value: number }
   | { kind: 'gold'; value: number }
-  | { kind: 'item'; value: string; valueKey?: DictKey; icon: IconName; rarity: Rarity };
+  | {
+      kind: 'item';
+      value: string;
+      valueKey?: DictKey;
+      icon: IconName;
+      rarity: Rarity;
+      /** templateId — match z server'owym `gemShop.bundlePreview`. Klik → modal. */
+      templateId?: string;
+    };
 
 export interface BundleDef {
   id: string;
@@ -71,7 +80,9 @@ const BUNDLES: readonly BundleDef[] = [
     rewards: [
       { kind: 'gems', value: 300 },
       { kind: 'gold', value: 5000 },
-      { kind: 'item', value: 'Miecz Żarliwy', valueKey: 'gemShop.item.swordZarliwy', icon: 'sword-dawn', rarity: 'rare' },
+      // templateId tu = item NAME (server lookup w `REGISTRY.itemsByName`),
+      // nie shop catalog id. Patrz `BUNDLE_PACKAGES` w server gemPackages.ts.
+      { kind: 'item', value: 'Miecz Świtu', valueKey: 'gemShop.item.swordZarliwy', icon: 'sword-dawn', rarity: 'rare', templateId: 'Miecz Świtu' },
     ],
     bg: 'linear-gradient(135deg, #4a7c3a 0%, #2e5020 100%)',
   },
@@ -85,8 +96,8 @@ const BUNDLES: readonly BundleDef[] = [
     oldPrice: '59,99',
     rewards: [
       { kind: 'gems', value: 800 },
-      { kind: 'item', value: 'Kostur Chaosu', valueKey: 'gemShop.item.kosturChaosu', icon: 'orb', rarity: 'epic' },
-      { kind: 'item', value: 'Eliksir Many ×5', valueKey: 'gemShop.item.eliksirManyX5', icon: 'potion', rarity: 'rare' },
+      { kind: 'item', value: 'Kostur Chaosu', valueKey: 'gemShop.item.kosturChaosu', icon: 'orb', rarity: 'epic', templateId: 'Kostur Chaosu' },
+      { kind: 'item', value: 'Mikstura Głębokiej Many ×5', valueKey: 'gemShop.item.eliksirManyX5', icon: 'potion', rarity: 'rare', templateId: 'Mikstura Głębokiej Many' },
     ],
     bg: 'linear-gradient(135deg, #5a3a8a 0%, #3a1a5a 100%)',
   },
@@ -148,8 +159,20 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
   const [confirm, setConfirm] = useState<{ pack: Purchase; displayName: string } | null>(null);
   const [nativeOnlyBlock, setNativeOnlyBlock] = useState<string | null>(null);
   const [paypal, setPaypal] = useState<{ packId: string; label: string; price: string } | null>(null);
+  const [itemPreview, setItemPreview] = useState<BundleItemPreview | null>(null);
   const catalogQuery = trpc.gemShop.list.useQuery();
   const paypalReady = catalogQuery.data?.paypalReady ?? false;
+  // Bundle item previews — server zwraca templates z REGISTRY per bundleId.
+  // Cache infinity — content drift mało prawdopodobny w obrębie sesji.
+  const bundlePreviewQuery = trpc.gemShop.bundlePreview.useQuery(undefined, {
+    staleTime: Infinity,
+  });
+  const bundleItemMap = new Map<string, BundleItemPreview>();
+  for (const bundle of bundlePreviewQuery.data?.bundles ?? []) {
+    for (const item of bundle.items) {
+      bundleItemMap.set(item.templateId, item);
+    }
+  }
 
   function buy(pack: Purchase, displayName: string) {
     // Web użytkownik klika BUY na produkcie real-money. Dwie ścieżki:
@@ -557,50 +580,87 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
               <div
                 style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}
               >
-                {b.rewards.map((r, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      background: 'rgba(255,243,224,0.15)',
-                      border: '1.5px solid rgba(255,243,224,0.35)',
-                      borderRadius: 6,
-                      padding: '4px 7px',
-                      fontSize: 12,
-                    }}
-                  >
-                    {r.kind === 'gems' && (
-                      <>
-                        <IcoGem s={13} />{' '}
-                        <span
-                          className="h-title"
-                          style={{ fontSize: 12, color: '#a0d8f0' }}
-                        >
-                          {r.value}
-                        </span>
-                      </>
-                    )}
-                    {r.kind === 'gold' && (
-                      <>
-                        <IcoCoin s={13} />{' '}
-                        <span
-                          className="h-title"
-                          style={{ fontSize: 12, color: '#ffc830' }}
-                        >
-                          {r.value.toLocaleString('pl')}
-                        </span>
-                      </>
-                    )}
-                    {r.kind === 'item' && (
-                      <>
-                        <GameIcon name={r.icon} size={16} />
-                        <span style={{ fontSize: 13 }}>{r.valueKey ? t(r.valueKey) : r.value}</span>
-                      </>
-                    )}
-                  </div>
-                ))}
+                {b.rewards.map((r, i) => {
+                  const isClickableItem =
+                    r.kind === 'item' && r.templateId && bundleItemMap.has(r.templateId);
+                  const baseStyle: React.CSSProperties = {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'rgba(255,243,224,0.15)',
+                    border: '1.5px solid rgba(255,243,224,0.35)',
+                    borderRadius: 6,
+                    padding: '4px 7px',
+                    fontSize: 12,
+                    fontFamily: 'inherit',
+                    color: 'inherit',
+                  };
+                  const content = (
+                    <>
+                      {r.kind === 'gems' && (
+                        <>
+                          <IcoGem s={13} />{' '}
+                          <span
+                            className="h-title"
+                            style={{ fontSize: 12, color: '#a0d8f0' }}
+                          >
+                            {r.value}
+                          </span>
+                        </>
+                      )}
+                      {r.kind === 'gold' && (
+                        <>
+                          <IcoCoin s={13} />{' '}
+                          <span
+                            className="h-title"
+                            style={{ fontSize: 12, color: '#ffc830' }}
+                          >
+                            {r.value.toLocaleString('pl')}
+                          </span>
+                        </>
+                      )}
+                      {r.kind === 'item' && (
+                        <>
+                          <GameIcon name={r.icon} size={16} />
+                          <span style={{ fontSize: 13 }}>
+                            {r.valueKey ? t(r.valueKey) : r.value}
+                          </span>
+                          {isClickableItem && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                opacity: 0.6,
+                                marginLeft: 2,
+                              }}
+                            >
+                              ⓘ
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </>
+                  );
+                  if (isClickableItem && r.kind === 'item' && r.templateId) {
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          const preview = bundleItemMap.get(r.templateId!);
+                          if (preview) setItemPreview(preview);
+                        }}
+                        style={{ ...baseStyle, cursor: 'pointer' }}
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
+                  return (
+                    <div key={i} style={baseStyle}>
+                      {content}
+                    </div>
+                  );
+                })}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div
@@ -760,6 +820,10 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
           productLabel={nativeOnlyBlock}
           onClose={() => setNativeOnlyBlock(null)}
         />
+      )}
+
+      {itemPreview && (
+        <BundleItemPreviewModal item={itemPreview} onClose={() => setItemPreview(null)} />
       )}
 
       {paypal && (

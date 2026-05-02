@@ -13,7 +13,7 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoClock, IcoCoin } from '@/components/icons';
 import { HelpIcon } from '@/components/ui-common';
-import { useT, tStatic, useContentT } from '@/i18n';
+import { useT, tStatic, useContentT , translateServerError} from '@/i18n';
 import type { BlessingOffer } from '@grodno/shared';
 
 export interface ScreenBlessingProps {
@@ -58,7 +58,7 @@ export function ScreenBlessing({ onBack }: ScreenBlessingProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : tStatic('blessing.toast.refused'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : tStatic('blessing.toast.refused'),
         accent: '#c83232',
       });
     },

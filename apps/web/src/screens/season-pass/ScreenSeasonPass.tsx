@@ -14,7 +14,7 @@ import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
 import { IcoCoin, IcoGem, IcoKey } from '@/components/icons';
 import { GemSinkButton, LevelUpModal } from '@/components/ui-common';
-import { useT } from '@/i18n';
+import { useT , translateServerError} from '@/i18n';
 import type {
   SeasonPassClaimResponse,
   SeasonPassTierReward,
@@ -53,7 +53,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('seasonPass.toast.claimFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('seasonPass.toast.claimFailed'),
         accent: '#c83232',
       });
     },
@@ -70,7 +70,7 @@ export function ScreenSeasonPass({ onBack }: ScreenSeasonPassProps) {
     },
     onError: (err) => {
       pushToast({
-        text: err instanceof TRPCClientError ? err.message : t('seasonPass.toast.premiumFailed'),
+        text: err instanceof TRPCClientError ? translateServerError(err.message) : t('seasonPass.toast.premiumFailed'),
         accent: '#c83232',
       });
     },
