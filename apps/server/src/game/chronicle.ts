@@ -18,7 +18,7 @@ import type { ChronicleEntry, ChroniclePayload } from '@grodno/shared';
 import type { Db } from '../db/client.js';
 import { chronicleEvents } from '../db/schema.js';
 import { isoDateUTC } from './daily.js';
-import { pickChronicleFlavorPool, SEED_CHRONICLES } from './town-chronicle.js';
+import { pickChronicleFlavorPool, SEED_CHRONICLES, type ChronicleLang } from './town-chronicle.js';
 
 /** Poziomy, przy których warto wrzucić notkę do kronik. Mniej zalewa feed. */
 export const MILESTONES: readonly number[] = [5, 10, 15, 20, 30, 50, 75, 100];
@@ -484,7 +484,10 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
  * gracz w ciągu dnia widział stabilną kolejność (rotacja co 60s w kliencie
  * ma sens), ale nowy dzień = nowa tasowanka.
  */
-export async function listChronicleEntries(db: Db): Promise<ChronicleEntry[]> {
+export async function listChronicleEntries(
+  db: Db,
+  lang: ChronicleLang = 'pl',
+): Promise<ChronicleEntry[]> {
   const today = isoDateUTC();
 
   const eventRows = await db
@@ -497,6 +500,9 @@ export async function listChronicleEntries(db: Db): Promise<ChronicleEntry[]> {
     .orderBy(desc(chronicleEvents.createdAt))
     .limit(MAX_EVENTS);
 
+  // Eventowe wpisy (boss kill, level milestone, drop) renderuje klient po
+  // template_idx z dict.ts — server zwraca surowy payload, więc lang
+  // nieistotny. Tylko flavor (Claude-generated) jest pre-rendered tutaj.
   const eventEntries: ChronicleEntry[] = eventRows.map((row) => ({
     id: `event:${row.id}`,
     text: renderChronicleEvent(row.payload, row.id),
@@ -506,10 +512,7 @@ export async function listChronicleEntries(db: Db): Promise<ChronicleEntry[]> {
     templateIdx: computeTemplateIdx(row.payload, row.id),
   }));
 
-  // Flavor pool — odpowiada za kick-off batchu Claude jeśli go brak.
-  // PL-only na razie (Claude generuje po polsku). Klient w trybie EN
-  // mapuje te wpisy na statyczne SEED_CHRONICLES_EN po stronie i18n.
-  const flavorTexts = await pickChronicleFlavorPool(db, MAX_FLAVOR);
+  const flavorTexts = await pickChronicleFlavorPool(db, MAX_FLAVOR, lang);
   const flavorEntries: ChronicleEntry[] = flavorTexts.map((text, i) => ({
     id: `flavor:${today}:${i}`,
     text,
@@ -521,7 +524,7 @@ export async function listChronicleEntries(db: Db): Promise<ChronicleEntry[]> {
 
   const combined = [...eventEntries, ...flavorEntries];
   if (combined.length === 0) {
-    return SEED_CHRONICLES.map((text, i) => ({
+    return SEED_CHRONICLES[lang].map((text, i) => ({
       id: `seed:${i}`,
       text,
       source: 'flavor' as const,

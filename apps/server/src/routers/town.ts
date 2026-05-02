@@ -1,10 +1,13 @@
 import { TRPCError } from '@trpc/server';
 import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import type { ChronicleListResponse, TownTopWarResponse } from '@grodno/shared';
 import { characters, guilds, guildWars } from '../db/schema.js';
 import { listChronicleEntries } from '../game/chronicle.js';
 import { pickFlavor } from '../game/town-flavor.js';
 import { protectedProcedure, router } from '../trpc/trpc.js';
+
+const langSchema = z.enum(['pl', 'en']).optional();
 
 // Cache server-wide top war query — robi 1 SQL z 2 join'ami i wszyscy gracze
 // odpalają to co minutę z `ScreenTown`. 30s TTL = max ~2 query/min nawet gdy
@@ -17,21 +20,25 @@ export function invalidateTopWarCache(): void {
 }
 
 export const townRouter = router({
-  flavor: protectedProcedure.query(async ({ ctx }) => {
-    const [char] = await ctx.db
-      .select({ cls: characters.cls })
-      .from(characters)
-      .where(eq(characters.userId, ctx.userId))
-      .limit(1);
-    if (!char) throw new TRPCError({ code: 'NOT_FOUND', message: 'Character not found' });
-    const text = await pickFlavor(ctx.db, char.cls);
-    return { text };
-  }),
+  flavor: protectedProcedure
+    .input(z.object({ lang: langSchema }).optional())
+    .query(async ({ ctx, input }) => {
+      const [char] = await ctx.db
+        .select({ cls: characters.cls })
+        .from(characters)
+        .where(eq(characters.userId, ctx.userId))
+        .limit(1);
+      if (!char) throw new TRPCError({ code: 'NOT_FOUND', message: 'Character not found' });
+      const text = await pickFlavor(ctx.db, char.cls, input?.lang ?? 'pl');
+      return { text };
+    }),
 
-  chronicle: protectedProcedure.query(async ({ ctx }): Promise<ChronicleListResponse> => {
-    const entries = await listChronicleEntries(ctx.db);
-    return { entries };
-  }),
+  chronicle: protectedProcedure
+    .input(z.object({ lang: langSchema }).optional())
+    .query(async ({ ctx, input }): Promise<ChronicleListResponse> => {
+      const entries = await listChronicleEntries(ctx.db, input?.lang ?? 'pl');
+      return { entries };
+    }),
 
   topWar: protectedProcedure.query(async ({ ctx }): Promise<TownTopWarResponse> => {
     const now = Date.now();

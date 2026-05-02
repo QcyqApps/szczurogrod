@@ -543,10 +543,26 @@ export const guildWarsRouter = router({
         defenderG ?? { name: '???', tag: '???' },
       );
 
+      // Patchuj round'om imiona z `participants` (join z characters @ read-time).
+      // Legacy snapshoty z guildWarParticipants.snapshot — committed zanim
+      // CombatFighter miał `name` field — mają `attackerName: null` w log
+      // jsonb po resolve. Charactery wciąż żyją i znamy ich imiona przez
+      // characterId, więc patch overwrite'uje legacy null'e bez szkody dla
+      // nowych wpisów (te już mają poprawne name).
+      const rawRounds = (war.log as GuildWarRound[] | null) ?? null;
+      const nameById = new Map(participants.map((p) => [p.characterId, p.name]));
+      const rounds = rawRounds
+        ? rawRounds.map((r) => ({
+            ...r,
+            attackerName: nameById.get(r.attackerCharId) ?? r.attackerName ?? '?',
+            defenderName: nameById.get(r.defenderCharId) ?? r.defenderName ?? '?',
+          }))
+        : null;
+
       return {
         ...summary,
         participants,
-        rounds: (war.log as GuildWarRound[] | null) ?? null,
+        rounds,
         mySide,
         myOrderIndex,
       };

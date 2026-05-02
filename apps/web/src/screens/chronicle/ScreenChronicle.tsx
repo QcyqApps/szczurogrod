@@ -10,11 +10,14 @@ export interface ScreenChronicleProps {
 export function ScreenChronicle({ onBack }: ScreenChronicleProps) {
   const t = useT();
   const lang = useLangStore((s) => s.lang);
-  const q = trpc.town.chronicle.useQuery(undefined, {
-    // Chronicle feed to głównie stałe wartości na dzień — nie spamuj serwera.
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
+  const q = trpc.town.chronicle.useQuery(
+    { lang },
+    {
+      // Chronicle feed to głównie stałe wartości na dzień — nie spamuj serwera.
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
+  );
   const entries = q.data?.entries ?? [];
 
   return (

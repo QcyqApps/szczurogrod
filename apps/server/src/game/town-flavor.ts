@@ -1,8 +1,8 @@
-// Town flavor one-liners. Claude generates ~25 quips per class per day on the
-// first request that finds the batch empty; later requests pick one at random
-// from the stored batch. If generation is still running — or the API key is
-// unset / the call failed — `pickFlavor` returns a baked-in default so the
-// town screen is never blank.
+// Town flavor one-liners. Claude generates ~25 bilingual pairs per class per
+// day (PL + EN razem w jednym callu) na pierwszym requeście który znajdzie
+// pusty batch. Późniejsze requesty losują z zapisanych. Jeśli generation
+// jeszcze biegnie, API key brak, lub call failed — `pickFlavor` zwraca
+// hardcoded default w odpowiednim języku, ekran nigdy nie jest pusty.
 
 import Anthropic from '@anthropic-ai/sdk';
 import { and, eq, sql } from 'drizzle-orm';
@@ -12,29 +12,53 @@ import { townFlavors } from '../db/schema.js';
 import { isoDateUTC } from './daily.js';
 import { env } from '../env.js';
 
-/** How many quips we aim to have per (day, class) before stopping generation. */
-const TARGET_PER_DAY = 25;
+export type FlavorLang = 'pl' | 'en';
 
-/** Never trust LLM output blindly — cap each quip. */
+const TARGET_PER_DAY = 25;
 const MAX_QUIP_LENGTH = 200;
 
-/** Hardcoded fallbacks. Shown when the batch isn't ready yet or generation fails. */
-const DEFAULTS: Record<CharacterClass, readonly string[]> = {
-  warrior: [
-    'Jeszcze jeden smok i wracam na piwo.',
-    'Miecz mam zatępiony, ale piwo zawsze ostre.',
-    'Tarcza ciężka jak sumienie kowala.',
-  ],
-  mage: [
-    'Czy wszyscy widzą tę fioletową mgłę, czy tylko ja?',
-    'Staroslowianska klątwa czy zwykły kac — trzeba sprawdzić.',
-    'Różdżka mruczy. Zwykle wie, co robi.',
-  ],
-  rogue: [
-    'Nie ukradłem. Przesunąłem do swojej kieszeni.',
-    'Zamek był otwarty. Ja tylko sprawdziłem.',
-    'Cień to też mieszkanie, nawet mam adres.',
-  ],
+/**
+ * Hardcoded fallbacks per (class × lang). Pokazane gdy batch nie gotowy
+ * lub generation failed. EN to nie maszynowy przekład — pisane w tym samym
+ * deadpan rejstrze co reszta kopii.
+ */
+const DEFAULTS: Record<CharacterClass, Record<FlavorLang, readonly string[]>> = {
+  warrior: {
+    pl: [
+      'Jeszcze jeden smok i wracam na piwo.',
+      'Miecz mam zatępiony, ale piwo zawsze ostre.',
+      'Tarcza ciężka jak sumienie kowala.',
+    ],
+    en: [
+      'One more dragon and I’m off for a beer.',
+      'Sword’s blunt. Beer’s sharp. Priorities.',
+      'Shield’s heavy. Conscience heavier.',
+    ],
+  },
+  mage: {
+    pl: [
+      'Czy wszyscy widzą tę fioletową mgłę, czy tylko ja?',
+      'Staroslowianska klątwa czy zwykły kac — trzeba sprawdzić.',
+      'Różdżka mruczy. Zwykle wie, co robi.',
+    ],
+    en: [
+      'Does everyone see the purple mist, or just me?',
+      'Ancient curse or just a hangover. Hard to tell.',
+      'The wand’s humming. It usually knows things.',
+    ],
+  },
+  rogue: {
+    pl: [
+      'Nie ukradłem. Przesunąłem do swojej kieszeni.',
+      'Zamek był otwarty. Ja tylko sprawdziłem.',
+      'Cień to też mieszkanie, nawet mam adres.',
+    ],
+    en: [
+      'I didn’t steal it. I moved it to my pocket.',
+      'The lock was open. I just verified.',
+      'A shadow is also an address.',
+    ],
+  },
 };
 
 /** Locks to keep multiple concurrent requests from spinning up N generations. */
@@ -50,27 +74,42 @@ function pickRandom<T>(arr: readonly T[]): T {
 }
 
 /**
- * Returns a flavor text for the given class. If today's batch has fewer than
- * TARGET_PER_DAY entries, triggers async generation (best-effort, fire-and-
- * forget) and returns a fallback default for this request.
+ * Returns a flavor text for the given class + lang. Jeśli dzisiejszy batch
+ * < TARGET_PER_DAY, triggeruje async generation (best-effort, fire-and-
+ * forget) i zwraca fallback default w żądanym języku.
+ *
+ * EN'em przy NULL `text_en` (legacy rows sprzed migracji 0066) fallback'uje
+ * na PL — brzydkie ale unikatowe ryzyko jest tylko dla jednego dnia po
+ * deployu, kolejne batch'e są bilingual.
  */
-export async function pickFlavor(db: Db, cls: CharacterClass): Promise<string> {
+export async function pickFlavor(
+  db: Db,
+  cls: CharacterClass,
+  lang: FlavorLang,
+): Promise<string> {
   const today = isoDateUTC();
   const rows = await db
-    .select({ text: townFlavors.text })
+    .select({ pl: townFlavors.textPl, en: townFlavors.textEn })
     .from(townFlavors)
     .where(and(eq(townFlavors.generatedDate, today), eq(townFlavors.cls, cls)));
 
   if (rows.length >= TARGET_PER_DAY) {
-    return pickRandom(rows).text;
+    const row = pickRandom(rows);
+    return resolveLang(row, lang);
   }
 
-  // Background generation — don't block the user's request.
   void maybeGenerate(db, today, cls);
 
-  // If we have *some* rows (partial batch), prefer those over defaults.
-  if (rows.length > 0) return pickRandom(rows).text;
-  return pickRandom(DEFAULTS[cls]);
+  if (rows.length > 0) {
+    const row = pickRandom(rows);
+    return resolveLang(row, lang);
+  }
+  return pickRandom(DEFAULTS[cls][lang]);
+}
+
+function resolveLang(row: { pl: string; en: string | null }, lang: FlavorLang): string {
+  if (lang === 'en') return row.en ?? row.pl;
+  return row.pl;
 }
 
 function maybeGenerate(db: Db, date: string, cls: CharacterClass): Promise<void> {
@@ -78,10 +117,9 @@ function maybeGenerate(db: Db, date: string, cls: CharacterClass): Promise<void>
   const started = inFlight.get(key);
   const now = Date.now();
   if (started !== undefined && now - started < LOCK_TIMEOUT_MS) {
-    return Promise.resolve(); // already generating
+    return Promise.resolve();
   }
   if (!env.ANTHROPIC_API_KEY) {
-    // Log once per process — no point retrying without credentials.
     if (!warnedNoKey) {
       console.warn('[town-flavor] ANTHROPIC_API_KEY is unset — using defaults only');
       warnedNoKey = true;
@@ -101,26 +139,41 @@ function maybeGenerate(db: Db, date: string, cls: CharacterClass): Promise<void>
 
 let warnedNoKey = false;
 
-const CLASS_EXAMPLES: Record<CharacterClass, string> = {
-  warrior: "Jeszcze jeden smok i wracam na piwo.",
-  mage: "Czy wszyscy widzą tę fioletową mgłę, czy tylko ja?",
-  rogue: "Nie ukradłem. Przesunąłem do swojej kieszeni.",
+const CLASS_EXAMPLES: Record<CharacterClass, { pl: string; en: string }> = {
+  warrior: {
+    pl: 'Jeszcze jeden smok i wracam na piwo.',
+    en: 'One more dragon and I’m off for a beer.',
+  },
+  mage: {
+    pl: 'Czy wszyscy widzą tę fioletową mgłę, czy tylko ja?',
+    en: 'Does everyone see the purple mist, or just me?',
+  },
+  rogue: {
+    pl: 'Nie ukradłem. Przesunąłem do swojej kieszeni.',
+    en: 'I didn’t steal it. I moved it to my pocket.',
+  },
 };
 
-const CLASS_LABEL: Record<CharacterClass, string> = {
-  warrior: 'wojownika',
-  mage: 'maga',
-  rogue: 'łotrzyka',
+const CLASS_LABEL: Record<CharacterClass, { pl: string; en: string }> = {
+  warrior: { pl: 'wojownik', en: 'warrior' },
+  mage: { pl: 'mag', en: 'mage' },
+  rogue: { pl: 'łotrzyk', en: 'rogue' },
 };
 
-const SYSTEM_PROMPT = `Jesteś generatorem krótkich, zabawnych powiedzonek po polsku do idle-RPG o nazwie Szczurogród. Styl: absurdalny, suchy humor, miejscami fantasy-groteska, czasem odwołania do prostego życia (piwo, lokalni ludzie, plotki). Każde powiedzonko to JEDNO zdanie, wypowiedziane przez bohatera po wejściu do miasta. Bez emoji. Bez cudzysłowów na końcu.`;
+const SYSTEM_PROMPT = `You write short bilingual one-liners (Polish + English) for an idle-RPG called Szczurogród (English brand: Ratburg). Style: deadpan absurdist humor, dry, restrained. Polish original is the lead — English mirrors the tone, not a literal translation. Both languages: max 12 words, no emoji, no trailing quotes, one beat per line. Each output is a JSON array of objects { "pl": "...", "en": "..." }.`;
 
 function userPrompt(cls: CharacterClass): string {
-  return `Wygeneruj ${TARGET_PER_DAY} unikatowych powiedzonek, które może wypowiedzieć ${CLASS_LABEL[cls]} wchodząc do miasta Szczurogród. Przykład ogólnego stylu (NIE kopiuj): "${CLASS_EXAMPLES[cls]}". Każde powiedzonko: krótkie (do 12 słów), wpadające w ucho, z odrobiną humoru. Nie powtarzaj się. Zwróć wynik jako JSON array stringów.`;
+  const ex = CLASS_EXAMPLES[cls];
+  const label = CLASS_LABEL[cls];
+  return `Generate ${TARGET_PER_DAY} unique bilingual one-liners that a ${label.en} (PL: ${label.pl}) might say upon entering Ratburg. Style example (DO NOT copy): { "pl": "${ex.pl}", "en": "${ex.en}" }. Return as JSON object with "pairs" array.`;
 }
 
+interface GeneratedPair {
+  pl: string;
+  en: string;
+}
 interface GeneratedPayload {
-  texts: string[];
+  pairs: GeneratedPair[];
 }
 
 async function generateBatch(db: Db, date: string, cls: CharacterClass): Promise<void> {
@@ -128,7 +181,7 @@ async function generateBatch(db: Db, date: string, cls: CharacterClass): Promise
 
   const response = await client.messages.create({
     model: 'claude-opus-4-7',
-    max_tokens: 4000,
+    max_tokens: 6000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userPrompt(cls) }],
     output_config: {
@@ -137,12 +190,20 @@ async function generateBatch(db: Db, date: string, cls: CharacterClass): Promise
         schema: {
           type: 'object',
           properties: {
-            texts: {
+            pairs: {
               type: 'array',
-              items: { type: 'string' },
+              items: {
+                type: 'object',
+                properties: {
+                  pl: { type: 'string' },
+                  en: { type: 'string' },
+                },
+                required: ['pl', 'en'],
+                additionalProperties: false,
+              },
             },
           },
-          required: ['texts'],
+          required: ['pairs'],
           additionalProperties: false,
         },
       },
@@ -154,27 +215,32 @@ async function generateBatch(db: Db, date: string, cls: CharacterClass): Promise
     throw new Error('No text block in response');
   }
   const parsed = JSON.parse(textBlock.text) as GeneratedPayload;
-  if (!Array.isArray(parsed.texts)) {
-    throw new Error('Response missing texts array');
+  if (!Array.isArray(parsed.pairs)) {
+    throw new Error('Response missing pairs array');
   }
 
-  const clean = parsed.texts
-    .map((t) => t?.trim())
-    .filter((t): t is string => Boolean(t) && t.length <= MAX_QUIP_LENGTH);
+  const clean = parsed.pairs
+    .map((p) => ({ pl: p?.pl?.trim(), en: p?.en?.trim() }))
+    .filter(
+      (p): p is { pl: string; en: string } =>
+        Boolean(p.pl) &&
+        Boolean(p.en) &&
+        p.pl.length <= MAX_QUIP_LENGTH &&
+        p.en.length <= MAX_QUIP_LENGTH,
+    );
 
   if (clean.length === 0) {
-    throw new Error('Generated 0 usable quips');
+    throw new Error('Generated 0 usable pairs');
   }
 
-  // Insert; ignore duplicates (unique index on date+cls+text) so re-runs within
-  // the same lock window don't explode.
   await db
     .insert(townFlavors)
     .values(
-      clean.map((text) => ({
+      clean.map((p) => ({
         generatedDate: date,
         cls,
-        text,
+        textPl: p.pl,
+        textEn: p.en,
       })),
     )
     .onConflictDoNothing();
@@ -185,6 +251,6 @@ async function generateBatch(db: Db, date: string, cls: CharacterClass): Promise
     .where(and(eq(townFlavors.generatedDate, date), eq(townFlavors.cls, cls)));
 
   console.log(
-    `[town-flavor] generated batch date=${date} cls=${cls} added=${clean.length} total=${after?.n ?? 0}`,
+    `[town-flavor] generated bilingual batch date=${date} cls=${cls} added=${clean.length} total=${after?.n ?? 0}`,
   );
 }

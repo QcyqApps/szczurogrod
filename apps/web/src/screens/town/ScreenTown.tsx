@@ -3,7 +3,7 @@ import { GameIcon } from '@/components/game-icons';
 import { LocTile } from '@/components/ui-common';
 import { trpc } from '@/api/trpc';
 import { getSurvivorUrl } from '@/api/survivor-url';
-import { useT } from '@/i18n';
+import { useT, useLangStore } from '@/i18n';
 import type { DictKey } from '@/i18n';
 import type { Character } from '@grodno/shared';
 import type { SubScreen, Tab } from '@/types/nav';
@@ -55,11 +55,14 @@ export function ScreenTown({
   survivorClaimPending,
 }: ScreenTownProps) {
   const t = useT();
+  const lang = useLangStore((s) => s.lang);
   // Fresh flavor quip per mount — each entry into town re-queries.
-  const flavorQuery = trpc.town.flavor.useQuery(undefined, {
-    staleTime: 0,
-    refetchOnWindowFocus: false,
-  });
+  // `lang` w queryKey: zmiana języka invalidate'uje cache, gracz dostaje
+  // świeży flavor w nowym języku bez czekania na refetch.
+  const flavorQuery = trpc.town.flavor.useQuery(
+    { lang },
+    { staleTime: 0, refetchOnWindowFocus: false },
+  );
   const fallbackKey = FALLBACK_KEY[char.cls] ?? 'town.flavor.warrior';
   const flavor = flavorQuery.data?.text ?? t(fallbackKey);
 
@@ -74,10 +77,13 @@ export function ScreenTown({
   // Kroniki — pokazujemy top 3 (z ~20 w odpowiedzi serwera). Trzeci z fade'em
   // pod spodem, jako teaser że jest więcej. Brak rotacji — gracz klika
   // „WIĘCEJ" żeby zobaczyć pełny feed w osobnym ekranie.
-  const chronicleQuery = trpc.town.chronicle.useQuery(undefined, {
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-  });
+  const chronicleQuery = trpc.town.chronicle.useQuery(
+    { lang },
+    {
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    },
+  );
   const chronicleEntries = chronicleQuery.data?.entries ?? [];
   const chroniclePreview = chronicleEntries.slice(0, 3);
 

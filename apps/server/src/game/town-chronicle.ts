@@ -1,7 +1,7 @@
-// Claude-generated kroniki NPC — batch ~20 per dzień UTC, globalny (bez klasy).
-// Wzorzec 1:1 z `town-flavor.ts`: lock system, fallback, fire-and-forget
-// background generation. `pickChronicleFlavorPool(db, N)` zwraca N tekstów
-// (random sample z dzisiejszego batchu), uruchamia generowanie gdy pusto.
+// Claude-generated bilingual NPC chronicles — batch ~20 par PL/EN per dzień
+// UTC, globalny (bez klasy). Wzorzec 1:1 z `town-flavor.ts`: lock system,
+// fallback, fire-and-forget background generation, jeden Claude call na
+// PL+EN razem (połowa kosztu API vs dwa osobne wywołania).
 
 import Anthropic from '@anthropic-ai/sdk';
 import { and, eq, sql } from 'drizzle-orm';
@@ -10,24 +10,38 @@ import { townChronicles } from '../db/schema.js';
 import { env } from '../env.js';
 import { isoDateUTC } from './daily.js';
 
+export type ChronicleLang = 'pl' | 'en';
+
 const TARGET_PER_DAY = 20;
 const MAX_ENTRY_LENGTH = 200;
 
 /**
  * Stałe ziarenka — backup na wypadek brakującego API key'a lub pierwszego
  * requestu zanim batch się wygeneruje. Ten sam ton co gra: sucho, fragmenty,
- * konkret. Imiona — polskie ludowe, miejsca — swojskie.
+ * konkret. Imiona — polskie ludowe, EN: tłumaczenie zachowujące tone.
  */
-export const SEED_CHRONICLES: readonly string[] = [
-  'Wojciech utopił miecz w fosie. Twierdzi, że celowo.',
-  'Jadwiga wygrała turniej w rzut podkową. Nikt się nie zdziwił.',
-  'Bolek przespał swój poziom. Rano był zdziwiony.',
-  'Helena otworzyła skrzynię. Znalazła inną skrzynię.',
-  'Karczmarz podniósł ceny piwa. Gildia kronikarzy ogłasza żałobę.',
-  'Mieszko poszedł po grzyby. Wrócił z trollem. Trolla zostawił w stodole.',
-  'Gretka z Rzepnicy wróciła z lochu. Z lochem.',
-  'Stasio nauczył się nowego zaklęcia. Na razie tylko go rani.',
-];
+export const SEED_CHRONICLES: Record<ChronicleLang, readonly string[]> = {
+  pl: [
+    'Wojciech utopił miecz w fosie. Twierdzi, że celowo.',
+    'Jadwiga wygrała turniej w rzut podkową. Nikt się nie zdziwił.',
+    'Bolek przespał swój poziom. Rano był zdziwiony.',
+    'Helena otworzyła skrzynię. Znalazła inną skrzynię.',
+    'Karczmarz podniósł ceny piwa. Gildia kronikarzy ogłasza żałobę.',
+    'Mieszko poszedł po grzyby. Wrócił z trollem. Trolla zostawił w stodole.',
+    'Gretka z Rzepnicy wróciła z lochu. Z lochem.',
+    'Stasio nauczył się nowego zaklęcia. Na razie tylko go rani.',
+  ],
+  en: [
+    'Wojciech dropped his sword in the moat. Claims it was intentional.',
+    'Jadwiga won the horseshoe-toss tournament. No one was surprised.',
+    'Bolek slept through his level-up. Confused in the morning.',
+    'Helena opened a chest. Found another chest.',
+    'The innkeeper raised beer prices. The chroniclers’ guild declares mourning.',
+    'Mieszko went mushroom-picking. Came back with a troll. Left it in the barn.',
+    'Gretka of Rzepnica returned from the dungeon. With the dungeon.',
+    'Stasio learned a new spell. So far it only hurts him.',
+  ],
+};
 
 const inFlight = new Map<string, number>();
 const LOCK_TIMEOUT_MS = 10 * 60 * 1000;
@@ -46,14 +60,19 @@ function pickRandomSample<T>(arr: readonly T[], n: number): T[] {
 }
 
 /**
- * Zwraca do `limit` losowych flavorów dla dzisiejszego dnia. Jeśli batch
- * niepełny — wystrzeliwuje background generation i zwraca co jest (lub
- * SEED_CHRONICLES gdy nic).
+ * Zwraca do `limit` losowych flavorów dla dzisiejszego dnia w żądanym
+ * języku. Jeśli batch niepełny — wystrzeliwuje background generation.
+ * EN przy NULL `text_en` (legacy rows) fallback'uje na PL — patrz komentarz
+ * w `pickFlavor`.
  */
-export async function pickChronicleFlavorPool(db: Db, limit: number): Promise<string[]> {
+export async function pickChronicleFlavorPool(
+  db: Db,
+  limit: number,
+  lang: ChronicleLang,
+): Promise<string[]> {
   const today = isoDateUTC();
   const rows = await db
-    .select({ text: townChronicles.text })
+    .select({ pl: townChronicles.textPl, en: townChronicles.textEn })
     .from(townChronicles)
     .where(eq(townChronicles.generatedDate, today));
 
@@ -62,13 +81,11 @@ export async function pickChronicleFlavorPool(db: Db, limit: number): Promise<st
   }
 
   if (rows.length > 0) {
-    return pickRandomSample(
-      rows.map((r) => r.text),
-      limit,
-    );
+    const sampled = pickRandomSample(rows, limit);
+    return sampled.map((r) => (lang === 'en' ? r.en ?? r.pl : r.pl));
   }
 
-  return pickRandomSample(SEED_CHRONICLES, limit);
+  return pickRandomSample(SEED_CHRONICLES[lang], limit);
 }
 
 function maybeGenerate(db: Db, date: string): Promise<void> {
@@ -95,24 +112,25 @@ function maybeGenerate(db: Db, date: string): Promise<void> {
     });
 }
 
-const SYSTEM_PROMPT = `Jesteś generatorem jednozdaniowych kronik do idle-RPG „Szczurogród". Każda kronika to krótki nagłówek z życia JEDNEGO bohatera lub NPC miasta — coś między plotką a notką w gazecie. Styl: suchy humor, fragmenty, konkret. Polskie ludowe imiona (Gretka, Wojciech, Mieszko, Jadwiga, Bolek, Helena, Stasio, Maryla, Janko, Weronika). Max 14 słów. Bez emoji, bez wielu wykrzykników, bez cudzysłowów na końcu. Informacja first, joke second.
+const SYSTEM_PROMPT = `You write bilingual (Polish + English) one-line town chronicles for an idle-RPG called Szczurogród (English brand: Ratburg). Each chronicle is a short headline from the life of ONE hero or NPC — somewhere between gossip and a newspaper note. Style: dry humor, fragments, concrete. Polish original uses Polish folk names (Gretka, Wojciech, Mieszko, Jadwiga, Bolek, Helena, Stasio, Maryla, Janko, Weronika); keep the same names in EN. Max 14 words per line, no emoji, no trailing quotes. Information first, joke second.
 
-Przykłady tonu z gry (NIE kopiuj treści):
-- "Staruszka jest głodna. I zła. Jest zgłodniała."
-- "Mikstura Pierwsza Lepsza — Leczy trochę. Albo wcale."
-- "Rdzawy Miecz — +5 ATK. Rdza wliczona w cenę."
+Tone references from the game (DO NOT copy):
+- "Staruszka jest głodna. I zła. Jest zgłodniała." / "Old lady's hungry. And angry. And starving."
+- "Mikstura Pierwsza Lepsza — Leczy trochę. Albo wcale." / "Plain Old Potion — heals a bit. Or not at all."
 
-Przykłady formatu kroniki (NIE kopiuj):
-- "Wojciech utopił miecz w fosie. Twierdzi, że celowo."
-- "Jadwiga wygrała turniej w rzut podkową. Nikt się nie zdziwił."
-- "Karczmarz podniósł ceny piwa. Gildia kronikarzy ogłasza żałobę."`;
+Format example (DO NOT copy content):
+{ "pl": "Wojciech utopił miecz w fosie. Twierdzi, że celowo.", "en": "Wojciech dropped his sword in the moat. Claims it was intentional." }`;
 
 function userPrompt(): string {
-  return `Wygeneruj ${TARGET_PER_DAY} unikatowych kronik miasta Szczurogród. Każda kronika w osobnym stringu, różne imiona, różne sytuacje (łowy, targowisko, karczma, kapłan, złodziej, magiczne dziwactwa, codzienne absurdy). Nie powtarzaj się. Zwróć JSON array stringów.`;
+  return `Generate ${TARGET_PER_DAY} unique bilingual chronicles for the town of Ratburg / Szczurogród. Each chronicle in its own pair, different names, different situations (hunting, market, tavern, priest, thief, magical oddities, daily absurdities). Don't repeat. Return JSON object with "pairs" array.`;
 }
 
+interface GeneratedPair {
+  pl: string;
+  en: string;
+}
 interface GeneratedPayload {
-  chronicles: string[];
+  pairs: GeneratedPair[];
 }
 
 async function generateBatch(db: Db, date: string): Promise<void> {
@@ -120,7 +138,7 @@ async function generateBatch(db: Db, date: string): Promise<void> {
 
   const response = await client.messages.create({
     model: 'claude-opus-4-7',
-    max_tokens: 4000,
+    max_tokens: 6000,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userPrompt() }],
     output_config: {
@@ -129,12 +147,20 @@ async function generateBatch(db: Db, date: string): Promise<void> {
         schema: {
           type: 'object',
           properties: {
-            chronicles: {
+            pairs: {
               type: 'array',
-              items: { type: 'string' },
+              items: {
+                type: 'object',
+                properties: {
+                  pl: { type: 'string' },
+                  en: { type: 'string' },
+                },
+                required: ['pl', 'en'],
+                additionalProperties: false,
+              },
             },
           },
-          required: ['chronicles'],
+          required: ['pairs'],
           additionalProperties: false,
         },
       },
@@ -146,21 +172,27 @@ async function generateBatch(db: Db, date: string): Promise<void> {
     throw new Error('No text block in response');
   }
   const parsed = JSON.parse(textBlock.text) as GeneratedPayload;
-  if (!Array.isArray(parsed.chronicles)) {
-    throw new Error('Response missing chronicles array');
+  if (!Array.isArray(parsed.pairs)) {
+    throw new Error('Response missing pairs array');
   }
 
-  const clean = parsed.chronicles
-    .map((t) => t?.trim())
-    .filter((t): t is string => Boolean(t) && t.length <= MAX_ENTRY_LENGTH);
+  const clean = parsed.pairs
+    .map((p) => ({ pl: p?.pl?.trim(), en: p?.en?.trim() }))
+    .filter(
+      (p): p is { pl: string; en: string } =>
+        Boolean(p.pl) &&
+        Boolean(p.en) &&
+        p.pl.length <= MAX_ENTRY_LENGTH &&
+        p.en.length <= MAX_ENTRY_LENGTH,
+    );
 
   if (clean.length === 0) {
-    throw new Error('Generated 0 usable chronicles');
+    throw new Error('Generated 0 usable pairs');
   }
 
   await db
     .insert(townChronicles)
-    .values(clean.map((text) => ({ generatedDate: date, text })))
+    .values(clean.map((p) => ({ generatedDate: date, textPl: p.pl, textEn: p.en })))
     .onConflictDoNothing();
 
   const [after] = await db
@@ -169,6 +201,6 @@ async function generateBatch(db: Db, date: string): Promise<void> {
     .where(and(eq(townChronicles.generatedDate, date)));
 
   console.log(
-    `[town-chronicle] generated batch date=${date} added=${clean.length} total=${after?.n ?? 0}`,
+    `[town-chronicle] generated bilingual batch date=${date} added=${clean.length} total=${after?.n ?? 0}`,
   );
 }

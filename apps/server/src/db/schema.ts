@@ -1114,11 +1114,12 @@ export const townChronicles = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     generatedDate: varchar('generated_date', { length: 10 }).notNull(), // ISO YYYY-MM-DD (UTC)
-    text: text('text').notNull(),
+    textPl: text('text_pl').notNull(),
+    textEn: text('text_en'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    dateTextIdx: uniqueIndex('town_chronicles_date_text_unique').on(t.generatedDate, t.text),
+    dateTextIdx: uniqueIndex('town_chronicles_date_text_unique').on(t.generatedDate, t.textPl),
   }),
 );
 
@@ -1318,14 +1319,18 @@ export const townFlavors = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     generatedDate: varchar('generated_date', { length: 10 }).notNull(), // ISO YYYY-MM-DD (UTC)
     cls: characterClassEnum('cls').notNull(),
-    text: text('text').notNull(),
+    textPl: text('text_pl').notNull(),
+    // Nullable bo migracja 0066 nie backfilluje starych rekordów (klucz =
+    // (date, cls), więc dzisiejszy batch w trakcie pierwszej deploya będzie
+    // PL-only — fallback w pickFlavor kieruje EN'em na PL gdy NULL).
+    textEn: text('text_en'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     dateClsIdx: uniqueIndex('town_flavors_date_cls_text_unique').on(
       t.generatedDate,
       t.cls,
-      t.text,
+      t.textPl,
     ),
   }),
 );
