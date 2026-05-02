@@ -44,6 +44,7 @@ interface ClassDef {
   id: CharacterClass;
   nameKey: DictKey;
   descKey: DictKey;
+  perkKey: DictKey;
   color: string;
   icon: IconName;
   stats: string;
@@ -54,6 +55,7 @@ const CLASSES: readonly ClassDef[] = [
     id: 'warrior',
     nameKey: 'cc.class.warrior.name',
     descKey: 'cc.class.warrior.desc',
+    perkKey: 'cc.class.warrior.perk',
     color: '#c83232',
     icon: 'sword',
     stats: 'ATK 8 · DEF 7 · MAG 2',
@@ -62,6 +64,7 @@ const CLASSES: readonly ClassDef[] = [
     id: 'mage',
     nameKey: 'cc.class.mage.name',
     descKey: 'cc.class.mage.desc',
+    perkKey: 'cc.class.mage.perk',
     color: '#5a3a8a',
     icon: 'orb',
     stats: 'ATK 3 · DEF 4 · MAG 9',
@@ -70,6 +73,7 @@ const CLASSES: readonly ClassDef[] = [
     id: 'rogue',
     nameKey: 'cc.class.rogue.name',
     descKey: 'cc.class.rogue.desc',
+    perkKey: 'cc.class.rogue.perk',
     color: '#4a7c3a',
     icon: 'dagger',
     stats: 'ATK 6 · DEF 5 · MAG 4',
@@ -561,6 +565,17 @@ export function ScreenCreateChar({ onDone, onBackToLogin }: ScreenCreateCharProp
                         {t(c.nameKey)}
                       </div>
                       <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1.25 }}>{t(c.descKey)}</div>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          marginTop: 5,
+                          lineHeight: 1.3,
+                          color: sel ? '#ffc830' : '#5a3a2a',
+                          fontStyle: 'italic',
+                        }}
+                      >
+                        {t(c.perkKey)}
+                      </div>
                       <div className="mono" style={{ fontSize: 13, marginTop: 5, opacity: 0.85 }}>
                         {c.stats}
                       </div>

@@ -1474,10 +1474,22 @@ If we change this policy, you’ll see a new banner at login. The old version st
   'cc.unnamed': { pl: 'Bezimienny', en: 'Nameless' },
   'cc.class.warrior.name': { pl: 'WOJOWNIK', en: 'WARRIOR' },
   'cc.class.warrior.desc': { pl: 'Tank z toporem. Rozwiązuje problemy siłą.', en: 'Tank with an axe. Solves problems by force.' },
+  'cc.class.warrior.perk': {
+    pl: 'Najwięcej HP i pancerza. Mocny topór, rzadko unika.',
+    en: 'Highest HP and armor. Heavy axe, low dodge.',
+  },
   'cc.class.mage.name': { pl: 'MAG', en: 'MAGE' },
   'cc.class.mage.desc': { pl: 'Rzuca ogniem, czyta księgi, robi herbatę.', en: 'Throws fire, reads books, makes tea.' },
+  'cc.class.mage.perk': {
+    pl: 'Magia tnie połowę pancerza wroga. Bez mieczy — kostur i kula.',
+    en: 'Spells pierce half of enemy armor. No swords — staff and orb.',
+  },
   'cc.class.rogue.name': { pl: 'ŁOTRZYK', en: 'ROGUE' },
   'cc.class.rogue.desc': { pl: 'Szybki, sprytny. Kieszonkowiec z klasą.', en: 'Fast, clever. A pickpocket with style.' },
+  'cc.class.rogue.perk': {
+    pl: 'Dwa sztylety zamiast tarczy. Najwięcej uniku.',
+    en: 'Dual daggers instead of a shield. Highest dodge.',
+  },
   'cc.bonus.gold.name': { pl: 'Sakwa Kupca', en: 'Merchant’s Purse' },
   'cc.bonus.gold.desc': { pl: '+500 złota na start', en: '+500 gold to start' },
   'cc.bonus.gems.name': { pl: 'Garść Szafirów', en: 'Handful of Sapphires' },
