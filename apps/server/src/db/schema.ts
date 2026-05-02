@@ -173,6 +173,20 @@ export const characters = pgTable(
      */
     raidHitsToday: smallint('raid_hits_today').notNull().default(0),
     lastRaidHitDate: varchar('last_raid_hit_date', { length: 10 }).notNull().default(''),
+    /**
+     * World boss hits dziś — równoległy do raid (gildia), ale dla server-wide
+     * bossa. 3/dzień, reset UTC. Niezależny od gildii — solo gracze też biją.
+     */
+    worldBossHitsToday: smallint('world_boss_hits_today').notNull().default(0),
+    lastWorldBossHitDate: varchar('last_world_boss_hit_date', { length: 10 })
+      .notNull()
+      .default(''),
+    /**
+     * Echa Wybudzonego — waluta dropowana z każdego hit'a w world boss.
+     * Tradeable w `worldBoss.shop` na gemy/scrap/gold/extra hit. Nie resetuje
+     * się — akumulujące się saldo lifetime.
+     */
+    echoes: integer('echoes').notNull().default(0),
     /** Ostatni rename imienia postaci (gem sink). 30-dniowy cooldown, NULL = never renamed. */
     lastRenameAt: timestamp('last_rename_at', { withTimezone: true }),
     /** Zasób "złom" z dismantle u Kowala Zygmunta. Gated na upgrade itemów. */
@@ -961,6 +975,54 @@ export const guildRaidBosses = pgTable(
   (t) => ({
     guildStatusIdx: index('guild_raid_bosses_guild_status_idx').on(t.guildId, t.status),
     guildTierIdx: index('guild_raid_bosses_guild_tier_idx').on(t.guildId, t.tier),
+  }),
+);
+
+// World boss — single boss serwer-wide. Status='active' chroniony przez
+// partial unique index w migracji 0061: tylko jeden active w jednym czasie.
+// Killing blow → status='killed', natychmiast insert next tier (continuous).
+export const worldBosses = pgTable(
+  'world_bosses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** Nieskończony scaling. Rotation slug przez (tier-1) % 5. */
+    tier: integer('tier').notNull(),
+    bossSlug: varchar('boss_slug', { length: 64 }).notNull(),
+    hpMax: integer('hp_max').notNull(),
+    hpCurrent: integer('hp_current').notNull(),
+    /** 'active' | 'killed' */
+    status: varchar('status', { length: 16 }).notNull().default('active'),
+    killingBlowCharId: uuid('killing_blow_char_id').references(
+      () => characters.id,
+      { onDelete: 'set null' },
+    ),
+    spawnedAt: timestamp('spawned_at', { withTimezone: true }).notNull().defaultNow(),
+    killedAt: timestamp('killed_at', { withTimezone: true }),
+  },
+  (t) => ({
+    tierIdx: index('world_bosses_tier_idx').on(t.tier),
+  }),
+);
+
+// Log hit'ów per boss. Używany do leaderboard'u i tier reward distribution.
+export const worldBossHits = pgTable(
+  'world_boss_hits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bossId: uuid('boss_id')
+      .notNull()
+      .references(() => worldBosses.id, { onDelete: 'cascade' }),
+    characterId: uuid('character_id')
+      .notNull()
+      .references(() => characters.id, { onDelete: 'cascade' }),
+    dmg: integer('dmg').notNull(),
+    /** Faza HP w momencie hit'a (1/2/3). Phase 1 = >66% HP, 2 = 33-66%, 3 = <33%. */
+    phase: smallint('phase').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    bossDmgIdx: index('world_boss_hits_boss_dmg_idx').on(t.bossId, t.dmg),
+    charIdx: index('world_boss_hits_char_idx').on(t.characterId, t.createdAt),
   }),
 );
 

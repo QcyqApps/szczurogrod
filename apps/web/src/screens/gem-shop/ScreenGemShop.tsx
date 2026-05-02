@@ -152,12 +152,13 @@ export function ScreenGemShop({ char, onBack, onPurchase }: ScreenGemShopProps) 
   const paypalReady = catalogQuery.data?.paypalReady ?? false;
 
   function buy(pack: Purchase, displayName: string) {
-    // Web użytkownik klika BUY na produkcie real-money. Trzy ścieżki:
+    // Web użytkownik klika BUY na produkcie real-money. Dwie ścieżki:
     //   - native (Capacitor) → confirm modal → Google Play Billing
-    //   - web + paypalReady + pack ma serwerowy mapping (NIE bundle) → PayPal
-    //   - web bez PayPala lub bundle → fallback NativeOnly modal
+    //   - web + paypalReady → PayPal (gem packs, VIP, bundles — wszystko
+    //     ma server-side mapping w `findPaypalTarget`)
+    //   - web bez PayPala → fallback NativeOnly modal
     if (!native && pack.real) {
-      if (paypalReady && !pack.bundle) {
+      if (paypalReady) {
         setPaypal({ packId: pack.id, label: displayName, price: pack.price });
         return;
       }

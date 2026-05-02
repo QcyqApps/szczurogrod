@@ -759,7 +759,7 @@ export const combatRouter = router({
           message: `Dzienny limit ubitych osiągnięty (${enemy.dailyLimit}). Wróć jutro.`,
         });
       }
-      if (killRow?.lastKilledAt) {
+      if (killRow?.lastKilledAt && !input.bypassCooldown) {
         const cooldownEnd = killRow.lastKilledAt.getTime() + enemy.cooldownSec * 1000;
         if (cooldownEnd > now.getTime()) {
           const remaining = Math.ceil((cooldownEnd - now.getTime()) / 1000);

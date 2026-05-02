@@ -134,6 +134,10 @@ export type AchievementUnlockPayload = z.infer<typeof achievementUnlockPayloadSc
 // ========== Combat intents ==========
 export const combatEngageInputSchema = z.object({
   enemySlug: z.string().min(1).max(64),
+  // Tryb seryjny — pomiń per-mob cooldown. Daily limit i koszt klucza nadal
+  // egzekwowane. Cooldown to UX gate (anti-spam), nie anti-cheat — daily cap
+  // zostaje twardym murem przeciw farmingowi.
+  bypassCooldown: z.boolean().optional(),
 });
 
 export const combatAttackInputSchema = z.object({
@@ -674,6 +678,14 @@ export const chroniclePayloadSchema = z.discriminatedUnion('kind', [
     guildName: z.string(),
     bossName: z.string(),
     tier: z.number().int().min(1),
+  }),
+  z.object({
+    kind: z.literal('world_boss_killed'),
+    heroName: z.string(),
+    bossName: z.string(),
+    tier: z.number().int().min(1),
+    /** Liczba uczestników (hitterów) */
+    contributors: z.number().int().min(1),
   }),
 ]);
 export type ChroniclePayload = z.infer<typeof chroniclePayloadSchema>;
@@ -1447,6 +1459,9 @@ export const GEM_SINK_COSTS = {
   healInstant: 3,
   extraArenaFight: 5,
   extraRaidHit: 5,
+  /** Bypass world boss daily limit (3/dzień). Premium wersja — droższa
+   *  niż raid bo damage per hit jest dużo wyższy + dostęp do leaderboard'u. */
+  extraWorldBossHit: 8,
   extraKey: 3,
   staminaRefill: 8,
   renameCharacter: 50,
@@ -1830,6 +1845,161 @@ export const guildRaidHistoryResponseSchema = z.object({
   entries: z.array(guildRaidHistoryEntrySchema),
 });
 export type GuildRaidHistoryResponse = z.infer<typeof guildRaidHistoryResponseSchema>;
+
+// ========== World boss (Phase 1: server-wide raid) ==========
+
+export const worldBossPhaseSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+]);
+export type WorldBossPhase = z.infer<typeof worldBossPhaseSchema>;
+
+export const worldBossSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  icon: z.string(),
+  flavor: z.string(),
+  tier: z.number().int().min(1),
+  hpMax: z.number().int().min(1),
+  hpCurrent: z.number().int().min(0),
+  /** Aktualna faza HP — 1 (>66%), 2 (33-66%), 3 (<33%). */
+  phase: worldBossPhaseSchema,
+  /** Klasy które dostają +50% damage w obecnej fazie. */
+  advantageousClasses: z.array(characterClassSchema),
+  spawnedAt: z.number().int(),
+});
+export type WorldBoss = z.infer<typeof worldBossSchema>;
+
+export const worldBossLeaderboardEntrySchema = z.object({
+  characterId: z.string(),
+  name: z.string(),
+  cls: characterClassSchema,
+  totalDmg: z.number().int().min(0),
+  hitCount: z.number().int().min(0),
+});
+export type WorldBossLeaderboardEntry = z.infer<typeof worldBossLeaderboardEntrySchema>;
+
+export const worldBossCurrentResponseSchema = z.object({
+  boss: worldBossSchema,
+  myHitsToday: z.number().int().min(0),
+  myHitsMax: z.number().int().min(0),
+  myTotalDmg: z.number().int().min(0),
+  myRank: z.number().int().min(0).nullable(),
+  /** Liczba wszystkich graczy którzy uderzyli aktywnego bossa. */
+  totalHitters: z.number().int().min(0),
+  /** Top 50. */
+  leaderboard: z.array(worldBossLeaderboardEntrySchema),
+});
+export type WorldBossCurrentResponse = z.infer<typeof worldBossCurrentResponseSchema>;
+
+export const worldBossHitResponseSchema = z.object({
+  dmg: z.number().int().min(0),
+  /** Faza w momencie tego konkretnego hit'a (mogła zmienić się po hit'cie). */
+  phaseAtHit: worldBossPhaseSchema,
+  /** True gdy moja klasa była advantageous w fazie hit'a. */
+  phaseMatched: z.boolean(),
+  /** Echa Wybudzonego dropnięte z tego hita. */
+  echoesDrop: z.number().int().min(0),
+  hpRemaining: z.number().int().min(0),
+  killed: z.boolean(),
+  /** Gdy killed=true — preview następnego tier'a. */
+  nextBoss: worldBossSchema.nullable(),
+  /** Reward dla TEJ postaci po killu. 0 gdy killed=false. */
+  rewardGold: z.number().int().min(0),
+  rewardGems: z.number().int().min(0),
+  /** Mój rank na finalnej leaderboard po killu (1=top). null gdy killed=false. */
+  finalRank: z.number().int().min(1).nullable(),
+  /** True gdy ja zadałem killing blow. */
+  isKiller: z.boolean(),
+  myHitsToday: z.number().int().min(0),
+  myHitsMax: z.number().int().min(0),
+  unlockedAchievements: z.array(achievementUnlockPayloadSchema).optional(),
+  /** Server-clamped tap count (0 gdy bossAlreadyDead). */
+  taps: z.number().int().nonnegative().optional(),
+  /** Damage multiplier z tap-mini-gry (0.6..1.4, 1.0 dla refundu). */
+  tapMultiplier: z.number().optional(),
+  /** True gdy commit trafił na bossa już ubitego — uderzenie zwrócone, brak nagród. */
+  bossAlreadyDead: z.boolean().optional(),
+});
+export type WorldBossHitResponse = z.infer<typeof worldBossHitResponseSchema>;
+
+/** Reservation response — klient otwiera tap-modal z tymi parametrami. */
+export const worldBossStartHitResponseSchema = z.object({
+  sessionId: z.string().uuid(),
+  durationMs: z.number().int().positive(),
+  minTaps: z.number().int().nonnegative(),
+  maxTaps: z.number().int().positive(),
+});
+export type WorldBossStartHitResponse = z.infer<typeof worldBossStartHitResponseSchema>;
+
+/** Commit input — sessionId z startHit, taps liczone klientowsko (server clampuje). */
+export const worldBossCommitHitInputSchema = z.object({
+  sessionId: z.string().uuid(),
+  taps: z.number().int().min(0).max(200),
+});
+export type WorldBossCommitHitInput = z.infer<typeof worldBossCommitHitInputSchema>;
+
+export const worldBossHistoryEntrySchema = z.object({
+  id: z.string(),
+  tier: z.number().int().min(1),
+  bossName: z.string(),
+  bossIcon: z.string(),
+  hpMax: z.number().int().min(1),
+  killedAt: z.number().int(),
+  killingBlowCharName: z.string().nullable(),
+  /** Mój rank w tej walce (jeśli brałem udział). */
+  myRank: z.number().int().min(1).nullable(),
+  myDmg: z.number().int().min(0),
+});
+export type WorldBossHistoryEntry = z.infer<typeof worldBossHistoryEntrySchema>;
+
+export const worldBossHistoryResponseSchema = z.object({
+  entries: z.array(worldBossHistoryEntrySchema),
+});
+export type WorldBossHistoryResponse = z.infer<typeof worldBossHistoryResponseSchema>;
+
+export const worldBossShopRewardKindSchema = z.enum([
+  'gems',
+  'scrap',
+  'gold',
+  'extra_hit',
+]);
+export type WorldBossShopRewardKind = z.infer<typeof worldBossShopRewardKindSchema>;
+
+export const worldBossShopOfferSchema = z.object({
+  slug: z.string(),
+  i18nKey: z.string(),
+  icon: z.string(),
+  cost: z.number().int().min(1),
+  reward: z.object({
+    kind: worldBossShopRewardKindSchema,
+    amount: z.number().int().min(1),
+  }),
+});
+export type WorldBossShopOfferDTO = z.infer<typeof worldBossShopOfferSchema>;
+
+export const worldBossShopListResponseSchema = z.object({
+  myEchoes: z.number().int().min(0),
+  offers: z.array(worldBossShopOfferSchema),
+});
+export type WorldBossShopListResponse = z.infer<typeof worldBossShopListResponseSchema>;
+
+export const worldBossShopBuyInputSchema = z.object({
+  offerSlug: z.string().min(1).max(64),
+});
+export type WorldBossShopBuyInput = z.infer<typeof worldBossShopBuyInputSchema>;
+
+export const worldBossShopBuyResponseSchema = z.object({
+  spent: z.number().int().min(0),
+  echoesAfter: z.number().int().min(0),
+  reward: z.object({
+    kind: worldBossShopRewardKindSchema,
+    amount: z.number().int().min(1),
+  }),
+});
+export type WorldBossShopBuyResponse = z.infer<typeof worldBossShopBuyResponseSchema>;
 
 // ========== Hall of Fame / Kroniki Chwały (unified leaderboards) ==========
 //

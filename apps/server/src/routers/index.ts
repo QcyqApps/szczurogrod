@@ -35,6 +35,7 @@ import { trainerRouter } from './trainer.js';
 import { witchRouter } from './witch.js';
 import { workRouter } from './work.js';
 import { worldRouter } from './world.js';
+import { worldBossRouter } from './worldBoss.js';
 
 export const appRouter = router({
   achievements: achievementsRouter,
@@ -73,6 +74,7 @@ export const appRouter = router({
   witch: witchRouter,
   work: workRouter,
   world: worldRouter,
+  worldBoss: worldBossRouter,
 });
 
 export type AppRouter = typeof appRouter;

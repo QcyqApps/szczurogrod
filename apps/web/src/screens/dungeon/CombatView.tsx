@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AvatarPortrait } from '@/components/avatar';
 import { GameIcon } from '@/components/game-icons';
 import type { IconName } from '@/components/game-icons';
@@ -242,15 +242,24 @@ export interface CombatViewProps {
   onLevelUp?: (info: import('@grodno/shared').LevelUpInfo) => void;
   mode?: CombatMode;
   /**
-   * Tryb seryjny (auto-chain) — domyślny sim ON, po victory automatycznie
-   * woła onBack po krótkim delay. Parent (ScreenDungeon) re-engage'uje
-   * następną walkę. Boss-intro pomijany (boss-y nie są w seriach).
-   * `serialInfo` opcjonalnie wyświetla pasek "Walka 2/5".
+   * Tryb seryjny (auto-chain) — domyślny sim ON. Po victory pokazuje panel
+   * z odliczaniem 5s do auto-kontynuacji + przyciskami KONTYNUUJ/WYJDŹ.
+   * KONTYNUUJ → onSerialContinue (parent ends current combat + engages
+   * next z bypassCooldown). WYJDŹ → onBack. Boss-intro pomijany (boss-y
+   * nie są w seriach). `serialInfo` opcjonalnie wyświetla pasek "Walka 2/5".
    */
   serialMode?: boolean;
   serialInfo?: { current: number; total: number };
   /** Callback po terminalnym statusie walki — przed onBack. */
   onResult?: (outcome: 'victory' | 'defeat') => void;
+  /**
+   * Wywoływane gdy w serii gracz klika KONTYNUUJ albo timer dobiega końca.
+   * Parent powinien zamknąć obecną sesję walki, zaengage'ować kolejną
+   * (z bypassCooldown) i zwrócić nowy CombatState — CombatView zresetuje
+   * swój stan na ten nowy initialState. Pomijane gdy serialInfo wskazuje
+   * ostatnią walkę serii (current === total).
+   */
+  onSerialContinue?: () => Promise<void>;
 }
 
 export function CombatView({
@@ -263,6 +272,7 @@ export function CombatView({
   serialMode = false,
   serialInfo,
   onResult,
+  onSerialContinue,
 }: CombatViewProps) {
   const t = useT();
   const tc = useContentT();
@@ -318,16 +328,81 @@ export function CombatView({
   // animacji per walkę), choć i tak boss-y na ogół nie są w seriach.
   const [introOpen, setIntroOpen] = useState(enemy.isBoss && !serialMode);
 
-  // Tryb seryjny — po victory auto-przekazujemy do parenta po krótkim delay
-  // żeby gracz zobaczył drop/animację. Defeat NIE auto-przechodzi: gracz
-  // patrzy na panel porażki i klika RESPAWN (parent decyduje czy plan
-  // serii się resetuje).
+  // Tryb seryjny — po victory pokazujemy panel z odliczaniem 5s.
+  // Gracz ma czas zobaczyć drop, kliknąć WYJDŹ (przerwij serię) albo
+  // KONTYNUUJ. Po 5s timer auto-fire'uje kontynuację. Ostatnia walka serii
+  // (lub brak onSerialContinue) pomija odliczanie i pokazuje normalny przycisk
+  // DALEJ. Defeat NIE pokazuje countdownu: gracz patrzy na panel porażki
+  // i klika RESPAWN (parent decyduje czy plan serii się resetuje).
+  const SERIAL_CONTINUE_MS = 5000;
+  const isLastSerialFight =
+    serialInfo !== undefined && serialInfo.current >= serialInfo.total;
+  const showSerialContinue =
+    serialMode &&
+    state.status === 'victory' &&
+    onSerialContinue !== undefined &&
+    !isLastSerialFight;
+  const [serialCountdownStart, setSerialCountdownStart] = useState<number | null>(
+    null,
+  );
+  const [serialCountdownTick, setSerialCountdownTick] = useState(0);
+  const [serialContinuing, setSerialContinuing] = useState(false);
+
   useEffect(() => {
-    if (!serialMode) return;
-    if (state.status !== 'victory') return;
-    const handle = setTimeout(() => onBack(), 1200);
+    // Start countdown gdy victory wpada w trybie serii. Reset gdy state.status
+    // wraca do 'fight' (nowa walka, nowy initialState).
+    if (showSerialContinue) {
+      setSerialCountdownStart(Date.now());
+      return;
+    }
+    setSerialCountdownStart(null);
+  }, [showSerialContinue]);
+
+  useEffect(() => {
+    if (serialCountdownStart === null) return;
+    const tick = setInterval(() => setSerialCountdownTick((n) => n + 1), 100);
+    return () => clearInterval(tick);
+  }, [serialCountdownStart]);
+
+  const triggerSerialContinue = useCallback(async () => {
+    if (!onSerialContinue || serialContinuing) return;
+    setSerialContinuing(true);
+    setSerialCountdownStart(null);
+    try {
+      await onSerialContinue();
+    } catch (err) {
+      console.warn('serial continue failed', err);
+    } finally {
+      setSerialContinuing(false);
+    }
+  }, [onSerialContinue, serialContinuing]);
+
+  useEffect(() => {
+    if (serialCountdownStart === null) return;
+    const handle = setTimeout(() => {
+      void triggerSerialContinue();
+    }, SERIAL_CONTINUE_MS);
     return () => clearTimeout(handle);
-  }, [serialMode, state.status, onBack]);
+  }, [serialCountdownStart, triggerSerialContinue]);
+
+  // Kiedy parent dostarcza nowy initialState (nowa walka w serii), CombatView
+  // resetuje swój wewnętrzny stan, log, animacje i loot — bez tego widać
+  // pozostałości po poprzedniej walce.
+  useEffect(() => {
+    setState(initialState);
+    setLog([
+      t('combat.log.met')
+        .replace('{name}', enemyDisplayName)
+        .replace('{flavor}', enemy.flavor),
+    ]);
+    setLastLoot(null);
+    setLastTower(null);
+    setAnims({ player: '', enemy: '' });
+    setDmgNums([]);
+    setBurst(null);
+    setTurnLock(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialState.combatId]);
   useEffect(() => {
     if (!introOpen) return;
     const t = setTimeout(() => setIntroOpen(false), 1500);
@@ -1262,9 +1337,85 @@ export function CombatView({
               </div>
             </div>
           )}
-          <button type="button" className="cbtn green" onClick={onBack}>
-            {t('combat.victory.next')}
-          </button>
+          {showSerialContinue ? (
+            (() => {
+              // serialCountdownTick referenced w obliczeniu remaining — trzymamy
+              // odwołanie żeby ESLint/React nie wywalił hooka jako "unused"
+              // w przypadku gdyby compiler wyciął dependency.
+              void serialCountdownTick;
+              const elapsed =
+                serialCountdownStart !== null ? Date.now() - serialCountdownStart : 0;
+              const remainingMs = Math.max(0, SERIAL_CONTINUE_MS - elapsed);
+              const remainingSec = Math.ceil(remainingMs / 1000);
+              const progress = Math.min(1, elapsed / SERIAL_CONTINUE_MS);
+              return (
+                <>
+                  {/* Pasek odliczania — wizualnie pokazuje ile czasu zostało
+                      do auto-kontynuacji. */}
+                  <div
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      background: '#a8c896',
+                      overflow: 'hidden',
+                      marginBottom: 8,
+                      border: '1px solid #2a4a3a',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${(1 - progress) * 100}%`,
+                        height: '100%',
+                        background: '#4a8a3a',
+                        transition: 'width 100ms linear',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="cbtn"
+                      style={{ flex: 1, background: '#c8a878', color: '#2a1810' }}
+                      onClick={onBack}
+                      disabled={serialContinuing}
+                    >
+                      {t('combat.serial.exit')}
+                    </button>
+                    <button
+                      type="button"
+                      className="cbtn green"
+                      style={{ flex: 2 }}
+                      onClick={() => {
+                        void triggerSerialContinue();
+                      }}
+                      disabled={serialContinuing}
+                    >
+                      {t('combat.serial.continue').replace('{s}', String(remainingSec))}
+                    </button>
+                  </div>
+                </>
+              );
+            })()
+          ) : (
+            <>
+              {serialMode && isLastSerialFight && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontFamily: 'Luckiest Guy, sans-serif',
+                    color: '#2e5020',
+                    letterSpacing: 0.5,
+                    marginBottom: 6,
+                  }}
+                >
+                  {t('combat.serial.last')}
+                </div>
+              )}
+              <button type="button" className="cbtn green" onClick={onBack}>
+                {t('combat.victory.next')}
+              </button>
+            </>
+          )}
         </div>
       )}
       {state.status === 'victory' && mode === 'tower' && (

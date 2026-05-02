@@ -428,6 +428,20 @@
       "when": 1777702182364,
       "tag": "0060_mighty_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1777713780000,
+      "tag": "0061_world_bosses",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1777716000000,
+      "tag": "0062_world_boss_phase2",
+      "breakpoints": true
     }
   ]
 }

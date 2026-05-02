@@ -42,8 +42,52 @@ export const GEM_PACKAGES: readonly GemPackage[] = [
   // Phase 2 doda `vip_expires_at` na characterze + premium perks (daily
   // gems, +50% gold, crown). Na razie kupujący dostają 3000 gemów (~30
   // dni × ~100/dzień) jako wymierna wartość pasująca do brandu „SUBSKRYPCJA".
-  { id: 'vip30', gems: 3000, bonus: 0, googlePlayProductId: 'vip_30days', priceGrosze: 4999, currency: 'PLN' },
+  // Cena 19.99 PLN — match z dict 'gemShop.vip.price' i CTA na buttonie.
+  { id: 'vip30', gems: 3000, bonus: 0, googlePlayProductId: 'vip_30days', priceGrosze: 1999, currency: 'PLN' },
 ] as const;
+
+// ===== Bundle packages — gems + gold + items (PayPal only, na razie) =====
+// Native (Play Billing) ich nie obsługuje, bo wymagałyby SKU per-bundle
+// w Play Console + receipt-encoded payload. Klient (`ScreenGemShop.BUNDLES`)
+// ma własny display catalog; serwer dostaje tylko id przy createOrder
+// i decyduje cenę + payload tutaj. Item template ids muszą istnieć w
+// `SHOP_CATALOG` (game/shop.ts) — w przeciwnym razie grant fail'uje.
+export interface BundlePackage {
+  id: string;
+  gems: number;
+  bonus: number;
+  priceGrosze: number;
+  currency: 'PLN';
+  /** Bonus gold credit (UPDATE characters.gold). */
+  goldBonus?: number;
+  /** Item template ids inserted as character_items rows (one per id, dupli-
+   *  cates allowed dla "x5 mikstur"). */
+  itemTemplateIds?: readonly string[];
+}
+
+export const BUNDLE_PACKAGES: readonly BundlePackage[] = [
+  {
+    id: 'b1',
+    gems: 300,
+    bonus: 0,
+    priceGrosze: 999,
+    currency: 'PLN',
+    goldBonus: 5_000,
+    itemTemplateIds: ['s9'], // Miecz Świtu — sword-dawn icon match
+  },
+  {
+    id: 'b2',
+    gems: 800,
+    bonus: 0,
+    priceGrosze: 2499,
+    currency: 'PLN',
+    itemTemplateIds: ['s14', 's-buff-mp25', 's-buff-mp25', 's-buff-mp25', 's-buff-mp25', 's-buff-mp25'],
+  },
+];
+
+export function findBundleById(id: string): BundlePackage | undefined {
+  return BUNDLE_PACKAGES.find((b) => b.id === id);
+}
 
 export function findPackageByProductId(productId: string): GemPackage | undefined {
   return GEM_PACKAGES.find((p) => p.googlePlayProductId === productId);
@@ -51,6 +95,19 @@ export function findPackageByProductId(productId: string): GemPackage | undefine
 
 export function findPackageById(id: string): GemPackage | undefined {
   return GEM_PACKAGES.find((p) => p.id === id);
+}
+
+/** Zunifikowany lookup dla PayPal — zarówno gem packages jak i bundle. */
+export type PaypalPaymentTarget =
+  | { kind: 'gems'; pkg: GemPackage }
+  | { kind: 'bundle'; pkg: BundlePackage };
+
+export function findPaypalTarget(id: string): PaypalPaymentTarget | null {
+  const gems = findPackageById(id);
+  if (gems) return { kind: 'gems', pkg: gems };
+  const bundle = findBundleById(id);
+  if (bundle) return { kind: 'bundle', pkg: bundle };
+  return null;
 }
 
 /** Format dla PayPal `value` field — "X.YZ" string z 2 cyframi po kropce. */

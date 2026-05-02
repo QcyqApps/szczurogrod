@@ -520,6 +520,13 @@ export function ScreenTown({
           icon={<GameIcon name="castle" size={40} />}
         />
         <LocTile
+          label={t('town.tile.worldBoss')}
+          sub={t('town.tile.worldBoss.sub')}
+          bg="linear-gradient(135deg, #d8a8e8 0%, #9a6ac8 100%)"
+          onClick={() => nav('worldBoss')}
+          icon={<GameIcon name="skull-mage" size={40} />}
+        />
+        <LocTile
           label={t('town.tile.fame')}
           sub={t('town.tile.fame.sub')}
           bg="#d8a850"

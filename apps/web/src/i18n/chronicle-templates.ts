@@ -138,6 +138,27 @@ const GUILD_RAID_KILLED: Lib<Array<(g: string, b: string, t: number) => string>>
   ],
 };
 
+const WORLD_BOSS_KILLED: Lib<
+  Array<(h: string, b: string, t: number, c: number) => string>
+> = {
+  pl: [
+    (h, b, t, c) =>
+      `${h} dobija „${b}" (tier ${t}). Świat patrzył — ${c} osób w tym maczało palce.`,
+    (h, b, t, c) =>
+      `„${b}" padł. ${h} zadał ostatni cios. Tier ${t}, ${c} chętnych do napluwania.`,
+    (h, b, t, c) =>
+      `Wybudzony zasnął. ${h} z ${c}-osobowej zgrai zamyka „${b}" na tier ${t}.`,
+  ],
+  en: [
+    (h, b, t, c) =>
+      `${h} finishes "${b}" (tier ${t}). The whole server watched — ${c} hands on the kill.`,
+    (h, b, t, c) =>
+      `"${b}" fell. ${h} landed the killing blow. Tier ${t}, ${c} contributors.`,
+    (h, b, t, c) =>
+      `The Awakened sleeps. ${h} from a ${c}-strong mob seals "${b}" at tier ${t}.`,
+  ],
+};
+
 const ACHIEVEMENT: Record<string, Lib<Array<(h: string, n: string) => string>>> = {
   bronze: {
     pl: [
@@ -279,6 +300,12 @@ export function renderChronicleEntry(entry: ChronicleEntry, lang: Lang): string 
     case 'guild_raid_killed': {
       const tpl = pickFromLib(GUILD_RAID_KILLED, lang, idx);
       return tpl ? tpl(payload.guildName, payload.bossName, payload.tier) : entry.text;
+    }
+    case 'world_boss_killed': {
+      const tpl = pickFromLib(WORLD_BOSS_KILLED, lang, idx);
+      return tpl
+        ? tpl(payload.heroName, payload.bossName, payload.tier, payload.contributors)
+        : entry.text;
     }
     default: {
       const _exhaustive: never = payload;

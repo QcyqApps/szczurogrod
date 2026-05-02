@@ -328,26 +328,19 @@ export function ScreenDungeon({
 
   /**
    * Wywołane przez CombatView gdy walka osiągnie terminalny status
-   * (przed onBack). Aktualizujemy plan serii — przy victory inkrementujemy
-   * `completed`; przy defeat plan się zatrzymuje (parent reset w leaveCombat).
+   * (przed onBack). Defeat zatrzymuje cały plan serii. Victory inkrementuje
+   * `completed` dopiero gdy gracz potwierdzi kontynuację (continueSerial),
+   * żeby pasek "WALKA n/total" nie wyprzedzał faktycznie odpalonej walki.
    */
   function handleCombatResult(outcome: 'victory' | 'defeat') {
     if (!serialPlan) return;
-    if (outcome === 'victory') {
-      setSerialPlan((prev) =>
-        prev ? { ...prev, completed: prev.completed + 1 } : null,
-      );
-    } else {
-      // Defeat — zatrzymujemy cały plan.
-      setSerialPlan(null);
-    }
+    if (outcome === 'defeat') setSerialPlan(null);
   }
 
   async function leaveCombat() {
     const combatId = activeCombat?.state.combatId;
-    const finishedEnemy = activeCombat?.enemy ?? null;
-    const finishedStatus = activeCombat?.state.status; // może być stale (initial)
     setActiveCombat(null);
+    setSerialPlan(null);
     if (combatId) {
       try {
         await endMut.mutateAsync({ combatId });
@@ -361,32 +354,44 @@ export function ScreenDungeon({
     // Track slot was consumed on engage — refresh so UI shows the gap.
     void utils.tracks.list.invalidate();
     onReward();
-    // Serial chain — sprawdź czy kolejna walka jest możliwa po świeżym me.get.
-    // Używamy `finishedStatus` jako hint; rzeczywiste preconditions sprawdza
-    // engageMut po stronie serwera (klucz, daily, HP, cooldown).
-    if (
-      serialPlan &&
-      finishedEnemy &&
-      serialPlan.completed + 1 < serialPlan.total &&
-      finishedStatus !== 'defeat'
-    ) {
-      // Drobny opóźniacz na inwalidację cache + UI flash.
-      setTimeout(() => {
-        void chainNext(finishedEnemy);
-      }, 300);
-    } else {
-      setSerialPlan(null);
-    }
   }
 
-  async function chainNext(enemy: DungeonEnemy) {
+  /**
+   * Wywołane przez CombatView gdy gracz w trybie seryjnym klika KONTYNUUJ
+   * (lub odlicza się timer). Zamykamy obecną sesję walki, zaengage'ujemy
+   * kolejną z `bypassCooldown: true` i podstawiamy nowy CombatState do
+   * activeCombat — CombatView wykryje zmianę combatId i zresetuje wewnętrzny
+   * stan. Plan serii inkrementujemy `completed`. Daily limit + key cost
+   * nadal pilnowane przez serwer; failure → toast + przerwanie serii.
+   */
+  async function continueSerial() {
+    const finishedCombatId = activeCombat?.state.combatId;
+    const enemy = activeCombat?.enemy;
+    if (!enemy || !serialPlan) return;
+    // Best-effort end — error nie powinien blokować chain'a, sesja i tak
+    // wygaśnie przez TTL.
+    if (finishedCombatId) {
+      try {
+        await endMut.mutateAsync({ combatId: finishedCombatId });
+      } catch (e) {
+        console.warn('combat.end (chain) failed', e);
+      }
+    }
+    void utils.me.get.invalidate();
+    void utils.combat.enemies.invalidate();
+    void utils.tracks.list.invalidate();
+    onReward();
     try {
-      const state = await engageMut.mutateAsync({ enemySlug: enemy.slug });
+      const state = await engageMut.mutateAsync({
+        enemySlug: enemy.slug,
+        bypassCooldown: true,
+      });
       setActiveCombat({ state, enemy });
+      setSerialPlan((prev) =>
+        prev ? { ...prev, completed: prev.completed + 1 } : null,
+      );
     } catch (e) {
       console.warn('combat.engage chain failed', e);
-      // Engage failed (cooldown / no key / dailyMaxed) — przerywamy serię,
-      // toast info. Plan czyścimy.
       pushToast({
         text:
           e instanceof TRPCClientError
@@ -394,6 +399,7 @@ export function ScreenDungeon({
             : tStatic('dungeon.serial.toast.stopped'),
         accent: '#c83232',
       });
+      setActiveCombat(null);
       setSerialPlan(null);
     }
   }
@@ -416,6 +422,7 @@ export function ScreenDungeon({
         serialMode={Boolean(serial)}
         serialInfo={serial ?? undefined}
         onResult={handleCombatResult}
+        onSerialContinue={serial ? continueSerial : undefined}
       />
     );
   }

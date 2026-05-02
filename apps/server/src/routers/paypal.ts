@@ -23,9 +23,11 @@ import {
   type PaypalCaptureOrderResponse,
   type PaypalCreateOrderResponse,
 } from '@grodno/shared';
-import { characters, gemPurchases } from '../db/schema.js';
+import { REGISTRY } from '../content/registry.js';
+import { characterItems, characters, gemPurchases } from '../db/schema.js';
+import { itemTemplateToRowValues } from '../game/inventory.js';
 import {
-  findPackageById,
+  findPaypalTarget,
   priceToPayPalAmount,
 } from '../game/gemPackages.js';
 import {
@@ -57,20 +59,21 @@ export async function grantPayPalCapture(
     currency: string;
   },
 ): Promise<{ status: 'credited' | 'already_credited'; gemsGranted: number; characterGems: number }> {
-  const pkg = findPackageById(args.packId);
-  if (!pkg) {
+  const target = findPaypalTarget(args.packId);
+  if (!target) {
     throw new PayPalError('UNKNOWN_PACK', args.packId);
   }
-  const expectedAmount = priceToPayPalAmount(pkg.priceGrosze);
-  if (args.amountValue !== expectedAmount || args.currency !== pkg.currency) {
+  const expectedAmount = priceToPayPalAmount(target.pkg.priceGrosze);
+  if (args.amountValue !== expectedAmount || args.currency !== target.pkg.currency) {
     // Nie kredytujemy jeśli capture amount nie zgadza się z server-authoritative
     // ceną pakietu. Defenduje przed manual'nym mutowaniem orderu po naszej stronie.
     throw new PayPalError(
       'AMOUNT_MISMATCH',
-      `${args.currency} ${args.amountValue} vs ${pkg.currency} ${expectedAmount}`,
+      `${args.currency} ${args.amountValue} vs ${target.pkg.currency} ${expectedAmount}`,
     );
   }
 
+  const pkg = target.pkg;
   const totalGems = pkg.gems + Math.floor((pkg.gems * pkg.bonus) / 100);
   const amountMicros = pkg.priceGrosze * 10_000; // PLN grosze → micros (1 PLN = 1_000_000)
 
@@ -105,6 +108,37 @@ export async function grantPayPalCapture(
     return { status: 'already_credited', gemsGranted: totalGems, characterGems: char.gems };
   }
 
+  // Bundle delivery — gold + items oprócz gemów. Robione PO insert do
+  // gem_purchases (UNIQUE blokuje retry), więc duplicate-grant nie zdarzy się.
+  // Items lecą jako osobne characterItems rows; jeden bundle może zawierać
+  // ten sam template_id wielokrotnie ("Eliksir Many ×5") — każda kopia osobny row.
+  if (target.kind === 'bundle') {
+    const bundle = target.pkg;
+    if (bundle.goldBonus && bundle.goldBonus > 0) {
+      await db
+        .update(characters)
+        .set({ gold: sql`${characters.gold} + ${bundle.goldBonus}` })
+        .where(eq(characters.id, args.characterId));
+    }
+    if (bundle.itemTemplateIds && bundle.itemTemplateIds.length > 0) {
+      const rows: (typeof characterItems.$inferInsert)[] = [];
+      for (const templateId of bundle.itemTemplateIds) {
+        const tpl = REGISTRY.items.get(templateId);
+        if (!tpl) {
+          // Missing template = content drift. Skipujemy ten item, ale gemy +
+          // gold idą — gracz dostaje co najmniej częściowo, niż nic. Logujemy
+          // żeby content team mogł poprawić registry.
+          console.warn(`[paypal] bundle ${bundle.id}: template ${templateId} not in registry, skipping item`);
+          continue;
+        }
+        rows.push(itemTemplateToRowValues(tpl, args.characterId, 'bundle'));
+      }
+      if (rows.length > 0) {
+        await db.insert(characterItems).values(rows);
+      }
+    }
+  }
+
   const [updated] = await db
     .update(characters)
     .set({ gems: sql`${characters.gems} + ${totalGems}` })
@@ -125,8 +159,8 @@ export const paypalRouter = router({
       if (!isPayPalConfigured()) {
         throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'PAYPAL_NOT_CONFIGURED' });
       }
-      const pkg = findPackageById(input.packId);
-      if (!pkg) {
+      const target = findPaypalTarget(input.packId);
+      if (!target) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'UNKNOWN_PACK' });
       }
       const [char] = await ctx.db
@@ -140,9 +174,9 @@ export const paypalRouter = router({
 
       try {
         const order = await createOrder({
-          amountValue: priceToPayPalAmount(pkg.priceGrosze),
-          currency: pkg.currency,
-          packId: pkg.id,
+          amountValue: priceToPayPalAmount(target.pkg.priceGrosze),
+          currency: target.pkg.currency,
+          packId: target.pkg.id,
           characterId: char.id,
         });
         return paypalCreateOrderResponseSchema.parse({ orderId: order.id });

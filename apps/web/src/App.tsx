@@ -16,6 +16,7 @@ import { ScreenChar } from '@/screens/character';
 import { ScreenQuests } from '@/screens/quests';
 import { ScreenArena } from '@/screens/arena';
 import { ScreenGuild } from '@/screens/guild';
+import { ScreenWorldBoss } from '@/screens/world-boss';
 import { ScreenDungeon } from '@/screens/dungeon';
 import { ScreenShop } from '@/screens/shop';
 import type { ShopItem } from '@/screens/shop';
@@ -973,6 +974,8 @@ export default function App() {
     content = <ScreenBlacksmith onBack={() => setSub(null)} />;
   } else if (sub === 'tower') {
     content = <ScreenTower onBack={() => setSub(null)} />;
+  } else if (sub === 'worldBoss') {
+    content = <ScreenWorldBoss myCharClass={char.cls} onBack={() => setSub(null)} />;
   } else if (sub === 'dice') {
     content = <ScreenDice onBack={() => setSub(null)} />;
   } else if (sub === 'oracle') {

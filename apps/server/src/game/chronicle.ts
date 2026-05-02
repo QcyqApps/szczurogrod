@@ -180,6 +180,31 @@ export async function logGuildJoined(
   });
 }
 
+/** Server-wide world boss padł — dedup per (character, bossId). Logowane
+ * tylko dla killing-blow gracza (chronicle to feed osobisty per char). */
+export async function logWorldBossKilled(
+  db: Db,
+  characterId: string,
+  heroName: string,
+  bossId: string,
+  bossName: string,
+  tier: number,
+  contributors: number,
+): Promise<void> {
+  await insertEvent({
+    db,
+    characterId,
+    dedupKey: `world_boss_killed:${bossId}`,
+    payload: {
+      kind: 'world_boss_killed',
+      heroName,
+      bossName,
+      tier,
+      contributors,
+    },
+  });
+}
+
 /** Zabity boss rajdu — dedup per (character, bossId). Kluczowy dla killingBlow
  * charId oraz wszystkich contributorów. */
 export async function logGuildRaidKilled(
@@ -295,6 +320,15 @@ const GUILD_RAID_KILLED_TEMPLATES = [
   (g: string, b: string, t: number) => `„${g}" kończy temat z „${b}" na tier ${t}. Krótko i rzeczowo.`,
 ];
 
+const WORLD_BOSS_KILLED_TEMPLATES = [
+  (h: string, b: string, t: number, c: number) =>
+    `${h} dobija „${b}" (tier ${t}). Świat patrzył — ${c} osób w tym maczało palce.`,
+  (h: string, b: string, t: number, c: number) =>
+    `„${b}" padł. ${h} zadał ostatni cios. Tier ${t}, ${c} chętnych do napluwania.`,
+  (h: string, b: string, t: number, c: number) =>
+    `Wybudzony zasnął. ${h} z ${c}-osobowej zgrai zamyka „${b}" na tier ${t}.`,
+];
+
 /** Per-tier — gold/legendary dostaje mocniejszy ton. */
 const ACHIEVEMENT_TEMPLATES: Record<string, Array<(h: string, n: string) => string>> = {
   bronze: [
@@ -340,6 +374,7 @@ const TEMPLATE_POOL_SIZES = {
   guild_joined: 3,
   guild_war_won: 3,
   guild_raid_killed: 3,
+  world_boss_killed: 3,
   achievement_unlock: 2, // per tier — wszystkie tiery mają 2 warianty
 } as const;
 
@@ -408,6 +443,13 @@ export function renderChronicleEvent(payload: ChroniclePayload, stableKey: strin
           hashIndex(stableKey, GUILD_RAID_KILLED_TEMPLATES.length)
         ];
       return tpl(payload.guildName, payload.bossName, payload.tier);
+    }
+    case 'world_boss_killed': {
+      const tpl =
+        WORLD_BOSS_KILLED_TEMPLATES[
+          hashIndex(stableKey, WORLD_BOSS_KILLED_TEMPLATES.length)
+        ];
+      return tpl(payload.heroName, payload.bossName, payload.tier, payload.contributors);
     }
   }
 }

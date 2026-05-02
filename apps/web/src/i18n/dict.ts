@@ -1111,6 +1111,18 @@ export const dict = {
     pl: 'WALKA {n}/{total}',
     en: 'FIGHT {n}/{total}',
   },
+  'combat.serial.continue': {
+    pl: 'KONTYNUUJ ({s})',
+    en: 'CONTINUE ({s})',
+  },
+  'combat.serial.exit': {
+    pl: 'WYJDŹ',
+    en: 'EXIT',
+  },
+  'combat.serial.last': {
+    pl: 'OSTATNIA WALKA — KONIEC SERII',
+    en: 'LAST FIGHT — SERIES COMPLETE',
+  },
   'dungeon.help.p1.a': { pl: 'Każda walka kosztuje ', en: 'Each fight costs ' },
   'dungeon.help.p1.b': { pl: 'jeden klucz do lochu', en: 'one dungeon key' },
   'dungeon.help.p1.c': { pl: '. Nosisz ich maks. ', en: '. You carry up to ' },
@@ -1728,6 +1740,168 @@ support@ratburg.app (placeholder — fill in before launch)
   'class.warrior.title': { pl: 'Wojownik', en: 'Warrior' },
   'class.mage.title': { pl: 'Mag', en: 'Mage' },
   'class.rogue.title': { pl: 'Łotrzyk', en: 'Rogue' },
+
+  // ===== World boss (Wybudzony — server-wide raid) =====
+  'worldBoss.title': { pl: 'WYBUDZONY', en: 'THE AWAKENED' },
+  'worldBoss.loading': { pl: 'Wybudzony się przeciąga…', en: 'The Awakened stirs…' },
+  'worldBoss.tier': { pl: 'TIER {n}', en: 'TIER {n}' },
+  'worldBoss.phase': { pl: 'FAZA {n}/3', en: 'PHASE {n}/3' },
+  'worldBoss.weakness.match': {
+    pl: 'TWOJA KLASA TERAZ BIJE +50%',
+    en: 'YOUR CLASS DEALS +50% NOW',
+  },
+  'worldBoss.weakness.line': {
+    pl: 'Słabość fazy: {classes} (+50%)',
+    en: 'Phase weakness: {classes} (+50%)',
+  },
+  'worldBoss.hits.line': {
+    pl: 'Twoje uderzenia dziś: {n}/{max} · reset o północy UTC',
+    en: 'Your hits today: {n}/{max} · resets at UTC midnight',
+  },
+  'worldBoss.btn.hit': { pl: 'UDERZ ({n})', en: 'STRIKE ({n})' },
+  'worldBoss.btn.hit.sub': { pl: 'tapnij szybko!', en: 'tap fast!' },
+  'worldBoss.btn.pending': { pl: 'CIOS LECI…', en: 'STRIKING…' },
+  'worldBoss.btn.none': { pl: 'KONIEC NA DZIŚ', en: 'DONE FOR TODAY' },
+  'worldBoss.tap.title': { pl: 'FURIA!', en: 'FURY!' },
+  'worldBoss.tap.subtitle': {
+    pl: 'Tapnij szczura ile sił!',
+    en: 'Tap as fast as you can!',
+  },
+  'worldBoss.tap.combo': { pl: 'x{n} COMBO!', en: 'x{n} COMBO!' },
+  'worldBoss.tap.finisher': { pl: 'FINISHER!', en: 'FINISHER!' },
+  'worldBoss.tap.tapHint': { pl: 'TAPNIJ!', en: 'TAP!' },
+  'worldBoss.tap.timeLeft': { pl: '{s}s', en: '{s}s' },
+  'worldBoss.tap.dmgPreview': { pl: '×{mult} dmg', en: '×{mult} dmg' },
+  'worldBoss.tap.tapsCounter': { pl: '{n}/{max}', en: '{n}/{max}' },
+  'worldBoss.modal.bossAlreadyDead': {
+    pl: 'Wybudzony już padł — uderzenie zwrócone.',
+    en: 'The Awakened already fell — hit refunded.',
+  },
+  'worldBoss.modal.tapBreakdown': {
+    pl: '{taps} tapnięć × {mult}',
+    en: '{taps} taps × {mult}',
+  },
+  'worldBoss.standing.title': { pl: 'TWOJE MIEJSCE', en: 'YOUR STANDING' },
+  'worldBoss.standing.line': {
+    pl: '{dmg} dmg · {total} graczy bije',
+    en: '{dmg} dmg · {total} players hitting',
+  },
+  'worldBoss.lb.show': { pl: 'POKAŻ TOP 50', en: 'SHOW TOP 50' },
+  'worldBoss.lb.hide': { pl: 'ZWIŃ TOP 50', en: 'HIDE TOP 50' },
+  'worldBoss.hist.show': { pl: 'POKAŻ HISTORIĘ', en: 'SHOW HISTORY' },
+  'worldBoss.hist.hide': { pl: 'ZWIŃ HISTORIĘ', en: 'HIDE HISTORY' },
+  'worldBoss.hist.kb': { pl: 'Ostatni cios: {name}', en: 'Killing blow: {name}' },
+  'worldBoss.hist.empty': {
+    pl: 'Jeszcze nikt nikogo nie ubił. Bądź pierwszy.',
+    en: 'No one has fallen yet. Be the first.',
+  },
+  'worldBoss.help.label': { pl: 'Jak to działa?', en: 'How does this work?' },
+  'worldBoss.help.title': { pl: 'WYBUDZONY — instrukcja', en: 'THE AWAKENED — manual' },
+  'worldBoss.help.p1': {
+    pl: 'Jeden boss, cały serwer. Trzy uderzenia dziennie, reset o północy UTC. Można dokupić za echa lub gemy.',
+    en: 'One boss, whole server. Three hits a day, resets at UTC midnight. Buy extras with echoes or gems.',
+  },
+  'worldBoss.help.p2': {
+    pl: 'Trzy fazy HP. W każdej inna klasa dostaje +50% obrażeń: Faza 1 (>66% HP) — wojownik i łotr. Faza 2 (33–66%) — mag. Faza 3 (<33%) — wszyscy biją równo, kto pierwszy ten kładzie.',
+    en: 'Three HP phases. Each one buffs a different class by +50%: Phase 1 (>66% HP) — warrior and rogue. Phase 2 (33–66%) — mage. Phase 3 (<33%) — free-for-all, first to land the killing blow wins.',
+  },
+  'worldBoss.help.p3': {
+    pl: 'Po wciśnięciu UDERZ otwiera się Furia: 4 sekundy na tapowanie szczura. Więcej tapów = większy mnożnik (×0.6 przy 5 tapach, ×1.4 przy 30). 25+ tapów daje +50% ech.',
+    en: 'STRIKE opens FURY: 4 seconds to tap the rat. More taps = bigger multiplier (×0.6 at 5 taps, ×1.4 at 30). 25+ taps grants +50% echoes.',
+  },
+  'worldBoss.help.p4': {
+    pl: 'Echa to waluta dożywotnia, nie znikają na nocy. Wymień w Kramie na gemy, złoto, złom albo dodatkowe uderzenie.',
+    en: 'Echoes are lifetime currency — they don\'t reset at night. Trade them at the Echo Shop for gems, gold, scrap, or extra hits.',
+  },
+  'worldBoss.help.p5': {
+    pl: 'Po killu nagrody dzielą się po rankingu obrażeń: top 1 garść gemów i złota plus tytuł, top 10 mniej, top 100 jeszcze mniej. Każdy kto trafił, dostaje też trochę za sam udział.',
+    en: 'On kill, rewards split by damage ranking: top 1 grabs gems, gold and a title. Top 10 less, top 100 less still. Anyone who hit gets a participation cut.',
+  },
+  'worldBoss.modal.killer': { pl: 'OSTATNI CIOS!', en: 'KILLING BLOW!' },
+  'worldBoss.modal.killed': { pl: 'PADŁ', en: 'DEFEATED' },
+  'worldBoss.modal.killBlurb': {
+    pl: 'Wybudzony zasnął. Twoje miejsce: #{rank}',
+    en: 'The Awakened sleeps. Your rank: #{rank}',
+  },
+  'worldBoss.modal.hitTitle': { pl: 'CIOS!', en: 'STRIKE!' },
+  'worldBoss.modal.phase': { pl: 'Faza {n}', en: 'Phase {n}' },
+  'worldBoss.modal.phaseBonus': { pl: '+50% za klasę', en: '+50% class bonus' },
+  'worldBoss.modal.next': {
+    pl: 'Już budzi się nowy: {name} (T{tier})',
+    en: 'A new one stirs: {name} (T{tier})',
+  },
+  'worldBoss.toast.hitFail': {
+    pl: 'Cios nie wszedł. Spróbuj ponownie.',
+    en: 'Hit failed. Try again.',
+  },
+  'worldBoss.toast.bought': {
+    pl: 'Dokupione uderzenie. Bij dalej.',
+    en: 'Extra hit purchased. Strike on.',
+  },
+  'worldBoss.btn.buy': { pl: 'DOKUP UDERZENIE', en: 'BUY EXTRA HIT' },
+  'worldBoss.modal.echoes': { pl: 'ECH', en: 'ECHOES' },
+
+  // ===== Echo shop =====
+  'worldBoss.shop.open': { pl: 'KRAM Z ECHAMI', en: 'ECHO SHOP' },
+  'worldBoss.shop.title': { pl: 'KRAM Z ECHAMI', en: 'ECHO SHOP' },
+  'worldBoss.shop.close': { pl: 'ZAMKNIJ', en: 'CLOSE' },
+  'worldBoss.shop.flavor': {
+    pl: 'Sprzedawca milczy. Sklep jest. Wymiana w ciszy.',
+    en: 'The vendor says nothing. The shop is. Trade in silence.',
+  },
+  'worldBoss.shop.toast.bought': {
+    pl: 'Wzięte. {n} sztuka(i).',
+    en: 'Taken. {n} unit(s).',
+  },
+
+  // Per-offer i18n — title + desc (slug-based key, not enum)
+  'worldBoss.shop.gems.small.title': { pl: '5 gemów', en: '5 gems' },
+  'worldBoss.shop.gems.small.desc': {
+    pl: 'Mała szczypta premium.',
+    en: 'A small pinch of premium.',
+  },
+  'worldBoss.shop.gems.medium.title': { pl: '25 gemów', en: '25 gems' },
+  'worldBoss.shop.gems.medium.desc': {
+    pl: 'Większa porcja. Łap.',
+    en: 'Bigger handful. Take it.',
+  },
+  'worldBoss.shop.scrap.small.title': { pl: '50 złomu', en: '50 scrap' },
+  'worldBoss.shop.scrap.small.desc': {
+    pl: 'Zygmunt się ucieszy. Albo nie.',
+    en: 'Zygmunt will be glad. Or won\'t.',
+  },
+  'worldBoss.shop.gold.medium.title': { pl: '5 000 złota', en: '5,000 gold' },
+  'worldBoss.shop.gold.medium.desc': {
+    pl: 'Stare brudne monety.',
+    en: 'Old dirty coins.',
+  },
+  'worldBoss.shop.extra.hit.title': { pl: 'Dodatkowe uderzenie', en: 'Extra hit' },
+  'worldBoss.shop.extra.hit.desc': {
+    pl: 'Jedno więcej dziś. Wybudzony nie protestuje.',
+    en: 'One more today. The Awakened does not protest.',
+  },
+  'worldBoss.shop.help.label': { pl: 'Jak to działa?', en: 'How does it work?' },
+  'worldBoss.shop.help.title': { pl: 'KRAM Z ECHAMI', en: 'ECHO STALL' },
+  'worldBoss.shop.help.p1': {
+    pl: 'Każdy cios zadany Wybudzonemu strąca z niego echo. Echa zbierasz automatycznie — saldo widać u góry kramu.',
+    en: 'Every blow on the Awakened sheds an echo. You collect them automatically — your balance is shown at the top of the stall.',
+  },
+  'worldBoss.shop.help.p2': {
+    pl: 'Echa wymieniasz na gemy, złom rzemieślniczy, złoto albo dodatkowe uderzenie na dziś.',
+    en: 'Trade echoes for gems, crafting scrap, gold, or one extra hit for today.',
+  },
+  'worldBoss.shop.help.p3': {
+    pl: 'Saldo ech jest twoje na stałe — nie znika gdy boss ginie. Dropy z mocniejszych faz są tłustsze, więc warto trzymać hity na drugą i trzecią fazę.',
+    en: 'Your echo balance persists — it does not vanish when the boss falls. Drops from later phases are juicier, so save your hits for phases 2 and 3.',
+  },
+  'worldBoss.shop.help.p4': {
+    pl: 'Kupiec niczego nie zwraca. Wybierz mądrze.',
+    en: 'The merchant takes no returns. Choose wisely.',
+  },
+
+  // Town card
+  'town.tile.worldBoss': { pl: 'WYBUDZONY', en: 'AWAKENED' },
+  'town.tile.worldBoss.sub': { pl: 'Boss serwerowy', en: 'Server boss' },
 
   // Creator (post-creation editor)
   'creator.heading': { pl: 'KREATOR POSTACI', en: 'CHARACTER CREATOR' },
